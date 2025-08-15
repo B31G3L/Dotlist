@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Standard margins -->
+    <dimen name="margin_small">8dp</dimen>
+    <dimen name="margin_medium">16dp</dimen>
+    <dimen name="margin_large">24dp</dimen>
+    <dimen name="margin_extra_large">32dp</dimen>
+
+    <!-- Card dimensions -->
+    <dimen name="card_elevation">2dp</dimen>
+    <dimen name="card_corner_radius">12dp</dimen>
+
+    <!-- Widget dimensions -->
+    <dimen name="widget_min_width">250dp</dimen>
+    <dimen name="widget_min_height">180dp</dimen>
+    <dimen name="widget_min_resize_width">180dp</dimen>
+    <dimen name="widget_min_resize_height">120dp</dimen>
+
+    <!-- Icon sizes -->
+    <dimen name="icon_small">16dp</dimen>
+    <dimen name="icon_medium">24dp</dimen>
+    <dimen name="icon_large">32dp</dimen>
+
+    <!-- Priority indicator -->
+    <dimen name="priority_indicator_size">12dp</dimen>
+    <dimen name="priority_indicator_radius">6dp</dimen>
+
+    <!-- Task item -->
+    <dimen name="task_item_padding">16dp</dimen>
+    <dimen name="task_item_spacing">8dp</dimen>
+</resources>
