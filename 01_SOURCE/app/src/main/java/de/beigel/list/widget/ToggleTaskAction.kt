@@ -1,3 +1,4 @@
+
 package de.beigel.list.widget
 
 import android.content.Context
@@ -9,12 +10,23 @@ import kotlinx.coroutines.flow.first
 import java.time.LocalDateTime
 
 class ToggleTaskAction : ActionCallback {
+
+    companion object {
+        private val TASK_ID_KEY = ActionParameters.Key<String>("taskId")
+
+        fun createParameters(taskId: String): ActionParameters {
+            return ActionParameters.Builder()
+                .add(TASK_ID_KEY, taskId)
+                .build()
+        }
+    }
+
     override suspend fun onAction(
         context: Context,
         glanceId: GlanceId,
         parameters: ActionParameters
     ) {
-        val taskId = parameters[ActionParameters.Key<String>("taskId")] ?: return
+        val taskId = parameters[TASK_ID_KEY] ?: return
 
         val database = TaskDatabase.getDatabase(context)
         val taskDao = database.taskDao()

@@ -3,6 +3,9 @@ package de.beigel.list.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import de.beigel.list.data.TaskEntity
+import de.beigel.list.data.TaskPriority
+import de.beigel.list.repository.TaskRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate

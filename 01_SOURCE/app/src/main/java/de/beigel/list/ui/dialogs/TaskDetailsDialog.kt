@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import de.beigel.list.data.TaskEntity
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 

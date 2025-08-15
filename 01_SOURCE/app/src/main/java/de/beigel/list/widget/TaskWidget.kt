@@ -2,7 +2,9 @@ package de.beigel.list.widget
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -12,7 +14,9 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.color.ColorProvider
 import androidx.glance.layout.*
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -34,11 +38,15 @@ class TaskWidget : GlanceAppWidget() {
                 tasks = tasks,
                 onTaskClick = { taskId ->
                     actionRunCallback<ToggleTaskAction>(
-                        parameters = mapOf("taskId" to taskId)
+                        parameters = ToggleTaskAction.createParameters(taskId)
                     )
                 },
                 onWidgetClick = {
-                    actionStartActivity<MainActivity>()
+                    actionStartActivity(
+                        intent = Intent(context, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        }
+                    )
                 }
             )
         }
@@ -48,8 +56,8 @@ class TaskWidget : GlanceAppWidget() {
 @Composable
 fun TaskWidgetContent(
     tasks: List<TaskEntity>,
-    onTaskClick: (String) -> Action,
-    onWidgetClick: () -> Action
+    onTaskClick: (String) -> androidx.glance.action.Action,
+    onWidgetClick: () -> androidx.glance.action.Action
 ) {
     val completedCount = tasks.count { it.isCompleted }
     val totalCount = tasks.size
@@ -57,7 +65,7 @@ fun TaskWidgetContent(
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(androidx.glance.color.ColorProvider(Color.White))
+            .background(ColorProvider(day = Color.White, night = Color(0xFF1E1E1E)))
             .padding(16.dp)
             .clickable(onWidgetClick())
     ) {
@@ -71,7 +79,7 @@ fun TaskWidgetContent(
                 style = TextStyle(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = androidx.glance.color.ColorProvider(Color(0xFF3C3C3C))
+                    color = ColorProvider(day = Color(0xFF3C3C3C), night = Color.White)
                 )
             )
         }
@@ -83,7 +91,7 @@ fun TaskWidgetContent(
             text = if (totalCount > 0) "$completedCount von $totalCount" else "Keine Aufgaben",
             style = TextStyle(
                 fontSize = 14.sp,
-                color = androidx.glance.color.ColorProvider(Color(0xFF009966))
+                color = ColorProvider(day = Color(0xFF009966), night = Color(0xFF00CC88))
             )
         )
 
@@ -104,15 +112,23 @@ fun TaskWidgetContent(
                     modifier = GlanceModifier
                         .size(16.dp)
                         .background(
-                            androidx.glance.color.ColorProvider(
-                                if (task.isCompleted) Color(0xFF009966) else Color.Transparent
+                            ColorProvider(
+                                day = if (task.isCompleted) Color(0xFF009966) else Color.Transparent,
+                                night = if (task.isCompleted) Color(0xFF00CC88) else Color.Transparent
                             )
                         )
-                        .border(
-                            width = 2.dp,
-                            color = androidx.glance.color.ColorProvider(Color(0xFF009966))
+                        .cornerRadius(4.dp)
+                ) {
+                    if (!task.isCompleted) {
+                        // Checkbox border for unchecked state
+                        Box(
+                            modifier = GlanceModifier
+                                .fillMaxSize()
+                                .background(ColorProvider(day = Color.Transparent, night = Color.Transparent))
+                                .cornerRadius(4.dp) as Modifier
                         )
-                )
+                    }
+                }
 
                 Spacer(modifier = GlanceModifier.width(8.dp))
 
@@ -120,9 +136,9 @@ fun TaskWidgetContent(
                     text = task.title,
                     style = TextStyle(
                         fontSize = 12.sp,
-                        color = androidx.glance.color.ColorProvider(
-                            if (task.isCompleted) Color(0xFF3C3C3C).copy(alpha = 0.6f)
-                            else Color(0xFF3C3C3C)
+                        color = ColorProvider(
+                            day = if (task.isCompleted) Color(0xFF3C3C3C).copy(alpha = 0.6f) else Color(0xFF3C3C3C),
+                            night = if (task.isCompleted) Color.White.copy(alpha = 0.6f) else Color.White
                         )
                     ),
                     maxLines = 1
@@ -135,7 +151,10 @@ fun TaskWidgetContent(
                 text = "und ${tasks.size - 5} weitere...",
                 style = TextStyle(
                     fontSize = 10.sp,
-                    color = androidx.glance.color.ColorProvider(Color(0xFF3C3C3C).copy(alpha = 0.6f))
+                    color = ColorProvider(
+                        day = Color(0xFF3C3C3C).copy(alpha = 0.6f),
+                        night = Color.White.copy(alpha = 0.6f)
+                    )
                 )
             )
         }
