@@ -34,9 +34,11 @@
         <!-- Widget Receiver -->
         <receiver
             android:name=".widget.TaskWidgetReceiver"
-            android:exported="true">
+            android:exported="true"
+            android:enabled="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

@@ -21,6 +21,7 @@ class MidnightResetWorker(
             scheduleNextReset()
             Result.success()
         } catch (e: Exception) {
+            // Log the error if needed
             Result.retry()
         }
     }
@@ -50,6 +51,15 @@ class MidnightResetWorker(
     private fun scheduleNextReset() {
         val workRequest = OneTimeWorkRequestBuilder<MidnightResetWorker>()
             .setInitialDelay(calculateTimeUntilMidnight(), TimeUnit.MILLISECONDS)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
+                    .setRequiresBatteryNotLow(false)
+                    .setRequiresCharging(false)
+                    .setRequiresDeviceIdle(false)
+                    .setRequiresStorageNotLow(false)
+                    .build()
+            )
             .build()
 
         WorkManager.getInstance(applicationContext)
@@ -70,6 +80,15 @@ class MidnightResetWorker(
         fun scheduleInitialWork(context: Context) {
             val workRequest = OneTimeWorkRequestBuilder<MidnightResetWorker>()
                 .setInitialDelay(calculateTimeUntilMidnight(), TimeUnit.MILLISECONDS)
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
+                        .setRequiresBatteryNotLow(false)
+                        .setRequiresCharging(false)
+                        .setRequiresDeviceIdle(false)
+                        .setRequiresStorageNotLow(false)
+                        .build()
+                )
                 .build()
 
             WorkManager.getInstance(context)

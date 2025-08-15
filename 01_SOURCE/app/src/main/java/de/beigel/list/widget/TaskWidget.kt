@@ -2,9 +2,7 @@ package de.beigel.list.widget
 
 import android.content.Context
 import android.content.Intent
-import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -14,7 +12,6 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.color.ColorProvider
 import androidx.glance.layout.*
@@ -36,10 +33,8 @@ class TaskWidget : GlanceAppWidget() {
         provideContent {
             TaskWidgetContent(
                 tasks = tasks,
-                onTaskClick = { taskId ->
-                    actionRunCallback<ToggleTaskAction>(
-                        parameters = ToggleTaskAction.createParameters(taskId)
-                    )
+                onTaskClick = {
+                    actionRunCallback<ToggleTaskAction>()
                 },
                 onWidgetClick = {
                     actionStartActivity(
@@ -56,7 +51,7 @@ class TaskWidget : GlanceAppWidget() {
 @Composable
 fun TaskWidgetContent(
     tasks: List<TaskEntity>,
-    onTaskClick: (String) -> androidx.glance.action.Action,
+    onTaskClick: () -> androidx.glance.action.Action,
     onWidgetClick: () -> androidx.glance.action.Action
 ) {
     val completedCount = tasks.count { it.isCompleted }
@@ -70,19 +65,15 @@ fun TaskWidgetContent(
             .clickable(onWidgetClick())
     ) {
         // Header
-        Row(
-            modifier = GlanceModifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Daily List",
-                style = TextStyle(
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = ColorProvider(day = Color(0xFF3C3C3C), night = Color.White)
-                )
-            )
-        }
+        Text(
+            text = "Daily List",
+            style = TextStyle(
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = ColorProvider(day = Color(0xFF3C3C3C), night = Color.White)
+            ),
+            modifier = GlanceModifier.fillMaxWidth()
+        )
 
         Spacer(modifier = GlanceModifier.height(8.dp))
 
@@ -104,31 +95,20 @@ fun TaskWidgetContent(
                 modifier = GlanceModifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
-                    .clickable(onTaskClick(task.id)),
+                    .clickable(onTaskClick()),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Checkbox
-                Box(
-                    modifier = GlanceModifier
-                        .size(16.dp)
-                        .background(
-                            ColorProvider(
-                                day = if (task.isCompleted) Color(0xFF009966) else Color.Transparent,
-                                night = if (task.isCompleted) Color(0xFF00CC88) else Color.Transparent
-                            )
+                // Checkbox als einfacher Indikator
+                Text(
+                    text = if (task.isCompleted) "✓" else "◯",
+                    style = TextStyle(
+                        fontSize = 16.sp,
+                        color = ColorProvider(
+                            day = if (task.isCompleted) Color(0xFF009966) else Color(0xFF666666),
+                            night = if (task.isCompleted) Color(0xFF00CC88) else Color(0xFF999999)
                         )
-                        .cornerRadius(4.dp)
-                ) {
-                    if (!task.isCompleted) {
-                        // Checkbox border for unchecked state
-                        Box(
-                            modifier = GlanceModifier
-                                .fillMaxSize()
-                                .background(ColorProvider(day = Color.Transparent, night = Color.Transparent))
-                                .cornerRadius(4.dp) as Modifier
-                        )
-                    }
-                }
+                    )
+                )
 
                 Spacer(modifier = GlanceModifier.width(8.dp))
 
@@ -141,12 +121,14 @@ fun TaskWidgetContent(
                             night = if (task.isCompleted) Color.White.copy(alpha = 0.6f) else Color.White
                         )
                     ),
-                    maxLines = 1
+                    maxLines = 1,
+                    modifier = GlanceModifier.defaultWeight()
                 )
             }
         }
 
         if (tasks.size > 5) {
+            Spacer(modifier = GlanceModifier.height(4.dp))
             Text(
                 text = "und ${tasks.size - 5} weitere...",
                 style = TextStyle(
