@@ -3,8 +3,6 @@ package de.beigel.list.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import de.beigel.list.notification.NotificationWorker
-import de.beigel.list.service.MidnightResetWorker
 import de.beigel.list.settings.SettingsManager
 
 class BootReceiver : BroadcastReceiver() {
