@@ -4,6 +4,7 @@ import androidx.room.*
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import android.content.Context
+import kotlinx.coroutines.flow.first
 
 @Database(
     entities = [TaskEntity::class],
@@ -209,14 +210,14 @@ object DatabaseUtils {
     }
 
     suspend fun exportTasksToJson(taskDao: TaskDao): String {
-        val allTasks = taskDao.getAllActiveTasks().kotlinx.coroutines.flow.first()
+        val allTasks = taskDao.getAllActiveTasks().first()
 
         // Vereinfachter JSON-Export (in echter App würde man Gson/Moshi verwenden)
         return buildString {
             append("{\n")
             append("  \"tasks\": [\n")
 
-            allTasks.forEachIndexed { index, task ->
+            allTasks.forEachIndexed { index: Int, task: TaskEntity ->
                 append("    {\n")
                 append("      \"id\": \"${task.id}\",\n")
                 append("      \"title\": \"${task.title.replace("\"", "\\\"")}\",\n")

@@ -1,5 +1,6 @@
 package de.beigel.list.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -600,12 +601,14 @@ fun TaskStatCard(
     value: String,
     subtitle: String,
     icon: String,
-    color: Color = MaterialTheme.colorScheme.primary
+    color: Color = MaterialTheme.colorScheme.primary,
+    modifier: Modifier = Modifier
 ) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = color.copy(alpha = 0.1f)
-        )
+        ),
+        modifier = modifier
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

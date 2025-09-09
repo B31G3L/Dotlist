@@ -23,6 +23,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import de.beigel.list.data.TaskEntity
 import de.beigel.list.data.getTags
+import de.beigel.list.data.isQuickWin
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

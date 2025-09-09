@@ -4,13 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -163,9 +162,6 @@ class MainActivity : ComponentActivity() {
                         },
                         onNavigateToSettings = {
                             navController.navigate("settings")
-                        },
-                        onNavigateToSmartFocus = {
-                            navController.navigate("smart_focus")
                         }
                     )
                 }
@@ -185,18 +181,6 @@ class MainActivity : ComponentActivity() {
                     SettingsScreen(
                         onNavigateBack = {
                             navController.popBackStack()
-                        },
-                        onToggleSmartFocus = { useSmartFocus ->
-                            settingsManager.useSmartFocus = useSmartFocus
-                            if (useSmartFocus) {
-                                navController.navigate("smart_focus") {
-                                    popUpTo("task_list") { inclusive = true }
-                                }
-                            } else {
-                                navController.navigate("task_list") {
-                                    popUpTo("smart_focus") { inclusive = true }
-                                }
-                            }
                         }
                     )
                 }
@@ -241,6 +225,7 @@ class MainActivity : ComponentActivity() {
 }
 
 // Neue Productivity Analytics Screen
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductivityAnalyticsScreen(
     smartFocusRepository: SmartFocusRepository,
@@ -259,16 +244,16 @@ fun ProductivityAnalyticsScreen(
         }
     }
 
-    androidx.compose.material3.Scaffold(
+    Scaffold(
         topBar = {
-            androidx.compose.material3.TopAppBar(
+            TopAppBar(
                 title = {
-                    androidx.compose.material3.Text("📊 Produktivitäts-Analyse")
+                    Text("📊 Produktivitäts-Analyse")
                 },
                 navigationIcon = {
-                    androidx.compose.material3.IconButton(onClick = onNavigateBack) {
-                        androidx.compose.material3.Icon(
-                            androidx.compose.material.icons.Icons.Default.ArrowBack,
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            Icons.Default.ArrowBack,
                             contentDescription = "Zurück"
                         )
                     }
@@ -277,23 +262,23 @@ fun ProductivityAnalyticsScreen(
         }
     ) { paddingValues ->
         if (isLoading) {
-            androidx.compose.foundation.layout.Box(
-                modifier = androidx.compose.ui.Modifier
+            Box(
+                modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                contentAlignment = androidx.compose.ui.Alignment.Center
+                contentAlignment = Alignment.Center
             ) {
-                androidx.compose.material3.CircularProgressIndicator()
+                CircularProgressIndicator()
             }
         } else {
             insights?.let { data ->
                 androidx.compose.foundation.lazy.LazyColumn(
-                    modifier = androidx.compose.ui.Modifier
+                    modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
                         .padding(horizontal = 16.dp),
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(vertical = 16.dp)
                 ) {
                     // Motivational Header
                     item {
@@ -309,16 +294,16 @@ fun ProductivityAnalyticsScreen(
 
                     // Statistics Cards
                     item {
-                        androidx.compose.foundation.layout.Row(
-                            modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
-                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             de.beigel.list.ui.components.TaskStatCard(
                                 title = "Streak",
                                 value = "${data.currentStreak}",
                                 subtitle = "Tage am Stück",
                                 icon = "🔥",
-                                modifier = androidx.compose.ui.Modifier.weight(1f)
+                                modifier = Modifier.weight(1f)
                             )
 
                             de.beigel.list.ui.components.TaskStatCard(
@@ -326,7 +311,7 @@ fun ProductivityAnalyticsScreen(
                                 value = "${data.totalCompletedTasks}",
                                 subtitle = "Aufgaben erledigt",
                                 icon = "✅",
-                                modifier = androidx.compose.ui.Modifier.weight(1f)
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
@@ -344,27 +329,27 @@ fun ProductivityAnalyticsScreen(
                     // Best Day
                     data.bestDay?.let { bestDay ->
                         item {
-                            androidx.compose.material3.Card {
-                                androidx.compose.foundation.layout.Column(
-                                    modifier = androidx.compose.ui.Modifier.padding(16.dp)
+                            Card {
+                                Column(
+                                    modifier = Modifier.padding(16.dp)
                                 ) {
-                                    androidx.compose.material3.Text(
+                                    Text(
                                         text = "🏆 Bester Tag",
-                                        style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                                        style = MaterialTheme.typography.titleMedium,
                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                     )
 
-                                    androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
 
-                                    androidx.compose.material3.Text(
+                                    Text(
                                         text = "${bestDay.date}: ${bestDay.completedTasks} Aufgaben erledigt",
-                                        style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
+                                        style = MaterialTheme.typography.bodyLarge
                                     )
 
-                                    androidx.compose.material3.Text(
+                                    Text(
                                         text = "${bestDay.getCompletionPercentage()}% Completion Rate",
-                                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
-                                        color = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -373,35 +358,35 @@ fun ProductivityAnalyticsScreen(
 
                     // Weekly Breakdown
                     item {
-                        androidx.compose.material3.Card {
-                            androidx.compose.foundation.layout.Column(
-                                modifier = androidx.compose.ui.Modifier.padding(16.dp)
+                        Card {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
                             ) {
-                                androidx.compose.material3.Text(
+                                Text(
                                     text = "📈 Wöchentlicher Verlauf",
-                                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                 )
 
-                                androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
 
                                 data.dailyBreakdown.takeLast(7).forEach { day ->
-                                    androidx.compose.foundation.layout.Row(
-                                        modifier = androidx.compose.ui.Modifier
+                                    Row(
+                                        modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(vertical = 4.dp),
-                                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        androidx.compose.material3.Text(
+                                        Text(
                                             text = day.date,
-                                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+                                            style = MaterialTheme.typography.bodyMedium
                                         )
 
-                                        androidx.compose.material3.Text(
+                                        Text(
                                             text = "${day.completedTasks}/${day.totalTasks}",
-                                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-                                            color = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
