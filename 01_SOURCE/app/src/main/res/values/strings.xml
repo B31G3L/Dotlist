@@ -1,106 +1,425 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App Basics -->
     <string name="app_name">Daily List</string>
+    <string name="app_name_short">Daily List</string>
+    <string name="app_tagline">Intelligente To-Do App</string>
+    <string name="app_description">Die smarte Aufgaben-App, die sich an deinen Arbeitsrhythmus anpasst</string>
 
-    <!-- Widget -->
-    <string name="widget_description">Zeigt deine heutigen Aufgaben mit Fortschritt</string>
+    <!-- Smart Focus -->
+    <string name="smart_focus">Smart Focus</string>
+    <string name="smart_focus_subtitle">Deine wichtigsten 5 Aufgaben</string>
+    <string name="smart_focus_description">Intelligente Priorisierung basierend auf Deadlines, Kontext und Energie</string>
+    <string name="smart_focus_empty_title">Alle wichtigen Aufgaben erledigt!</string>
+    <string name="smart_focus_empty_message">Du bist heute richtig produktiv gewesen. Zeit für eine Pause oder neue Aufgaben?</string>
+    <string name="smart_focus_loading">Berechne intelligente Prioritäten…</string>
 
-    <!-- Notifications -->
-    <string name="notification_channel_name">Tägliche Erinnerungen</string>
-    <string name="notification_channel_description">Benachrichtigungen für ausstehende Aufgaben</string>
-    <string name="notification_title">Daily List</string>
-    <string name="notification_text_single">Du hast noch 1 offene Aufgabe für heute</string>
-    <string name="notification_text_multiple">Du hast noch %d offene Aufgaben für heute</string>
+    <!-- Greetings -->
+    <string name="greeting_morning">Guten Morgen! 🌅</string>
+    <string name="greeting_day">Guten Tag! ☀️</string>
+    <string name="greeting_evening">Guten Abend! 🌆</string>
+    <string name="greeting_night">Gute Nacht! 🌙</string>
+    <string name="greeting_question">Was möchtest du heute erreichen?</string>
 
-    <!-- Task Actions -->
+    <!-- Task Management -->
     <string name="add_task">Aufgabe hinzufügen</string>
     <string name="edit_task">Aufgabe bearbeiten</string>
     <string name="new_task">Neue Aufgabe</string>
     <string name="delete_task">Löschen</string>
+    <string name="complete_task">Erledigt</string>
     <string name="task_title">Titel</string>
-    <string name="task_description">Beschreibung (optional)</string>
+    <string name="task_title_hint">Was möchtest du erledigen?</string>
+    <string name="task_description">Beschreibung</string>
+    <string name="task_description_hint">Zusätzliche Details (optional)</string>
+    <string name="task_description_optional">Beschreibung (optional)</string>
+
+    <!-- Task Properties -->
     <string name="task_priority">Priorität</string>
+    <string name="task_due_date">Fälligkeitsdatum</string>
+    <string name="task_estimated_time">Geschätzte Zeit</string>
+    <string name="task_actual_time">Tatsächliche Zeit</string>
+    <string name="task_energy_level">Benötigte Energie</string>
+    <string name="task_context">Arbeitsbereich</string>
+    <string name="task_tags">Tags</string>
+    <string name="task_reminder">Erinnerung</string>
+    <string name="task_recurring">Wiederkehrend</string>
+
+    <!-- Priorities -->
     <string name="priority_high">Hoch</string>
     <string name="priority_medium">Mittel</string>
     <string name="priority_low">Niedrig</string>
-    <string name="task_details">Aufgabendetails</string>
-    <string name="task_description_label">Beschreibung</string>
-    <string name="task_details_label">Details</string>
-    <string name="created_at">Erstellt:</string>
-    <string name="completed_at">Erledigt:</string>
 
-    <!-- Navigation -->
-    <string name="history">Historie</string>
-    <string name="settings">Einstellungen</string>
-    <string name="back">Zurück</string>
-    <string name="progress">Fortschritt</string>
+    <!-- Energy Levels -->
+    <string name="energy_high">Viel Energie</string>
+    <string name="energy_medium">Normale Energie</string>
+    <string name="energy_low">Wenig Energie</string>
+    <string name="energy_required">Benötigte Energie</string>
 
-    <!-- Empty States -->
-    <string name="no_tasks_today">Keine Aufgaben für heute</string>
-    <string name="all_tasks_completed">Alle Aufgaben erledigt!</string>
-    <string name="add_first_task">Tippe auf \'+\' um eine neue Aufgabe hinzuzufügen</string>
-    <string name="great_work">Großartige Arbeit! 🎉</string>
-    <string name="no_tasks">Keine Aufgaben</string>
+    <!-- Task Contexts -->
+    <string name="context_work">Arbeit</string>
+    <string name="context_home">Zuhause</string>
+    <string name="context_errands">Besorgungen</string>
+    <string name="context_calls">Anrufe</string>
+    <string name="context_computer">Computer</string>
+    <string name="context_exercise">Sport</string>
+    <string name="context_learning">Lernen</string>
+    <string name="context_creative">Kreativ</string>
+    <string name="context_none">Kein Kontext</string>
+
+    <!-- Time Units -->
+    <string name="minutes">Minuten</string>
+    <string name="minutes_short">Min</string>
+    <string name="hours">Stunden</string>
+    <string name="hours_short">h</string>
+    <string name="days">Tage</string>
+    <string name="weeks">Wochen</string>
+
+    <!-- Due Date Expressions -->
+    <string name="due_today">Heute fällig</string>
+    <string name="due_tomorrow">Morgen fällig</string>
+    <string name="due_in_days">Fällig in %d Tagen</string>
+    <string name="overdue">Überfällig</string>
+    <string name="overdue_by_days">Überfällig seit %d Tag(en)</string>
+    <string name="no_due_date">Kein Fälligkeitsdatum</string>
+
+    <!-- Smart Features -->
+    <string name="smart_input">Smart-Eingabe</string>
+    <string name="smart_input_hint">z.B. \'Morgen Präsentation vorbereiten - 2h - wichtig\'</string>
+    <string name="smart_input_description">Beschreibe deine Aufgabe natürlich - ich erkenne automatisch Details</string>
+    <string name="smart_score">Smart Score</string>
+    <string name="smart_reasoning">Warum ist das wichtig?</string>
+    <string name="smart_recommendation">Empfehlung</string>
+
+    <!-- Quick Actions -->
+    <string name="quick_wins">Quick Wins</string>
+    <string name="quick_wins_description">Aufgaben die in 15 Minuten oder weniger erledigt werden können</string>
+    <string name="quick_wins_empty">Keine Quick Wins verfügbar</string>
+    <string name="quick_wins_empty_message">Erstelle Aufgaben mit einer Zeitschätzung von 15 Minuten oder weniger</string>
+
+    <!-- View Modes -->
+    <string name="view_mode">Ansicht</string>
+    <string name="view_focus">Smart Focus</string>
+    <string name="view_all">Alle Aufgaben</string>
+    <string name="view_overdue">Überfällig</string>
+    <string name="view_today">Heute</string>
+    <string name="view_quick_wins">Quick Wins</string>
+    <string name="view_by_context">Nach Kontext</string>
+    <string name="view_search">Suche</string>
 
     <!-- Actions -->
     <string name="save">Speichern</string>
     <string name="cancel">Abbrechen</string>
     <string name="close">Schließen</string>
     <string name="edit">Bearbeiten</string>
+    <string name="delete">Löschen</string>
     <string name="ok">OK</string>
+    <string name="yes">Ja</string>
+    <string name="no">Nein</string>
+    <string name="retry">Wiederholen</string>
+    <string name="refresh">Aktualisieren</string>
+    <string name="next">Weiter</string>
+    <string name="previous">Zurück</string>
+    <string name="skip">Überspringen</string>
+    <string name="finish">Fertig</string>
+    <string name="continue_action">Fortfahren</string>
+
+    <!-- Navigation -->
+    <string name="navigation_smart_focus">Smart Focus</string>
+    <string name="navigation_all_tasks">Alle Aufgaben</string>
+    <string name="navigation_history">Historie</string>
+    <string name="navigation_analytics">Statistiken</string>
+    <string name="navigation_settings">Einstellungen</string>
+    <string name="navigation_back">Zurück</string>
+
+    <!-- Progress & Statistics -->
+    <string name="progress">Fortschritt</string>
+    <string name="progress_today">Heutiger Fortschritt</string>
+    <string name="completed_today">Heute erledigt</string>
+    <string name="completed_tasks">Erledigte Aufgaben</string>
+    <string name="pending_tasks">Ausstehende Aufgaben</string>
+    <string name="total_tasks">Aufgaben gesamt</string>
+    <string name="completion_rate">Erledigungsrate</string>
+    <string name="streak_days">Tage Streak</string>
+    <string name="best_day">Bester Tag</string>
+    <string name="average_completion">Durchschnitt pro Tag</string>
+
+    <!-- Progress Messages -->
+    <string name="progress_completed_count">%1$d von %2$d erledigt</string>
+    <string name="progress_percentage">%d%% erledigt</string>
+    <string name="no_tasks_today">Keine Aufgaben für heute</string>
+    <string name="all_tasks_completed">Alle Aufgaben erledigt!</string>
+    <string name="great_work">Großartige Arbeit! 🎉</string>
+    <string name="no_tasks">Keine Aufgaben</string>
 
     <!-- History -->
-    <string name="history_7_days">Historie (7 Tage)</string>
+    <string name="history">Historie</string>
+    <string name="history_title">Historie (7 Tage)</string>
+    <string name="history_weekly">Wöchentliche Übersicht</string>
+    <string name="history_monthly">Monatliche Übersicht</string>
     <string name="today">Heute</string>
-    <string name="completed_tasks_count">%d von %d Aufgaben erledigt</string>
-    <string name="and_more">und %d weitere…</string>
+    <string name="yesterday">Gestern</string>
+    <string name="this_week">Diese Woche</string>
+    <string name="last_week">Letzte Woche</string>
+
+    <!-- Search -->
+    <string name="search">Suchen</string>
+    <string name="search_tasks">Aufgaben suchen…</string>
+    <string name="search_hint">Suche nach Titel, Beschreibung oder Tags</string>
+    <string name="search_no_results">Keine Ergebnisse gefunden</string>
+    <string name="search_no_results_message">Versuche es mit anderen Begriffen oder filtere nach Tags</string>
+    <string name="search_empty_title">Suche nach Aufgaben</string>
+    <string name="search_empty_message">Gib einen Suchbegriff ein um deine Aufgaben zu durchsuchen</string>
+
+    <!-- Filters & Tags -->
+    <string name="filter_by_tags">Nach Tags filtern</string>
+    <string name="filter_by_context">Nach Kontext filtern</string>
+    <string name="filter_by_priority">Nach Priorität filtern</string>
+    <string name="show_all">Alle anzeigen</string>
+    <string name="clear_filter">Filter löschen</string>
+    <string name="add_tag">Tag hinzufügen</string>
+    <string name="new_tag">Neuer Tag</string>
+    <string name="popular_tags">Beliebte Tags</string>
 
     <!-- Settings -->
+    <string name="settings">Einstellungen</string>
+    <string name="settings_general">Allgemein</string>
+    <string name="settings_smart_focus">Smart Focus</string>
+    <string name="settings_notifications">Benachrichtigungen</string>
+    <string name="settings_productivity">Produktivität</string>
+    <string name="settings_appearance">Erscheinungsbild</string>
+    <string name="settings_privacy">Privatsphäre</string>
+    <string name="settings_backup">Sicherung</string>
+    <string name="settings_about">Über die App</string>
+
+    <!-- Smart Focus Settings -->
+    <string name="enable_smart_focus">Smart Focus aktivieren</string>
+    <string name="enable_smart_focus_description">Zeige automatisch die 5 wichtigsten Aufgaben</string>
+    <string name="smart_scoring">Intelligente Bewertung</string>
+    <string name="smart_scoring_description">Aufgaben automatisch nach Wichtigkeit sortieren</string>
+    <string name="preferred_task_count">Anzahl Focus-Aufgaben</string>
+    <string name="natural_language_input">Natürliche Spracheingabe</string>
+    <string name="natural_language_description">Aufgaben in normaler Sprache erstellen</string>
+
+    <!-- Notifications -->
     <string name="notifications">Benachrichtigungen</string>
     <string name="daily_reminders">Tägliche Erinnerungen</string>
-    <string name="daily_reminders_description">Erhalte tägliche Benachrichtigungen für offene Aufgaben</string>
+    <string name="daily_reminders_description">Erhalte Benachrichtigungen für offene Aufgaben</string>
     <string name="notification_time">Benachrichtigungszeit</string>
-    <string name="notification_time_description">Tippen zum Ändern</string>
-    <string name="notification_permission_required">Benachrichtigungsberechtigung erforderlich</string>
+    <string name="notification_time_description">Wann möchtest du erinnert werden?</string>
     <string name="select_notification_time">Benachrichtigungszeit auswählen</string>
+    <string name="notification_permission_required">Benachrichtigungsberechtigung erforderlich</string>
 
-    <!-- App Info -->
+    <!-- Productivity Settings -->
+    <string name="productivity_tracking">Produktivitäts-Tracking</string>
+    <string name="productivity_tracking_description">Verfolge deine täglichen Fortschritte</string>
+    <string name="daily_goal">Tägliches Ziel</string>
+    <string name="weekly_goal">Wöchentliches Ziel</string>
+    <string name="motivational_messages">Motivationsnachrichten</string>
+    <string name="motivational_messages_description">Erhalte ermutigende Nachrichten</string>
+    <string name="working_hours">Arbeitszeiten</string>
+    <string name="energy_schedule">Energie-Zeitplan</string>
+
+    <!-- Appearance Settings -->
+    <string name="theme">Design</string>
+    <string name="theme_light">Hell</string>
+    <string name="theme_dark">Dunkel</string>
+    <string name="theme_system">System-Standard</string>
+    <string name="dynamic_colors">Dynamische Farben</string>
+    <string name="dynamic_colors_description">Nutze Farben aus deinem Wallpaper (Android 12+)</string>
+
+    <!-- App Information -->
     <string name="app_info">App-Information</string>
     <string name="version">Version</string>
-    <string name="version_number">1.0.0</string>
+    <string name="version_number">2.0.0</string>
     <string name="developed_with">Entwickelt mit</string>
     <string name="tech_stack">Jetpack Compose &amp; Material 3</string>
     <string name="data_storage">Datenspeicherung</string>
     <string name="storage_description">Lokal auf dem Gerät (Room Database)</string>
-
-    <!-- Features -->
-    <string name="features">Features</string>
-    <string name="feature_daily_lists">✅ Tägliche Aufgabenlisten</string>
-    <string name="feature_priorities">✅ Prioritäten &amp; Farben</string>
-    <string name="feature_drag_drop">✅ Drag &amp; Drop Sortierung</string>
-    <string name="feature_history">✅ 7-Tage Historie</string>
-    <string name="feature_widget">✅ Home Screen Widget</string>
-    <string name="feature_themes">✅ Dark/Light Mode</string>
-    <string name="feature_offline">✅ Offline-Funktionalität</string>
-
-    <!-- Accessibility -->
-    <string name="task_completed">Aufgabe erledigt</string>
-    <string name="task_pending">Aufgabe ausstehend</string>
-    <string name="show_completed_tasks">Erledigte Aufgaben anzeigen</string>
-    <string name="hide_completed_tasks">Erledigte Aufgaben ausblenden</string>
-    <string name="priority_indicator">Prioritätsindikator</string>
-    <string name="task_checkbox">Aufgaben-Checkbox</string>
-    <string name="edit_task_button">Aufgabe bearbeiten</string>
-    <string name="delete_task_button">Aufgabe löschen</string>
+    <string name="privacy_policy">Datenschutzerklärung</string>
+    <string name="terms_of_service">Nutzungsbedingungen</string>
+    <string name="contact">Kontakt</string>
+    <string name="feedback">Feedback</string>
 
     <!-- Error Messages -->
     <string name="error_loading_tasks">Fehler beim Laden der Aufgaben</string>
     <string name="error_saving_task">Fehler beim Speichern der Aufgabe</string>
-    <string name="task_title_required">Titel ist erforderlich</string>
+    <string name="error_deleting_task">Fehler beim Löschen der Aufgabe</string>
+    <string name="error_updating_task">Fehler beim Aktualisieren der Aufgabe</string>
+    <string name="error_network">Netzwerkfehler</string>
+    <string name="error_unknown">Ein unbekannter Fehler ist aufgetreten</string>
+    <string name="error_permission_denied">Berechtigung verweigert</string>
+    <string name="error_file_not_found">Datei nicht gefunden</string>
+
+    <!-- Validation Messages -->
+    <string name="validation_title_required">Titel ist erforderlich</string>
+    <string name="validation_title_too_long">Titel ist zu lang (max. 200 Zeichen)</string>
+    <string name="validation_description_too_long">Beschreibung ist zu lang (max. 1000 Zeichen)</string>
+    <string name="validation_invalid_date">Ungültiges Datum</string>
+    <string name="validation_invalid_time">Ungültige Zeitangabe</string>
+    <string name="validation_date_in_past">Datum liegt in der Vergangenheit</string>
 
     <!-- Success Messages -->
-    <string name="task_added">Aufgabe hinzugefügt</string>
-    <string name="task_updated">Aufgabe aktualisiert</string>
-    <string name="task_deleted">Aufgabe gelöscht</string>
-    <string name="task_completed_success">Aufgabe als erledigt markiert</string>
+    <string name="success_task_added">Aufgabe hinzugefügt</string>
+    <string name="success_task_updated">Aufgabe aktualisiert</string>
+    <string name="success_task_deleted">Aufgabe gelöscht</string>
+    <string name="success_task_completed">Aufgabe als erledigt markiert</string>
+    <string name="success_data_updated">Daten aktualisiert</string>
+    <string name="success_settings_saved">Einstellungen gespeichert</string>
+    <string name="success_backup_created">Backup erstellt</string>
+    <string name="success_data_imported">Daten importiert</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Zeigt deine heutigen Aufgaben mit Fortschritt</string>
+    <string name="widget_no_tasks">Keine Aufgaben</string>
+    <string name="widget_all_completed">Alle erledigt! 🎉</string>
+    <string name="widget_click_to_open">Tippen um App zu öffnen</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Willkommen bei Daily List!</string>
+    <string name="onboarding_welcome_subtitle">Die intelligente To-Do App, die sich an deinen Arbeitsrhythmus anpasst</string>
+    <string name="onboarding_feature_smart_focus">Smart Focus zeigt dir immer die 5 wichtigsten Aufgaben</string>
+    <string name="onboarding_feature_intelligent">Intelligente Priorisierung basierend auf Deadlines und Kontext</string>
+    <string name="onboarding_feature_quick_wins">Quick Wins für produktive Pausen</string>
+    <string name="onboarding_feature_tracking">Produktivitäts-Tracking und Motivation</string>
+
+    <string name="onboarding_work_style_title">Wie arbeitest du am liebsten?</string>
+    <string name="onboarding_work_style_subtitle">Das hilft uns, die App an deinen Arbeitsrhythmus anzupassen</string>
+
+    <string name="onboarding_context_title">In welchen Bereichen arbeitest du?</string>
+    <string name="onboarding_context_subtitle">Wähle die Arbeitsbereiche aus, die für dich relevant sind</string>
+
+    <string name="onboarding_schedule_title">Wann bist du am produktivsten?</string>
+    <string name="onboarding_schedule_subtitle">Diese Informationen helfen bei der intelligenten Aufgabenplanung</string>
+
+    <string name="onboarding_complete_title">Perfekt! Du bist startklar!</string>
+    <string name="onboarding_complete_subtitle">Daily List ist jetzt an deine Arbeitsweise angepasst</string>
+    <string name="onboarding_start">Los geht\'s!</string>
+
+    <!-- Work Styles -->
+    <string name="work_style_focused">Deep Work</string>
+    <string name="work_style_focused_desc">Ich arbeite gerne in langen, fokussierten Blöcken ohne Unterbrechungen</string>
+    <string name="work_style_flexible">Flexibel</string>
+    <string name="work_style_flexible_desc">Ich wechsle gerne zwischen verschiedenen Aufgaben und passe mich an</string>
+    <string name="work_style_structured">Strukturiert</string>
+    <string name="work_style_structured_desc">Ich bevorzuge feste Routinen und gut geplante Arbeitsblöcke</string>
+    <string name="work_style_creative">Kreativ</string>
+    <string name="work_style_creative_desc">Ich arbeite am besten, wenn ich kreativ und spontan sein kann</string>
+    <string name="work_style_efficient">Effizient</string>
+    <string name="work_style_efficient_desc">Ich liebe Quick Wins und möchte möglichst viel in kurzer Zeit schaffen</string>
+
+    <!-- Time Slots -->
+    <string name="time_early_morning">Früh morgens</string>
+    <string name="time_morning">Vormittag</string>
+    <string name="time_noon">Mittag</string>
+    <string name="time_afternoon">Nachmittag</string>
+    <string name="time_evening">Abend</string>
+    <string name="time_late_evening">Spät abends</string>
+
+    <!-- Working Hours -->
+    <string name="working_hours_title">Arbeitszeiten</string>
+    <string name="working_hours_from">Von:</string>
+    <string name="working_hours_to">Bis:</string>
+    <string name="energy_peaks_title">Energie-Hochzeiten</string>
+    <string name="energy_peaks_subtitle">Wann hast du die meiste Energie für schwierige Aufgaben?</string>
+
+    <!-- Motivational Messages -->
+    <string name="motivation_streak">🔥 %d Tage am Stück! Du bist unstoppbar!</string>
+    <string name="motivation_productive">🚀 Du bist heute richtig produktiv!</string>
+    <string name="motivation_completed">✅ %d Aufgaben geschafft - Weiter so!</string>
+    <string name="motivation_gentle_nudge">🌟 Ein kleiner Schritt zählt!</string>
+    <string name="motivation_achievement">🏆 Incredible! Du hast dein Ziel erreicht!</string>
+    <string name="motivation_keep_going">💪 Jeder Schritt zählt! Weiter so!</string>
+
+    <!-- Recommendations -->
+    <string name="recommendation_urgent">Solltest du jetzt sofort machen! 🚀</string>
+    <string name="recommendation_important">Eine der wichtigsten Aufgaben heute. 💪</string>
+    <string name="recommendation_today">Solltest du heute noch schaffen. 👍</string>
+    <string name="recommendation_later">Kannst du später machen. ⏰</string>
+    <string name="recommendation_low">Nicht dringend, aber nicht vergessen. 📝</string>
+
+    <!-- Analytics -->
+    <string name="analytics_title">Produktivitäts-Analyse</string>
+    <string name="analytics_overview">Übersicht</string>
+    <string name="analytics_trends">Trends</string>
+    <string name="analytics_insights">Erkenntnisse</string>
+    <string name="analytics_weekly_breakdown">Wöchentlicher Verlauf</string>
+    <string name="analytics_best_day">Bester Tag</string>
+    <string name="analytics_productivity_trend">Produktivitätstrend</string>
+    <string name="analytics_trend_improving">📈 Steigend</string>
+    <string name="analytics_trend_stable">➡️ Stabil</string>
+    <string name="analytics_trend_declining">📉 Fallend</string>
+
+    <!-- Data Management -->
+    <string name="data_backup">Datensicherung</string>
+    <string name="data_export">Daten exportieren</string>
+    <string name="data_import">Daten importieren</string>
+    <string name="data_reset">Daten zurücksetzen</string>
+    <string name="data_backup_description">Erstelle eine Sicherungskopie deiner Aufgaben</string>
+    <string name="data_export_description">Exportiere deine Aufgaben als JSON-Datei</string>
+    <string name="data_import_description">Importiere Aufgaben aus einer JSON-Datei</string>
+    <string name="data_reset_warning">Achtung: Alle Daten werden gelöscht!</string>
+
+    <!-- Accessibility -->
+    <string name="accessibility_task_completed">Aufgabe erledigt</string>
+    <string name="accessibility_task_pending">Aufgabe ausstehend</string>
+    <string name="accessibility_priority_high">Hohe Priorität</string>
+    <string name="accessibility_priority_medium">Mittlere Priorität</string>
+    <string name="accessibility_priority_low">Niedrige Priorität</string>
+    <string name="accessibility_show_completed">Erledigte Aufgaben anzeigen</string>
+    <string name="accessibility_hide_completed">Erledigte Aufgaben ausblenden</string>
+    <string name="accessibility_task_checkbox">Aufgaben-Checkbox</string>
+    <string name="accessibility_edit_task">Aufgabe bearbeiten</string>
+    <string name="accessibility_delete_task">Aufgabe löschen</string>
+    <string name="accessibility_task_details">Aufgabendetails anzeigen</string>
+    <string name="accessibility_show_reasoning">Zeige warum diese Aufgabe wichtig ist</string>
+
+    <!-- Plurals -->
+    <plurals name="tasks_count">
+        <item quantity="zero">Keine Aufgaben</item>
+        <item quantity="one">1 Aufgabe</item>
+        <item quantity="other">%d Aufgaben</item>
+    </plurals>
+
+    <plurals name="days_count">
+        <item quantity="zero">Heute</item>
+        <item quantity="one">1 Tag</item>
+        <item quantity="other">%d Tage</item>
+    </plurals>
+
+    <plurals name="minutes_count">
+        <item quantity="zero">0 Minuten</item>
+        <item quantity="one">1 Minute</item>
+        <item quantity="other">%d Minuten</item>
+    </plurals>
+
+    <!-- Advanced Features -->
+    <string name="advanced_features">Erweiterte Funktionen</string>
+    <string name="experimental_features">Experimentelle Funktionen</string>
+    <string name="voice_input">Spracheingabe</string>
+    <string name="voice_input_description">Aufgaben per Sprache hinzufügen</string>
+    <string name="gesture_navigation">Gesten-Navigation</string>
+    <string name="gesture_navigation_description">Swipe-Gesten für Aktionen</string>
+
+    <!-- Premium Features -->
+    <string name="premium_features">Premium-Funktionen</string>
+    <string name="upgrade_to_premium">Auf Premium upgraden</string>
+    <string name="premium_unlimited_tasks">Unbegrenzte Aufgaben</string>
+    <string name="premium_advanced_analytics">Erweiterte Analysen</string>
+    <string name="premium_cloud_sync">Cloud-Synchronisation</string>
+    <string name="premium_custom_themes">Benutzerdefinierte Designs</string>
+
+    <!-- Misc -->
+    <string name="loading">Lädt…</string>
+    <string name="unknown">Unbekannt</string>
+    <string name="none">Keine</string>
+    <string name="all">Alle</string>
+    <string name="other">Andere</string>
+    <string name="custom">Benutzerdefiniert</string>
+    <string name="default_value">Standard</string>
+    <string name="optional">Optional</string>
+    <string name="required">Erforderlich</string>
+    <string name="recommended">Empfohlen</string>
+    <string name="beta">Beta</string>
+    <string name="new_feature">Neu</string>
+    <string name="coming_soon">Demnächst</string>
 </resources>
