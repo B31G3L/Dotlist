@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -11,9 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import de.beigel.list.data.TaskDatabase
 import de.beigel.list.repository.TaskRepository
 import de.beigel.list.ui.screens.TaskListScreen
@@ -24,7 +24,7 @@ import de.beigel.list.viewmodel.TaskViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Install splash screen
+        // Einfache Splash Screen Installation
         installSplashScreen()
 
         super.onCreate(savedInstanceState)
@@ -45,18 +45,35 @@ class MainActivity : ComponentActivity() {
                         TaskViewModel(repository)
                     }
 
+                    // Einfache Navigation ohne komplexe Animationen
                     NavHost(
                         navController = navController,
-                        startDestination = "task_list"
+                        startDestination = "task_list",
+                        enterTransition = {
+                            fadeIn(animationSpec = tween(300))
+                        },
+                        exitTransition = {
+                            fadeOut(animationSpec = tween(300))
+                        },
+                        popEnterTransition = {
+                            fadeIn(animationSpec = tween(300))
+                        },
+                        popExitTransition = {
+                            fadeOut(animationSpec = tween(300))
+                        }
                     ) {
                         composable("task_list") {
                             TaskListScreen(
                                 viewModel = viewModel,
                                 onNavigateToHistory = {
-                                    navController.navigate("history")
+                                    navController.navigate("history") {
+                                        launchSingleTop = true
+                                    }
                                 },
                                 onNavigateToSettings = {
-                                    navController.navigate("settings")
+                                    navController.navigate("settings") {
+                                        launchSingleTop = true
+                                    }
                                 }
                             )
                         }

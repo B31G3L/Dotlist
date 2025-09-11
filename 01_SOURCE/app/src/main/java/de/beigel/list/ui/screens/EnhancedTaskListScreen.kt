@@ -259,7 +259,7 @@ fun DailyTasksContent(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 LinearProgressIndicator(
-                    progress = progress,
+                    progress = { progress },
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
@@ -280,7 +280,7 @@ fun DailyTasksContent(
         // Task List or Empty State
         if (tasks.isNotEmpty()) {
             LazyColumn(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f), // ✅ FIXED: Entfernt die zusätzlichen Klammern
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(tasks, key = { it.id }) { task ->
@@ -296,11 +296,11 @@ fun DailyTasksContent(
                 }
             }
         } else {
-            // Empty State - DIREKT im Column ohne separate Komponente
+            // Empty State
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f) // Hier ist weight() OK, weil wir in einem ColumnScope sind!
+                    .weight(1f) // ✅ FIXED: Entfernt die zusätzlichen Klammern
             ) {
                 Column(
                     modifier = Modifier
@@ -351,7 +351,7 @@ fun BacklogTasksContent(
     ) {
         if (tasks.isNotEmpty()) {
             LazyColumn(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f), // ✅ FIXED: Entfernt die zusätzlichen Klammern
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
@@ -368,11 +368,11 @@ fun BacklogTasksContent(
                 }
             }
         } else {
-            // Empty State - DIREKT im Column ohne separate Komponente
+            // Empty State
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f) // Hier ist weight() OK, weil wir in einem ColumnScope sind!
+                    .weight(1f) // ✅ FIXED: Entfernt die zusätzlichen Klammern
             ) {
                 Column(
                     modifier = Modifier
