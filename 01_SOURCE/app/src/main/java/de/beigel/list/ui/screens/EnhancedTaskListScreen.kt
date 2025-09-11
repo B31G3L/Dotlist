@@ -23,6 +23,7 @@ import de.beigel.list.ui.dialogs.AddEditTaskDialog
 import de.beigel.list.ui.dialogs.TaskDetailsDialog
 import de.beigel.list.ui.components.TaskItem
 import de.beigel.list.settings.SettingsManager
+import de.beigel.list.ui.components.SwipeableTaskItem
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -284,7 +285,7 @@ fun DailyTasksContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(tasks, key = { it.id }) { task ->
-                    TaskItem(
+                    SwipeableTaskItem(
                         task = task,
                         onToggleComplete = { viewModel.toggleTaskCompletion(task) },
                         onEdit = { viewModel.setDialogState(DialogState.EditTask(task)) },
@@ -356,14 +357,14 @@ fun BacklogTasksContent(
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 items(tasks, key = { it.id }) { task ->
-                    TaskItem(
+                    SwipeableTaskItem(
                         task = task,
                         onToggleComplete = { viewModel.toggleTaskCompletion(task) },
                         onEdit = { viewModel.setDialogState(DialogState.EditTask(task)) },
                         onDelete = { viewModel.deleteTask(task) },
                         onShowDetails = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
-                        showMoveToDaily = true,
-                        onMoveToDaily = { viewModel.moveTaskToDaily(task) }
+                        showMoveToBacklog = true,
+                        onMoveToBacklog = { viewModel.moveTaskToBacklog(task) }
                     )
                 }
             }
