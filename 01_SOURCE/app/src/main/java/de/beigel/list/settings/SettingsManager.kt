@@ -17,4 +17,14 @@ class SettingsManager(context: Context) {
     var notificationMinute: Int
         get() = prefs.getInt("notification_minute", 0)
         set(value) = prefs.edit().putInt("notification_minute", value).apply()
+
+    // NEU: Maximale Anzahl täglicher Aufgaben
+    var maxDailyTasks: Int
+        get() = prefs.getInt("max_daily_tasks", 5)
+        set(value) = prefs.edit().putInt("max_daily_tasks", value).apply()
+
+    // NEU: Auto-Backlog aktiviert
+    var autoBacklogEnabled: Boolean
+        get() = prefs.getBoolean("auto_backlog_enabled", true)
+        set(value) = prefs.edit().putBoolean("auto_backlog_enabled", value).apply()
 }

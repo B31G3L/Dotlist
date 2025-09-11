@@ -25,7 +25,11 @@ fun TaskItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onShowDetails: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showMoveToDaily: Boolean = false,
+    showMoveToBacklog: Boolean = false,
+    onMoveToDaily: () -> Unit = {},
+    onMoveToBacklog: () -> Unit = {}
 ) {
     Card(
         modifier = modifier
@@ -68,14 +72,34 @@ fun TaskItem(
 
             // Task Content
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color(0xFF3C3C3C),
-                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color(0xFF3C3C3C),
+                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    // Daily/Backlog Indicator
+                    if (!task.isInDailyList) {
+                        Badge(
+                            containerColor = Color(0xFF666666).copy(alpha = 0.7f)
+                        ) {
+                            Text(
+                                text = "B",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
 
                 if (task.description.isNotBlank()) {
                     Text(
@@ -88,19 +112,36 @@ fun TaskItem(
                 }
 
                 // Priority Badge
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = task.priority.displayName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(task.priority.color)
-                    )
-                }
+                Text(
+                    text = task.priority.displayName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(task.priority.color)
+                )
             }
 
             // Action Buttons
             Row {
+                // Move Buttons
+                if (showMoveToDaily) {
+                    IconButton(onClick = onMoveToDaily) {
+                        Icon(
+                            Icons.Default.Today,
+                            contentDescription = "Zu Heute",
+                            tint = Color(0xFF009966)
+                        )
+                    }
+                }
+
+                if (showMoveToBacklog) {
+                    IconButton(onClick = onMoveToBacklog) {
+                        Icon(
+                            Icons.Default.Inventory,
+                            contentDescription = "Zu Backlog",
+                            tint = Color(0xFF666666)
+                        )
+                    }
+                }
+
                 IconButton(onClick = onEdit) {
                     Icon(
                         Icons.Default.Edit,

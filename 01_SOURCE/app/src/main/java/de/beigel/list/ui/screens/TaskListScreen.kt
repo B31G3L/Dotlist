@@ -1,4 +1,3 @@
-
 package de.beigel.list.ui.screens
 
 import androidx.compose.foundation.layout.*
@@ -11,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -18,9 +18,11 @@ import de.beigel.list.data.TaskEntity
 import de.beigel.list.data.TaskPriority
 import de.beigel.list.viewmodel.TaskViewModel
 import de.beigel.list.viewmodel.DialogState
+import de.beigel.list.viewmodel.ViewType
 import de.beigel.list.ui.dialogs.AddEditTaskDialog
 import de.beigel.list.ui.dialogs.TaskDetailsDialog
 import de.beigel.list.ui.components.TaskItem
+import de.beigel.list.settings.SettingsManager
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -32,12 +34,14 @@ fun TaskListScreen(
     onNavigateToSettings: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val tasks by viewModel.todayTasks.collectAsState()
+    val todayTasks by viewModel.todayTasks.collectAsState()
+    val backlogTasks by viewModel.backlogTasks.collectAsState()
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
 
-    val filteredTasks = if (uiState.showCompletedTasks) {
-        tasks
-    } else {
-        tasks.filter { !it.isCompleted }
+    val currentTasks = when (uiState.currentView) {
+        ViewType.DAILY -> if (uiState.showCompletedTasks) todayTasks else todayTasks.filter { !it.isCompleted }
+        ViewType.BACKLOG -> if (uiState.showCompletedTasks) backlogTasks else backlogTasks.filter { !it.isCompleted }
     }
 
     // Handle Dialog States
@@ -46,8 +50,10 @@ fun TaskListScreen(
             AddEditTaskDialog(
                 onDismiss = { viewModel.setDialogState(DialogState.None) },
                 onSave = { title, description, priority ->
-                    viewModel.addTask(title, description, priority)
-                }
+                    viewModel.addTask(title, description, priority, dialogState.addToDaily)
+                },
+                showDestinationChoice = true,
+                initialAddToDaily = dialogState.addToDaily
             )
         }
         is DialogState.EditTask -> {
@@ -70,7 +76,9 @@ fun TaskListScreen(
             TaskDetailsDialog(
                 task = dialogState.task,
                 onDismiss = { viewModel.setDialogState(DialogState.None) },
-                onEdit = { viewModel.setDialogState(DialogState.EditTask(dialogState.task)) }
+                onEdit = { viewModel.setDialogState(DialogState.EditTask(dialogState.task)) },
+                onMoveToDaily = { viewModel.moveTaskToDaily(dialogState.task) },
+                onMoveToBacklog = { viewModel.moveTaskToBacklog(dialogState.task) }
             )
         }
         DialogState.None -> { /* No dialog */ }
@@ -87,13 +95,31 @@ fun TaskListScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
+                            text = when (uiState.currentView) {
+                                ViewType.DAILY -> "${todayTasks.size}/${settingsManager.maxDailyTasks} heute"
+                                ViewType.BACKLOG -> "${backlogTasks.size} im Backlog"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                     }
                 },
                 actions = {
+                    // Fill from Backlog Button (nur bei Daily View)
+                    if (uiState.currentView == ViewType.DAILY && backlogTasks.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                viewModel.fillFromBacklog(settingsManager.maxDailyTasks)
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.PlaylistAdd,
+                                contentDescription = "Aus Backlog auffüllen",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
                     IconButton(onClick = onNavigateToHistory) {
                         Icon(
                             Icons.Default.History,
@@ -127,13 +153,22 @@ fun TaskListScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { viewModel.setDialogState(DialogState.AddTask) },
+                onClick = {
+                    viewModel.setDialogState(
+                        DialogState.AddTask(addToDaily = uiState.currentView == ViewType.DAILY)
+                    )
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Aufgabe hinzufügen")
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Aufgabe hinzufügen")
+                Text(
+                    when (uiState.currentView) {
+                        ViewType.DAILY -> "Zur Liste"
+                        ViewType.BACKLOG -> "Zum Backlog"
+                    }
+                )
             }
         }
     ) { paddingValues ->
@@ -141,107 +176,235 @@ fun TaskListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp)
         ) {
-            // Progress Card
-            val completedCount = tasks.count { it.isCompleted }
-            val totalCount = tasks.size
-            val progress = if (totalCount > 0) completedCount.toFloat() / totalCount.toFloat() else 0f
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                )
+            // Tab Row
+            TabRow(
+                selectedTabIndex = uiState.currentView.ordinal,
+                containerColor = MaterialTheme.colorScheme.background
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+                Tab(
+                    selected = uiState.currentView == ViewType.DAILY,
+                    onClick = { viewModel.setCurrentView(ViewType.DAILY) },
+                    text = { Text("Heute") }
+                )
+                Tab(
+                    selected = uiState.currentView == ViewType.BACKLOG,
+                    onClick = { viewModel.setCurrentView(ViewType.BACKLOG) },
+                    text = { Text("Backlog") }
+                )
+            }
+
+            // Content
+            when (uiState.currentView) {
+                ViewType.DAILY -> DailyTasksContent(
+                    tasks = currentTasks,
+                    totalTasks = todayTasks,
+                    maxTasks = settingsManager.maxDailyTasks,
+                    viewModel = viewModel
+                )
+                ViewType.BACKLOG -> BacklogTasksContent(
+                    tasks = currentTasks,
+                    viewModel = viewModel
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DailyTasksContent(
+    tasks: List<TaskEntity>,
+    totalTasks: List<TaskEntity>,
+    maxTasks: Int,
+    viewModel: TaskViewModel
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        // Progress Card
+        val completedCount = totalTasks.count { it.isCompleted }
+        val totalCount = totalTasks.size
+        val progress = if (totalCount > 0) completedCount.toFloat() / totalCount.toFloat() else 0f
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Fortschritt",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "$completedCount von $totalCount",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    LinearProgressIndicator(
-                        progress = progress,
-                        modifier = Modifier.fillMaxWidth(),
+                    Text(
+                        text = "Fortschritt",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "$completedCount von $totalCount (max. $maxTasks)",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                LinearProgressIndicator(
+                    progress = progress,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                )
+
+                // Warnung wenn Limit überschritten
+                if (totalCount > maxTasks) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "⚠️ Du hast ${totalCount - maxTasks} Aufgaben über dem Limit",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Task List
-            if (filteredTasks.isNotEmpty()) {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(filteredTasks, key = { it.id }) { task ->
-                        TaskItem(
-                            task = task,
-                            onToggleComplete = { viewModel.toggleTaskCompletion(task) },
-                            onEdit = { viewModel.setDialogState(DialogState.EditTask(task)) },
-                            onDelete = { viewModel.deleteTask(task) },
-                            onShowDetails = { viewModel.setDialogState(DialogState.TaskDetails(task)) }
-                        )
-                    }
+        // Task List or Empty State
+        if (tasks.isNotEmpty()) {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(tasks, key = { it.id }) { task ->
+                    TaskItem(
+                        task = task,
+                        onToggleComplete = { viewModel.toggleTaskCompletion(task) },
+                        onEdit = { viewModel.setDialogState(DialogState.EditTask(task)) },
+                        onDelete = { viewModel.deleteTask(task) },
+                        onShowDetails = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
+                        showMoveToBacklog = true,
+                        onMoveToBacklog = { viewModel.moveTaskToBacklog(task) }
+                    )
                 }
-            } else {
-                // Empty State
-                Card(
+            }
+        } else {
+            // Empty State - DIREKT im Column ohne separate Komponente
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f) // Hier ist weight() OK, weil wir in einem ColumnScope sind!
+            ) {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Task,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                        )
+                    Icon(
+                        Icons.Default.Task,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    )
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                        Text(
-                            text = if (uiState.showCompletedTasks) "Keine Aufgaben für heute" else "Alle Aufgaben erledigt!",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center
-                        )
+                    Text(
+                        text = "Keine Aufgaben für heute",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                        Text(
-                            text = if (uiState.showCompletedTasks) "Tippe auf '+' um eine neue Aufgabe hinzuzufügen" else "Großartige Arbeit! 🎉",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    Text(
+                        text = "Tippe auf '+' um eine neue Aufgabe hinzuzufügen",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BacklogTasksContent(
+    tasks: List<TaskEntity>,
+    viewModel: TaskViewModel
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        if (tasks.isNotEmpty()) {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(tasks, key = { it.id }) { task ->
+                    TaskItem(
+                        task = task,
+                        onToggleComplete = { viewModel.toggleTaskCompletion(task) },
+                        onEdit = { viewModel.setDialogState(DialogState.EditTask(task)) },
+                        onDelete = { viewModel.deleteTask(task) },
+                        onShowDetails = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
+                        showMoveToDaily = true,
+                        onMoveToDaily = { viewModel.moveTaskToDaily(task) }
+                    )
+                }
+            }
+        } else {
+            // Empty State - DIREKT im Column ohne separate Komponente
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f) // Hier ist weight() OK, weil wir in einem ColumnScope sind!
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.Task,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Backlog ist leer",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Alle zusätzlichen Aufgaben werden hier gespeichert",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }

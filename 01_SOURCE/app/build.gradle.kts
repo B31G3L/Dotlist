@@ -106,4 +106,9 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    // Coroutines (falls noch nicht vorhanden)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Für Permissions
+    implementation("androidx.activity:activity-compose:1.8.2")
 }

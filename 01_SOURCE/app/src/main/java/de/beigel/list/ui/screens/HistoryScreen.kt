@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack // FIXED: AutoMirrored
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,7 +40,8 @@ fun HistoryScreen(
 
         for (i in 0..6) {
             val date = LocalDate.now().minusDays(i.toLong())
-            val tasks = repository.getTasksForDate(date).first()
+            // FIXED: Verwende getAllTasksForDate statt getTasksForDate
+            val tasks: List<TaskEntity> = repository.getAllTasksForDate(date).first()
             val completionRate = repository.getCompletionRate(date)
 
             data.add(
@@ -68,7 +69,7 @@ fun HistoryScreen(
         ) {
             IconButton(onClick = onNavigateBack) {
                 Icon(
-                    Icons.Default.ArrowBack,
+                    Icons.AutoMirrored.Filled.ArrowBack, // FIXED: AutoMirrored
                     contentDescription = "Zurück",
                     tint = Color(0xFF009966)
                 )
@@ -176,10 +177,10 @@ fun HistoryDayCard(dayData: HistoryDayData) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Progress Bar
+            // Progress Bar - FIXED: Deprecated API
             if (totalTasks > 0) {
                 LinearProgressIndicator(
-                    progress = dayData.completionRate,
+                    progress = { dayData.completionRate }, // FIXED: Lambda-Version
                     modifier = Modifier.fillMaxWidth(),
                     color = Color(0xFF009966),
                     trackColor = Color(0xFF009966).copy(alpha = 0.3f)

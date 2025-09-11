@@ -21,7 +21,6 @@ import de.beigel.list.ui.screens.HistoryScreen
 import de.beigel.list.ui.screens.SettingsScreen
 import de.beigel.list.ui.theme.DailyListTheme
 import de.beigel.list.viewmodel.TaskViewModel
-import de.beigel.list.viewmodel.TaskViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,9 +41,9 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    val viewModel: TaskViewModel = viewModel(
-                        factory = TaskViewModelFactory(repository)
-                    )
+                    val viewModel: TaskViewModel = viewModel {
+                        TaskViewModel(repository)
+                    }
 
                     NavHost(
                         navController = navController,

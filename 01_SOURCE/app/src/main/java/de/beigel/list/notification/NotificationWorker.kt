@@ -16,7 +16,6 @@ import de.beigel.list.data.TaskDatabase
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
-import java.util.jar.Manifest
 
 class NotificationWorker(
     context: Context,
@@ -27,9 +26,11 @@ class NotificationWorker(
         createNotificationChannel()
 
         val database = TaskDatabase.getDatabase(applicationContext)
-        val tasks = database.taskDao().getTasksForDate(LocalDate.now().toString()).first()
+        // FIXED: Verwende getDailyTasksForDate statt getTasksForDate
+        val tasks = database.taskDao().getDailyTasksForDate(LocalDate.now().toString()).first()
 
-        val pendingTasks = tasks.filter { !it.isCompleted }
+        // FIXED: Explizite Typisierung für filter
+        val pendingTasks: List<de.beigel.list.data.TaskEntity> = tasks.filter { !it.isCompleted }
 
         if (pendingTasks.isNotEmpty()) {
             showNotification(pendingTasks.size)
@@ -52,6 +53,7 @@ class NotificationWorker(
             notificationManager.createNotificationChannel(channel)
         }
     }
+
     private fun showNotification(pendingTasksCount: Int) {
         val intent = Intent(applicationContext, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(

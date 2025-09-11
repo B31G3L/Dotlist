@@ -16,14 +16,21 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(TaskUiState())
     val uiState: StateFlow<TaskUiState> = _uiState.asStateFlow()
 
-    val todayTasks = repository.getTasksForToday()
+    val todayTasks = repository.getDailyTasksForToday()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    fun addTask(title: String, description: String = "", priority: TaskPriority = TaskPriority.MEDIUM) {
+    val backlogTasks = repository.getBacklogTasks()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun addTask(title: String, description: String = "", priority: TaskPriority = TaskPriority.MEDIUM, addToDaily: Boolean = true) {
         if (title.isBlank()) return
 
         viewModelScope.launch {
@@ -31,9 +38,10 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
                 title = title.trim(),
                 description = description.trim(),
                 priority = priority,
-                position = todayTasks.value.size
+                position = if (addToDaily) todayTasks.value.size else 0,
+                backlogPosition = if (!addToDaily) backlogTasks.value.size else 0
             )
-            repository.insertTask(newTask)
+            repository.insertTask(newTask, addToDaily)
         }
     }
 
@@ -59,17 +67,21 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
-    fun reorderTasks(fromIndex: Int, toIndex: Int) {
+    fun moveTaskToDaily(task: TaskEntity) {
         viewModelScope.launch {
-            val currentTasks = todayTasks.value.toMutableList()
-            val movedTask = currentTasks.removeAt(fromIndex)
-            currentTasks.add(toIndex, movedTask)
+            repository.moveTaskToDaily(task)
+        }
+    }
 
-            val updatedTasks = currentTasks.mapIndexed { index, task ->
-                task.copy(position = index)
-            }
+    fun moveTaskToBacklog(task: TaskEntity) {
+        viewModelScope.launch {
+            repository.moveTaskToBacklog(task)
+        }
+    }
 
-            repository.updateTaskPositions(updatedTasks)
+    fun fillFromBacklog(maxTasks: Int) {
+        viewModelScope.launch {
+            repository.fillDailyListFromBacklog(maxTasks)
         }
     }
 
@@ -80,26 +92,25 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     fun setDialogState(state: DialogState) {
         _uiState.update { it.copy(dialogState = state) }
     }
+
+    fun setCurrentView(view: ViewType) {
+        _uiState.update { it.copy(currentView = view) }
+    }
 }
 
 data class TaskUiState(
     val showCompletedTasks: Boolean = true,
-    val dialogState: DialogState = DialogState.None
+    val dialogState: DialogState = DialogState.None,
+    val currentView: ViewType = ViewType.DAILY
 )
+
+enum class ViewType {
+    DAILY, BACKLOG
+}
 
 sealed class DialogState {
     object None : DialogState()
-    object AddTask : DialogState()
+    data class AddTask(val addToDaily: Boolean = true) : DialogState()
     data class EditTask(val task: TaskEntity) : DialogState()
     data class TaskDetails(val task: TaskEntity) : DialogState()
-}
-
-class TaskViewModelFactory(private val repository: TaskRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(TaskViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return TaskViewModel(repository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
 }

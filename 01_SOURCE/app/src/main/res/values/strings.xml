@@ -103,4 +103,22 @@
     <string name="task_updated">Aufgabe aktualisiert</string>
     <string name="task_deleted">Aufgabe gelöscht</string>
     <string name="task_completed_success">Aufgabe als erledigt markiert</string>
+
+    <!-- Backlog System -->
+    <string name="backlog">Backlog</string>
+    <string name="move_to_today">Zu Heute</string>
+    <string name="move_to_backlog">Zu Backlog</string>
+    <string name="add_to_today">Zur Liste</string>
+    <string name="add_to_backlog">Zum Backlog</string>
+    <string name="fill_from_backlog">Aus Backlog auffüllen</string>
+    <string name="max_daily_tasks">Maximale tägliche Aufgaben</string>
+    <string name="max_daily_tasks_description">Anzahl der Aufgaben, die täglich angezeigt werden</string>
+    <string name="auto_backlog">Automatisches Backlog</string>
+    <string name="auto_backlog_description">Tägliche Liste automatisch aus Backlog auffüllen</string>
+    <string name="task_management">Aufgabenverwaltung</string>
+    <string name="daily_limit_exceeded">⚠️ Du hast %d Aufgaben über dem Limit</string>
+    <string name="backlog_empty">Backlog ist leer</string>
+    <string name="backlog_empty_description">Alle zusätzlichen Aufgaben werden hier gespeichert</string>
+    <string name="tasks_count_today">%d/%d heute</string>
+    <string name="tasks_count_backlog">%d im Backlog</string>
 </resources>

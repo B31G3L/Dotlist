@@ -32,7 +32,10 @@ fun SettingsScreen(
     var notificationsEnabled by remember { mutableStateOf(settingsManager.notificationsEnabled) }
     var notificationHour by remember { mutableStateOf(settingsManager.notificationHour) }
     var notificationMinute by remember { mutableStateOf(settingsManager.notificationMinute) }
+    var maxDailyTasks by remember { mutableIntStateOf(settingsManager.maxDailyTasks) }
+    var autoBacklogEnabled by remember { mutableStateOf(settingsManager.autoBacklogEnabled) }
     var showTimePicker by remember { mutableStateOf(false) }
+
 
     // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -104,7 +107,7 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Notifications Section
+            // ========== NEU: Backlog Einstellungen ==========
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -115,7 +118,7 @@ fun SettingsScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "Benachrichtigungen",
+                        text = "Aufgabenverwaltung",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -123,7 +126,7 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Enable Notifications
+                    // Maximale tägliche Aufgaben
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -131,77 +134,79 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Tägliche Erinnerungen",
+                                text = "Maximale tägliche Aufgaben",
                                 style = MaterialTheme.typography.bodyLarge
                             )
                             Text(
-                                text = "Erhalte tägliche Benachrichtigungen für offene Aufgaben",
+                                text = "Anzahl der Aufgaben, die täglich angezeigt werden",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    if (maxDailyTasks > 1) {
+                                        maxDailyTasks--
+                                        settingsManager.maxDailyTasks = maxDailyTasks
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = "Weniger")
+                            }
+
+                            Text(
+                                text = maxDailyTasks.toString(),
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            IconButton(
+                                onClick = {
+                                    if (maxDailyTasks < 20) {
+                                        maxDailyTasks++
+                                        settingsManager.maxDailyTasks = maxDailyTasks
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Mehr")
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Auto-Backlog
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Automatisches Backlog",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = "Tägliche Liste automatisch aus Backlog auffüllen",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
                         }
 
                         Switch(
-                            checked = notificationsEnabled && hasNotificationPermission,
+                            checked = autoBacklogEnabled,
                             onCheckedChange = { enabled ->
-                                if (enabled) {
-                                    if (hasNotificationPermission) {
-                                        notificationsEnabled = true
-                                        settingsManager.notificationsEnabled = true
-                                        NotificationWorker.scheduleDaily(context, notificationHour, notificationMinute)
-                                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    }
-                                } else {
-                                    notificationsEnabled = false
-                                    settingsManager.notificationsEnabled = false
-                                }
+                                autoBacklogEnabled = enabled
+                                settingsManager.autoBacklogEnabled = enabled
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.primary
                             )
                         )
-                    }
-
-                    if (notificationsEnabled && hasNotificationPermission) {
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Notification Time
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                            ),
-                            onClick = { showTimePicker = true }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "Benachrichtigungszeit",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = "Tippen zum Ändern",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                    )
-                                }
-
-                                Text(
-                                    text = String.format("%02d:%02d", notificationHour, notificationMinute),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
                     }
                 }
             }

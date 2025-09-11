@@ -28,7 +28,8 @@ class TaskWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val database = TaskDatabase.getDatabase(context)
-        val tasks = database.taskDao().getTasksForDate(LocalDate.now().toString()).first()
+        // FIXED: Verwende getDailyTasksForDate statt getTasksForDate
+        val tasks: List<TaskEntity> = database.taskDao().getDailyTasksForDate(LocalDate.now().toString()).first()
 
         provideContent {
             TaskWidgetContent(

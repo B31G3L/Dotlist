@@ -3,6 +3,8 @@ package de.beigel.list.service
 import android.content.Context
 import androidx.work.*
 import de.beigel.list.data.TaskDatabase
+import de.beigel.list.repository.TaskRepository
+import de.beigel.list.settings.SettingsManager
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -21,7 +23,6 @@ class MidnightResetWorker(
             scheduleNextReset()
             Result.success()
         } catch (e: Exception) {
-            // Log the error if needed
             Result.retry()
         }
     }
@@ -29,23 +30,35 @@ class MidnightResetWorker(
     private suspend fun resetDailyTasks() {
         val database = TaskDatabase.getDatabase(applicationContext)
         val taskDao = database.taskDao()
+        val settingsManager = SettingsManager(applicationContext)
 
-        // Alle Aufgaben von gestern und davor als "historisch" markieren
-        val yesterday = LocalDate.now().minusDays(1)
-        val tasks = taskDao.getTasksForDateRange(
-            startDate = LocalDate.now().minusDays(30).toString(),
-            endDate = yesterday.toString()
+        // 1. Unerledigte Aufgaben von gestern ins Backlog verschieben (optional)
+        val yesterday = LocalDate.now().minusDays(1).toString()
+        val yesterdayTasks = taskDao.getDailyTasksForDate(yesterday).first()
+
+        yesterdayTasks.filter { !it.isCompleted }.forEach { task ->
+            val maxBacklogPos = taskDao.getMaxBacklogPosition() ?: -1
+            taskDao.moveTaskToBacklog(task.id, maxBacklogPos + 1)
+        }
+
+        // 2. Wenn Auto-Backlog aktiviert ist: Daily List für heute aus Backlog füllen
+        if (settingsManager.autoBacklogEnabled) {
+            val repository = TaskRepository(taskDao)
+            repository.fillDailyListFromBacklog(settingsManager.maxDailyTasks)
+        }
+
+        // 3. Alte Aufgaben nach 30 Tagen löschen
+        val thirtyDaysAgo = LocalDate.now().minusDays(30)
+        val oldTasks = taskDao.getTasksForDateRange(
+            startDate = LocalDate.now().minusDays(60).toString(),
+            endDate = thirtyDaysAgo.toString()
         ).first()
 
-        // Optional: Alte Aufgaben nach 30 Tagen löschen
-        val thirtyDaysAgo = LocalDate.now().minusDays(30)
-        tasks.filter {
+        oldTasks.filter {
             LocalDate.parse(it.date).isBefore(thirtyDaysAgo)
         }.forEach { task ->
             taskDao.deleteTask(task)
         }
-
-        // Neue Aufgaben für heute werden automatisch erstellt, wenn der User sie hinzufügt
     }
 
     private fun scheduleNextReset() {

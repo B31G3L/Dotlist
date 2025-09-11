@@ -22,7 +22,9 @@ import java.time.format.DateTimeFormatter
 fun TaskDetailsDialog(
     task: TaskEntity,
     onDismiss: () -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onMoveToDaily: () -> Unit = {},
+    onMoveToBacklog: () -> Unit = {}
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -36,7 +38,7 @@ fun TaskDetailsDialog(
                     .fillMaxWidth()
                     .padding(24.dp)
             ) {
-                // Header with Priority
+                // Header with Priority and Status
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -58,11 +60,28 @@ fun TaskDetailsDialog(
                             fontWeight = FontWeight.Bold
                         )
 
-                        Text(
-                            text = task.priority.displayName,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(task.priority.color)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = task.priority.displayName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(task.priority.color)
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            // Daily/Backlog Badge
+                            Badge(
+                                containerColor = if (task.isInDailyList) Color(0xFF009966) else Color(0xFF666666)
+                            ) {
+                                Text(
+                                    text = if (task.isInDailyList) "Heute" else "Backlog",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White
+                                )
+                            }
+                        }
                     }
 
                     // Status Icon
@@ -104,7 +123,7 @@ fun TaskDetailsDialog(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // Timestamps
+                // Timestamps and Details
                 Column {
                     Text(
                         text = "Details",
@@ -115,6 +134,27 @@ fun TaskDetailsDialog(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // Location
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Ort:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF3C3C3C).copy(alpha = 0.7f)
+                        )
+
+                        Text(
+                            text = if (task.isInDailyList) "Tägliche Liste" else "Backlog",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF3C3C3C)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Creation date
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -171,30 +211,68 @@ fun TaskDetailsDialog(
                 // Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Schließen", color = Color(0xFF3C3C3C))
+                    // Move Actions
+                    Row {
+                        if (!task.isInDailyList) {
+                            TextButton(
+                                onClick = {
+                                    onMoveToDaily()
+                                    onDismiss()
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Default.Today,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Zu Heute", color = Color(0xFF009966))
+                            }
+                        } else {
+                            TextButton(
+                                onClick = {
+                                    onMoveToBacklog()
+                                    onDismiss()
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Default.Inventory,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Zu Backlog", color = Color(0xFF666666))
+                            }
+                        }
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    // Main Actions
+                    Row {
+                        TextButton(onClick = onDismiss) {
+                            Text("Schließen", color = Color(0xFF3C3C3C))
+                        }
 
-                    Button(
-                        onClick = {
-                            onEdit()
-                            onDismiss()
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF009966)
-                        )
-                    ) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Bearbeiten")
+
+                        Button(
+                            onClick = {
+                                onEdit()
+                                onDismiss()
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF009966)
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Bearbeiten")
+                        }
                     }
                 }
             }

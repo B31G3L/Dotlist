@@ -7,12 +7,16 @@ import java.time.LocalDate
 
 class TaskRepository(private val taskDao: TaskDao) {
 
-    fun getTasksForToday(): Flow<List<TaskEntity>> {
-        return taskDao.getTasksForDate(LocalDate.now().toString())
+    fun getDailyTasksForToday(): Flow<List<TaskEntity>> {
+        return taskDao.getDailyTasksForDate(LocalDate.now().toString())
     }
 
-    fun getTasksForDate(date: LocalDate): Flow<List<TaskEntity>> {
-        return taskDao.getTasksForDate(date.toString())
+    fun getBacklogTasks(): Flow<List<TaskEntity>> {
+        return taskDao.getBacklogTasks()
+    }
+
+    fun getDailyTasksForDate(date: LocalDate): Flow<List<TaskEntity>> {
+        return taskDao.getDailyTasksForDate(date.toString())
     }
 
     fun getTasksForLast7Days(): Flow<List<TaskEntity>> {
@@ -21,8 +25,22 @@ class TaskRepository(private val taskDao: TaskDao) {
         return taskDao.getTasksForDateRange(startDate.toString(), endDate.toString())
     }
 
-    suspend fun insertTask(task: TaskEntity) {
-        taskDao.insertTask(task)
+    suspend fun insertTask(task: TaskEntity, addToDaily: Boolean = true) {
+        val taskToInsert = if (addToDaily) {
+            val dailyCount = taskDao.getTotalDailyTasksCount(LocalDate.now().toString())
+            task.copy(
+                isInDailyList = true,
+                position = dailyCount,
+                date = LocalDate.now().toString()
+            )
+        } else {
+            val maxBacklogPos = taskDao.getMaxBacklogPosition() ?: -1
+            task.copy(
+                isInDailyList = false,
+                backlogPosition = maxBacklogPos + 1
+            )
+        }
+        taskDao.insertTask(taskToInsert)
     }
 
     suspend fun updateTask(task: TaskEntity) {
@@ -35,14 +53,54 @@ class TaskRepository(private val taskDao: TaskDao) {
 
     suspend fun updateTaskPositions(tasks: List<TaskEntity>) {
         tasks.forEachIndexed { index, task ->
-            taskDao.updateTaskPosition(task.id, index)
+            if (task.isInDailyList) {
+                taskDao.updateTaskPosition(task.id, index)
+            } else {
+                taskDao.updateBacklogPosition(task.id, index)
+            }
+        }
+    }
+
+    suspend fun moveTaskToDaily(task: TaskEntity): Boolean {
+        val currentDailyCount = taskDao.getTotalDailyTasksCount(LocalDate.now().toString())
+        // Hier könnte man das Limit prüfen, aber wir lassen manuelles Hinzufügen zu
+        taskDao.moveTaskToDailyList(
+            taskId = task.id,
+            date = LocalDate.now().toString(),
+            position = currentDailyCount
+        )
+        return true
+    }
+
+    suspend fun moveTaskToBacklog(task: TaskEntity) {
+        val maxBacklogPos = taskDao.getMaxBacklogPosition() ?: -1
+        taskDao.moveTaskToBacklog(task.id, maxBacklogPos + 1)
+    }
+
+    suspend fun fillDailyListFromBacklog(maxDailyTasks: Int) {
+        val currentDailyCount = taskDao.getTotalDailyTasksCount(LocalDate.now().toString())
+        val slotsToFill = maxDailyTasks - currentDailyCount
+
+        if (slotsToFill > 0) {
+            val backlogTasks = taskDao.getTopBacklogTasks(slotsToFill)
+            backlogTasks.forEachIndexed { index, task ->
+                taskDao.moveTaskToDailyList(
+                    taskId = task.id,
+                    date = LocalDate.now().toString(),
+                    position = currentDailyCount + index
+                )
+            }
         }
     }
 
     suspend fun getCompletionRate(date: LocalDate): Float {
         val dateString = date.toString()
-        val completed = taskDao.getCompletedTasksCount(dateString)
-        val total = taskDao.getTotalTasksCount(dateString)
+        val completed = taskDao.getCompletedDailyTasksCount(dateString)
+        val total = taskDao.getTotalDailyTasksCount(dateString)
         return if (total > 0) completed.toFloat() / total.toFloat() else 0f
+    }
+
+    suspend fun getAllTasksForDate(date: LocalDate): Flow<List<TaskEntity>> {
+        return taskDao.getAllTasksForDate(date.toString())
     }
 }

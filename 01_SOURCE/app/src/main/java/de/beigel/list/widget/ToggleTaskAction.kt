@@ -5,6 +5,7 @@ import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
 import de.beigel.list.data.TaskDatabase
+import de.beigel.list.data.TaskEntity
 import kotlinx.coroutines.flow.first
 import java.time.LocalDateTime
 
@@ -21,13 +22,13 @@ class ToggleTaskAction : ActionCallback {
         val database = TaskDatabase.getDatabase(context)
         val taskDao = database.taskDao()
 
-        // Hole alle Aufgaben für heute
-        val allTasks = taskDao.getTasksForDate(
+        // FIXED: Verwende getDailyTasksForDate statt getTasksForDate
+        val allTasks: List<TaskEntity> = taskDao.getDailyTasksForDate(
             java.time.LocalDate.now().toString()
         ).first()
 
-        // Finde die erste unerledigte Aufgabe und markiere sie als erledigt
-        val firstIncompleteTask = allTasks.firstOrNull { !it.isCompleted }
+        // FIXED: Explizite Typisierung für firstOrNull
+        val firstIncompleteTask: TaskEntity? = allTasks.firstOrNull { !it.isCompleted }
 
         if (firstIncompleteTask != null) {
             val updatedTask = firstIncompleteTask.copy(

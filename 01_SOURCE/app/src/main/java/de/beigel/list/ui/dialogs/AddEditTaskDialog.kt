@@ -2,6 +2,9 @@ package de.beigel.list.ui.dialogs
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,11 +21,14 @@ fun AddEditTaskDialog(
     isEditing: Boolean = false,
     initialTask: TaskEntity? = null,
     onDismiss: () -> Unit,
-    onSave: (String, String, TaskPriority) -> Unit
+    onSave: (String, String, TaskPriority) -> Unit,
+    showDestinationChoice: Boolean = false,
+    initialAddToDaily: Boolean = true
 ) {
     var title by remember { mutableStateOf(initialTask?.title ?: "") }
     var description by remember { mutableStateOf(initialTask?.description ?: "") }
     var selectedPriority by remember { mutableStateOf(initialTask?.priority ?: TaskPriority.MEDIUM) }
+    var addToDaily by remember { mutableStateOf(initialAddToDaily) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -107,6 +113,59 @@ fun AddEditTaskDialog(
                             text = priority.displayName,
                             color = Color(priority.color),
                             style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                // Destination Choice (nur beim Hinzufügen neuer Aufgaben)
+                if (showDestinationChoice && !isEditing) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Hinzufügen zu",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF3C3C3C)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        FilterChip(
+                            selected = addToDaily,
+                            onClick = { addToDaily = true },
+                            label = { Text("Heute") },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Today,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFF009966),
+                                selectedLabelColor = Color.White
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        FilterChip(
+                            selected = !addToDaily,
+                            onClick = { addToDaily = false },
+                            label = { Text("Backlog") },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Inventory,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFF009966),
+                                selectedLabelColor = Color.White
+                            )
                         )
                     }
                 }

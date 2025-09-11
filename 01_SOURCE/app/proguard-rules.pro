@@ -37,3 +37,11 @@
     public static int d(...);
     public static int e(...);
 }
+# BacklogManager
+-keep class de.beigel.list.data.BacklogManager { *; }
+
+# Migration classes
+-keep class androidx.room.migration.** { *; }
+-keepclassmembers class androidx.room.migration.Migration {
+    public <methods>;
+}

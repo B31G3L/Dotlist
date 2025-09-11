@@ -14,7 +14,9 @@ data class TaskEntity(
     val position: Int = 0,
     val date: String = LocalDate.now().toString(),
     val createdAt: String = LocalDateTime.now().toString(),
-    val completedAt: String? = null
+    val completedAt: String? = null,
+    val isInDailyList: Boolean = false,
+    val backlogPosition: Int = 0
 )
 
 enum class TaskPriority(val displayName: String, val color: Long) {
