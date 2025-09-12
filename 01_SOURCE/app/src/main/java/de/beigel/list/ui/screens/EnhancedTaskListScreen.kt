@@ -1,8 +1,12 @@
 package de.beigel.list.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -11,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -21,15 +26,19 @@ import de.beigel.list.viewmodel.DialogState
 import de.beigel.list.viewmodel.ViewType
 import de.beigel.list.ui.dialogs.AddEditTaskDialog
 import de.beigel.list.ui.dialogs.TaskDetailsDialog
-import de.beigel.list.ui.components.TaskItem
-import de.beigel.list.settings.SettingsManager
+import de.beigel.list.ui.dialogs.AddTaskBottomSheet
 import de.beigel.list.ui.components.SwipeableTaskItem
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import de.beigel.list.ui.components.PullToRefreshLazyColumn
+import de.beigel.list.ui.animations.*
+import de.beigel.list.ui.utils.rememberHapticFeedback
+import de.beigel.list.ui.theme.TaskTypography
+import de.beigel.list.settings.SettingsManager
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskListScreen(
+fun EnhancedTaskListScreen(
     viewModel: TaskViewModel,
     onNavigateToHistory: () -> Unit,
     onNavigateToSettings: () -> Unit
@@ -39,6 +48,25 @@ fun TaskListScreen(
     val backlogTasks by viewModel.backlogTasks.collectAsState()
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
+    val hapticFeedback = rememberHapticFeedback()
+    val composeHapticFeedback = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+
+    // Refresh state
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    // Celebration state
+    var showCelebration by remember { mutableStateOf(false) }
+
+    // Check if all tasks completed for celebration
+    LaunchedEffect(todayTasks) {
+        val completedCount = todayTasks.count { it.isCompleted }
+        val totalCount = todayTasks.size
+        if (totalCount > 0 && completedCount == totalCount && completedCount > 2) {
+            showCelebration = true
+            hapticFeedback.celebration()
+        }
+    }
 
     val currentTasks = when (uiState.currentView) {
         ViewType.DAILY -> if (uiState.showCompletedTasks) todayTasks else todayTasks.filter { !it.isCompleted }
@@ -48,10 +76,15 @@ fun TaskListScreen(
     // Handle Dialog States
     when (val dialogState = uiState.dialogState) {
         is DialogState.AddTask -> {
-            AddEditTaskDialog(
-                onDismiss = { viewModel.setDialogState(DialogState.None) },
-                onSave = { title, description, priority ->
-                    viewModel.addTask(title, description, priority, dialogState.addToDaily)
+            AddTaskBottomSheet(
+                isVisible = true,
+                onDismiss = {
+                    viewModel.setDialogState(DialogState.None)
+                    hapticFeedback.buttonPress()
+                },
+                onSave = { title, description, priority, addToDaily ->
+                    viewModel.addTask(title, description, priority, addToDaily)
+                    hapticFeedback.taskAdded()
                 },
                 showDestinationChoice = true,
                 initialAddToDaily = dialogState.addToDaily
@@ -61,7 +94,10 @@ fun TaskListScreen(
             AddEditTaskDialog(
                 isEditing = true,
                 initialTask = dialogState.task,
-                onDismiss = { viewModel.setDialogState(DialogState.None) },
+                onDismiss = {
+                    viewModel.setDialogState(DialogState.None)
+                    hapticFeedback.buttonPress()
+                },
                 onSave = { title, description, priority ->
                     viewModel.updateTask(
                         dialogState.task.copy(
@@ -70,19 +106,40 @@ fun TaskListScreen(
                             priority = priority
                         )
                     )
+                    hapticFeedback.taskAdded()
                 }
             )
         }
         is DialogState.TaskDetails -> {
             TaskDetailsDialog(
                 task = dialogState.task,
-                onDismiss = { viewModel.setDialogState(DialogState.None) },
-                onEdit = { viewModel.setDialogState(DialogState.EditTask(dialogState.task)) },
-                onMoveToDaily = { viewModel.moveTaskToDaily(dialogState.task) },
-                onMoveToBacklog = { viewModel.moveTaskToBacklog(dialogState.task) }
+                onDismiss = {
+                    viewModel.setDialogState(DialogState.None)
+                    hapticFeedback.buttonPress()
+                },
+                onEdit = {
+                    viewModel.setDialogState(DialogState.EditTask(dialogState.task))
+                    hapticFeedback.buttonPress()
+                },
+                onMoveToDaily = {
+                    viewModel.moveTaskToDaily(dialogState.task)
+                    hapticFeedback.taskAdded()
+                },
+                onMoveToBacklog = {
+                    viewModel.moveTaskToBacklog(dialogState.task)
+                    hapticFeedback.buttonPress()
+                }
             )
         }
         DialogState.None -> { /* No dialog */ }
+    }
+
+    // Celebration overlay
+    if (showCelebration) {
+        TaskCompletionCelebration(
+            isVisible = showCelebration,
+            onAnimationEnd = { showCelebration = false }
+        )
     }
 
     Scaffold(
@@ -92,36 +149,52 @@ fun TaskListScreen(
                     Column {
                         Text(
                             text = "Daily List",
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = TaskTypography.SectionHeader,
                             fontWeight = FontWeight.Bold
                         )
-                        Text(
-                            text = when (uiState.currentView) {
+                        AnimatedContent(
+                            targetState = when (uiState.currentView) {
                                 ViewType.DAILY -> "${todayTasks.size}/${settingsManager.maxDailyTasks} heute"
                                 ViewType.BACKLOG -> "${backlogTasks.size} im Backlog"
                             },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
+                            transitionSpec = {
+                                slideInVertically { it } + fadeIn() togetherWith
+                                        slideOutVertically { -it } + fadeOut()
+                            }, label = "subtitle"
+                        ) { text ->
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 },
                 actions = {
                     // Fill from Backlog Button (nur bei Daily View)
                     if (uiState.currentView == ViewType.DAILY && backlogTasks.isNotEmpty()) {
-                        IconButton(
-                            onClick = {
-                                viewModel.fillFromBacklog(settingsManager.maxDailyTasks)
+                        PulsingIcon(scale = 1.05f) {
+                            IconButton(
+                                onClick = {
+                                    viewModel.fillFromBacklog(settingsManager.maxDailyTasks)
+                                    hapticFeedback.buttonPress()
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Default.PlaylistAdd,
+                                    contentDescription = "Aus Backlog auffüllen",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
-                        ) {
-                            Icon(
-                                Icons.Default.PlaylistAdd,
-                                contentDescription = "Aus Backlog auffüllen",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
                         }
                     }
 
-                    IconButton(onClick = onNavigateToHistory) {
+                    BouncyButton(
+                        onClick = {
+                            onNavigateToHistory()
+                            hapticFeedback.buttonPress()
+                        }
+                    ) {
                         Icon(
                             Icons.Default.History,
                             contentDescription = "Historie",
@@ -129,7 +202,12 @@ fun TaskListScreen(
                         )
                     }
 
-                    IconButton(onClick = onNavigateToSettings) {
+                    BouncyButton(
+                        onClick = {
+                            onNavigateToSettings()
+                            hapticFeedback.buttonPress()
+                        }
+                    ) {
                         Icon(
                             Icons.Default.Settings,
                             contentDescription = "Einstellungen",
@@ -137,14 +215,24 @@ fun TaskListScreen(
                         )
                     }
 
-                    IconButton(
-                        onClick = { viewModel.setShowCompleted(!uiState.showCompletedTasks) }
+                    BouncyButton(
+                        onClick = {
+                            viewModel.setShowCompleted(!uiState.showCompletedTasks)
+                            hapticFeedback.buttonPress()
+                        }
                     ) {
-                        Icon(
-                            if (uiState.showCompletedTasks) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (uiState.showCompletedTasks) "Erledigte ausblenden" else "Erledigte anzeigen",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        AnimatedContent(
+                            targetState = uiState.showCompletedTasks,
+                            transitionSpec = {
+                                scaleIn() + fadeIn() togetherWith scaleOut() + fadeOut()
+                            }, label = "visibility_icon"
+                        ) { showCompleted ->
+                            Icon(
+                                if (showCompleted) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (showCompleted) "Erledigte ausblenden" else "Erledigte anzeigen",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -153,23 +241,36 @@ fun TaskListScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = {
-                    viewModel.setDialogState(
-                        DialogState.AddTask(addToDaily = uiState.currentView == ViewType.DAILY)
-                    )
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Aufgabe hinzufügen")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    when (uiState.currentView) {
-                        ViewType.DAILY -> "Zur Liste"
-                        ViewType.BACKLOG -> "Zum Backlog"
+            FloatingAnimation {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        viewModel.setDialogState(
+                            DialogState.AddTask(addToDaily = uiState.currentView == ViewType.DAILY)
+                        )
+                        hapticFeedback.buttonPress()
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    AnimatedContent(
+                        targetState = uiState.currentView,
+                        transitionSpec = {
+                            slideInHorizontally { it } + fadeIn() togetherWith
+                                    slideOutHorizontally { -it } + fadeOut()
+                        }, label = "fab_content"
+                    ) { viewType ->
+                        Row {
+                            Icon(Icons.Default.Add, contentDescription = "Aufgabe hinzufügen")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                when (viewType) {
+                                    ViewType.DAILY -> "Zur Liste"
+                                    ViewType.BACKLOG -> "Zum Backlog"
+                                }
+                            )
+                        }
                     }
-                )
+                }
             }
         }
     ) { paddingValues ->
@@ -178,172 +279,260 @@ fun TaskListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Tab Row
+            // Enhanced Tab Row
             TabRow(
                 selectedTabIndex = uiState.currentView.ordinal,
-                containerColor = MaterialTheme.colorScheme.background
+                containerColor = MaterialTheme.colorScheme.background,
+                indicator = { tabPositions ->
+                    TabRowDefaults.Indicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[uiState.currentView.ordinal]),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             ) {
                 Tab(
                     selected = uiState.currentView == ViewType.DAILY,
-                    onClick = { viewModel.setCurrentView(ViewType.DAILY) },
-                    text = { Text("Heute") }
+                    onClick = {
+                        viewModel.setCurrentView(ViewType.DAILY)
+                        hapticFeedback.buttonPress()
+                    },
+                    text = {
+                        Text(
+                            "Heute",
+                            style = if (uiState.currentView == ViewType.DAILY)
+                                TaskTypography.ButtonText
+                            else MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 )
                 Tab(
                     selected = uiState.currentView == ViewType.BACKLOG,
-                    onClick = { viewModel.setCurrentView(ViewType.BACKLOG) },
-                    text = { Text("Backlog") }
+                    onClick = {
+                        viewModel.setCurrentView(ViewType.BACKLOG)
+                        hapticFeedback.buttonPress()
+                    },
+                    text = {
+                        Text(
+                            "Backlog",
+                            style = if (uiState.currentView == ViewType.BACKLOG)
+                                TaskTypography.ButtonText
+                            else MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 )
             }
 
-            // Content
-            when (uiState.currentView) {
-                ViewType.DAILY -> DailyTasksContent(
-                    tasks = currentTasks,
-                    totalTasks = todayTasks,
-                    maxTasks = settingsManager.maxDailyTasks,
-                    viewModel = viewModel
-                )
-                ViewType.BACKLOG -> BacklogTasksContent(
-                    tasks = currentTasks,
-                    viewModel = viewModel
-                )
+            // Enhanced Content with Pull-to-Refresh
+            PullToRefreshLazyColumn(
+                onRefresh = {
+                    isRefreshing = true
+                    scope.launch {
+                        delay(1000) // Simulate refresh
+                        isRefreshing = false
+                        hapticFeedback.buttonPress()
+                    }
+                },
+                refreshing = isRefreshing
+            ) {
+                when (uiState.currentView) {
+                    ViewType.DAILY -> EnhancedDailyTasksContent(
+                        tasks = currentTasks,
+                        totalTasks = todayTasks,
+                        maxTasks = settingsManager.maxDailyTasks,
+                        viewModel = viewModel,
+                        hapticFeedback = hapticFeedback
+                    )
+                    ViewType.BACKLOG -> EnhancedBacklogTasksContent(
+                        tasks = currentTasks,
+                        viewModel = viewModel,
+                        hapticFeedback = hapticFeedback
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun DailyTasksContent(
+fun EnhancedDailyTasksContent(
     tasks: List<TaskEntity>,
     totalTasks: List<TaskEntity>,
     maxTasks: Int,
-    viewModel: TaskViewModel
+    viewModel: TaskViewModel,
+    hapticFeedback: de.beigel.list.ui.utils.HapticFeedbackManager
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        // Progress Card
+        // Enhanced Progress Card
         val completedCount = totalTasks.count { it.isCompleted }
         val totalCount = totalTasks.size
         val progress = if (totalCount > 0) completedCount.toFloat() / totalCount.toFloat() else 0f
 
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-            )
+        AnimatedVisibility(
+            visible = totalCount > 0,
+            enter = slideInVertically() + fadeIn(),
+            exit = slideOutVertically() + fadeOut()
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Column(
+                    modifier = Modifier.padding(20.dp)
                 ) {
-                    Text(
-                        text = "Fortschritt",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Fortschritt",
+                                style = TaskTypography.SectionHeader,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Heute",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.Baseline
+                        ) {
+                            CountingNumber(
+                                targetValue = completedCount,
+                                textStyle = TaskTypography.StatNumber.copy(
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                            Text(
+                                text = " / $totalCount",
+                                style = TaskTypography.StatNumber.copy(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    AnimatedProgress(
+                        progress = progress,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    Text(
-                        text = "$completedCount von $totalCount (max. $maxTasks)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                )
-
-                // Warnung wenn Limit überschritten
-                if (totalCount > maxTasks) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "⚠️ Du hast ${totalCount - maxTasks} Aufgaben über dem Limit",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "${(progress * 100).toInt()}% erledigt",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Text(
+                            text = "max. $maxTasks",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+
+                    // Warning if over limit
+                    if (totalCount > maxTasks) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${totalCount - maxTasks} Aufgaben über dem Limit",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // Task List or Empty State
+        // Enhanced Task List
         if (tasks.isNotEmpty()) {
             LazyColumn(
-                modifier = Modifier.weight(1f), // ✅ FIXED: Entfernt die zusätzlichen Klammern
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(tasks, key = { it.id }) { task ->
-                    SwipeableTaskItem(
-                        task = task,
-                        onToggleComplete = { viewModel.toggleTaskCompletion(task) },
-                        onEdit = { viewModel.setDialogState(DialogState.EditTask(task)) },
-                        onDelete = { viewModel.deleteTask(task) },
-                        onShowDetails = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
-                        showMoveToBacklog = true,
-                        onMoveToBacklog = { viewModel.moveTaskToBacklog(task) }
-                    )
+                itemsIndexed(tasks, key = { _, task -> task.id }) { index, task ->
+                    AnimatedListItem(
+                        visible = true,
+                        delay = index * 50
+                    ) {
+                        SwipeableTaskItem(
+                            task = task,
+                            onToggleComplete = {
+                                viewModel.toggleTaskCompletion(task)
+                                if (!task.isCompleted) {
+                                    hapticFeedback.taskCompleted()
+                                }
+                            },
+                            onEdit = {
+                                viewModel.setDialogState(DialogState.EditTask(task))
+                                hapticFeedback.buttonPress()
+                            },
+                            onDelete = {
+                                viewModel.deleteTask(task)
+                                hapticFeedback.taskDeleted()
+                            },
+                            onShowDetails = {
+                                viewModel.setDialogState(DialogState.TaskDetails(task))
+                                hapticFeedback.buttonPress()
+                            },
+                            showMoveToBacklog = true,
+                            onMoveToBacklog = {
+                                viewModel.moveTaskToBacklog(task)
+                                hapticFeedback.buttonPress()
+                            }
+                        )
+                    }
                 }
             }
         } else {
-            // Empty State
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f) // ✅ FIXED: Entfernt die zusätzlichen Klammern
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        Icons.Default.Task,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = "Keine Aufgaben für heute",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Tippe auf '+' um eine neue Aufgabe hinzuzufügen",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
+            // Enhanced Empty State
+            EnhancedEmptyState(
+                icon = Icons.Default.Task,
+                title = "Keine Aufgaben für heute",
+                description = "Tippe auf '+' um eine neue Aufgabe hinzuzufügen",
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
 
 @Composable
-fun BacklogTasksContent(
+fun EnhancedBacklogTasksContent(
     tasks: List<TaskEntity>,
-    viewModel: TaskViewModel
+    viewModel: TaskViewModel,
+    hapticFeedback: de.beigel.list.ui.utils.HapticFeedbackManager
 ) {
     Column(
         modifier = Modifier
@@ -352,62 +541,101 @@ fun BacklogTasksContent(
     ) {
         if (tasks.isNotEmpty()) {
             LazyColumn(
-                modifier = Modifier.weight(1f), // ✅ FIXED: Entfernt die zusätzlichen Klammern
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(tasks, key = { it.id }) { task ->
-                    SwipeableTaskItem(
-                        task = task,
-                        onToggleComplete = { viewModel.toggleTaskCompletion(task) },
-                        onEdit = { viewModel.setDialogState(DialogState.EditTask(task)) },
-                        onDelete = { viewModel.deleteTask(task) },
-                        onShowDetails = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
-                        showMoveToBacklog = true,
-                        onMoveToBacklog = { viewModel.moveTaskToBacklog(task) }
-                    )
+                itemsIndexed(tasks, key = { _, task -> task.id }) { index, task ->
+                    AnimatedListItem(
+                        visible = true,
+                        delay = index * 50
+                    ) {
+                        SwipeableTaskItem(
+                            task = task,
+                            onToggleComplete = {
+                                viewModel.toggleTaskCompletion(task)
+                                hapticFeedback.taskCompleted()
+                            },
+                            onEdit = {
+                                viewModel.setDialogState(DialogState.EditTask(task))
+                                hapticFeedback.buttonPress()
+                            },
+                            onDelete = {
+                                viewModel.deleteTask(task)
+                                hapticFeedback.taskDeleted()
+                            },
+                            onShowDetails = {
+                                viewModel.setDialogState(DialogState.TaskDetails(task))
+                                hapticFeedback.buttonPress()
+                            },
+                            showMoveToDaily = true,
+                            onMoveToDaily = {
+                                viewModel.moveTaskToDaily(task)
+                                hapticFeedback.taskAdded()
+                            }
+                        )
+                    }
                 }
             }
         } else {
-            // Empty State
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f) // ✅ FIXED: Entfernt die zusätzlichen Klammern
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        Icons.Default.Task,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    )
+            EnhancedEmptyState(
+                icon = Icons.Default.Inventory,
+                title = "Backlog ist leer",
+                description = "Alle zusätzlichen Aufgaben werden hier gespeichert",
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = "Backlog ist leer",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Alle zusätzlichen Aufgaben werden hier gespeichert",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                        textAlign = TextAlign.Center
-                    )
-                }
+@Composable
+fun EnhancedEmptyState(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    description: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            PulsingIcon(scale = 1.1f, duration = 2000) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                )
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = title,
+                style = TaskTypography.CardTitle,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
