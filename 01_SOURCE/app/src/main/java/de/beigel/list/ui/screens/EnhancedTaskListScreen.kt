@@ -28,11 +28,12 @@ import de.beigel.list.ui.dialogs.AddEditTaskDialog
 import de.beigel.list.ui.dialogs.TaskDetailsDialog
 import de.beigel.list.ui.dialogs.AddTaskBottomSheet
 import de.beigel.list.ui.components.SwipeableTaskItem
-import de.beigel.list.ui.components.PullToRefreshLazyColumn
+import de.beigel.list.ui.components.PullToRefreshLazyColumn // FIXED: Verwende die vereinfachte Version
 import de.beigel.list.ui.animations.*
 import de.beigel.list.ui.utils.rememberHapticFeedback
 import de.beigel.list.ui.theme.TaskTypography
 import de.beigel.list.settings.SettingsManager
+import de.beigel.list.ui.utils.HapticFeedbackManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -189,7 +190,7 @@ fun EnhancedTaskListScreen(
                         }
                     }
 
-                    BouncyButton(
+                    IconButton(
                         onClick = {
                             onNavigateToHistory()
                             hapticFeedback.buttonPress()
@@ -202,7 +203,7 @@ fun EnhancedTaskListScreen(
                         )
                     }
 
-                    BouncyButton(
+                    IconButton(
                         onClick = {
                             onNavigateToSettings()
                             hapticFeedback.buttonPress()
@@ -215,7 +216,7 @@ fun EnhancedTaskListScreen(
                         )
                     }
 
-                    BouncyButton(
+                    IconButton(
                         onClick = {
                             viewModel.setShowCompleted(!uiState.showCompletedTasks)
                             hapticFeedback.buttonPress()
@@ -279,16 +280,10 @@ fun EnhancedTaskListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Enhanced Tab Row
+            // Enhanced Tab Row - FIXED: Entferne tabIndicatorOffset
             TabRow(
                 selectedTabIndex = uiState.currentView.ordinal,
-                containerColor = MaterialTheme.colorScheme.background,
-                indicator = { tabPositions ->
-                    TabRowDefaults.Indicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[uiState.currentView.ordinal]),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                containerColor = MaterialTheme.colorScheme.background
             ) {
                 Tab(
                     selected = uiState.currentView == ViewType.DAILY,
@@ -325,8 +320,8 @@ fun EnhancedTaskListScreen(
             // Enhanced Content with Pull-to-Refresh
             PullToRefreshLazyColumn(
                 onRefresh = {
-                    isRefreshing = true
                     scope.launch {
+                        isRefreshing = true
                         delay(1000) // Simulate refresh
                         isRefreshing = false
                         hapticFeedback.buttonPress()
@@ -335,18 +330,26 @@ fun EnhancedTaskListScreen(
                 refreshing = isRefreshing
             ) {
                 when (uiState.currentView) {
-                    ViewType.DAILY -> EnhancedDailyTasksContent(
-                        tasks = currentTasks,
-                        totalTasks = todayTasks,
-                        maxTasks = settingsManager.maxDailyTasks,
-                        viewModel = viewModel,
-                        hapticFeedback = hapticFeedback
-                    )
-                    ViewType.BACKLOG -> EnhancedBacklogTasksContent(
-                        tasks = currentTasks,
-                        viewModel = viewModel,
-                        hapticFeedback = hapticFeedback
-                    )
+                    ViewType.DAILY -> {
+                        item {
+                            EnhancedDailyTasksContent(
+                                tasks = currentTasks,
+                                totalTasks = todayTasks,
+                                maxTasks = settingsManager.maxDailyTasks,
+                                viewModel = viewModel,
+                                hapticFeedback = hapticFeedback
+                            )
+                        }
+                    }
+                    ViewType.BACKLOG -> {
+                        item {
+                            EnhancedBacklogTasksContent(
+                                tasks = currentTasks,
+                                viewModel = viewModel,
+                                hapticFeedback = hapticFeedback
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -359,7 +362,7 @@ fun EnhancedDailyTasksContent(
     totalTasks: List<TaskEntity>,
     maxTasks: Int,
     viewModel: TaskViewModel,
-    hapticFeedback: de.beigel.list.ui.utils.HapticFeedbackManager
+    hapticFeedback: HapticFeedbackManager
 ) {
     Column(
         modifier = Modifier
@@ -407,7 +410,7 @@ fun EnhancedDailyTasksContent(
                         }
 
                         Row(
-                            verticalAlignment = Alignment.Baseline
+                            verticalAlignment = Alignment.CenterVertically // FIXED: Entferne Baseline
                         ) {
                             CountingNumber(
                                 targetValue = completedCount,
@@ -532,7 +535,7 @@ fun EnhancedDailyTasksContent(
 fun EnhancedBacklogTasksContent(
     tasks: List<TaskEntity>,
     viewModel: TaskViewModel,
-    hapticFeedback: de.beigel.list.ui.utils.HapticFeedbackManager
+    hapticFeedback: HapticFeedbackManager
 ) {
     Column(
         modifier = Modifier

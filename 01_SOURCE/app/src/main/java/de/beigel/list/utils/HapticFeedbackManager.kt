@@ -12,7 +12,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 
-class ModernHapticFeedbackManager(private val context: Context) {
+class HapticFeedbackManager(private val context: Context) {
 
     private val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
@@ -24,34 +24,34 @@ class ModernHapticFeedbackManager(private val context: Context) {
 
     // Moderne Haptic Patterns für bessere UX
     fun taskCompleted() {
-        performModernHapticFeedback(HapticPattern.SUCCESS)
+        performHapticFeedback(HapticPattern.SUCCESS)
     }
 
     fun taskAdded() {
-        performModernHapticFeedback(HapticPattern.LIGHT_IMPACT)
+        performHapticFeedback(HapticPattern.LIGHT_IMPACT)
     }
 
     fun taskDeleted() {
-        performModernHapticFeedback(HapticPattern.HEAVY_IMPACT)
+        performHapticFeedback(HapticPattern.HEAVY_IMPACT)
     }
 
     fun taskSwipe() {
-        performModernHapticFeedback(HapticPattern.SELECTION)
+        performHapticFeedback(HapticPattern.SELECTION)
     }
 
     fun buttonPress() {
-        performModernHapticFeedback(HapticPattern.LIGHT_IMPACT)
+        performHapticFeedback(HapticPattern.LIGHT_IMPACT)
     }
 
     fun celebration() {
-        performModernHapticFeedback(HapticPattern.CELEBRATION)
+        performHapticFeedback(HapticPattern.CELEBRATION)
     }
 
     fun error() {
-        performModernHapticFeedback(HapticPattern.ERROR)
+        performHapticFeedback(HapticPattern.ERROR)
     }
 
-    private fun performModernHapticFeedback(pattern: HapticPattern) {
+    private fun performHapticFeedback(pattern: HapticPattern) {
         if (!vibrator.hasVibrator()) return
 
         when {
@@ -139,9 +139,9 @@ class ModernHapticFeedbackManager(private val context: Context) {
 }
 
 @Composable
-fun rememberModernHapticFeedback(): ModernHapticFeedbackManager {
+fun rememberHapticFeedback(): HapticFeedbackManager {
     val context = LocalContext.current
-    return remember { ModernHapticFeedbackManager(context) }
+    return remember { HapticFeedbackManager(context) }
 }
 
 // Compose Haptic Extensions für moderne APIs

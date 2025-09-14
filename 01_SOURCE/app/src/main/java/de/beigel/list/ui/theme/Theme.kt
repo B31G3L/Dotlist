@@ -161,161 +161,17 @@ fun DailyListTheme(
         else -> LightColorScheme
     }
 
-    // Animated color transitions
-    val animatedColorScheme = androidx.compose.material3.ColorScheme(
-        primary = animateColorAsState(
-            targetValue = colorScheme.primary,
-            animationSpec = tween(300), label = "primary"
-        ).value,
-        onPrimary = animateColorAsState(
-            targetValue = colorScheme.onPrimary,
-            animationSpec = tween(300), label = "onPrimary"
-        ).value,
-        primaryContainer = animateColorAsState(
-            targetValue = colorScheme.primaryContainer,
-            animationSpec = tween(300), label = "primaryContainer"
-        ).value,
-        onPrimaryContainer = animateColorAsState(
-            targetValue = colorScheme.onPrimaryContainer,
-            animationSpec = tween(300), label = "onPrimaryContainer"
-        ).value,
-        secondary = animateColorAsState(
-            targetValue = colorScheme.secondary,
-            animationSpec = tween(300), label = "secondary"
-        ).value,
-        onSecondary = animateColorAsState(
-            targetValue = colorScheme.onSecondary,
-            animationSpec = tween(300), label = "onSecondary"
-        ).value,
-        secondaryContainer = animateColorAsState(
-            targetValue = colorScheme.secondaryContainer,
-            animationSpec = tween(300), label = "secondaryContainer"
-        ).value,
-        onSecondaryContainer = animateColorAsState(
-            targetValue = colorScheme.onSecondaryContainer,
-            animationSpec = tween(300), label = "onSecondaryContainer"
-        ).value,
-        tertiary = animateColorAsState(
-            targetValue = colorScheme.tertiary,
-            animationSpec = tween(300), label = "tertiary"
-        ).value,
-        onTertiary = animateColorAsState(
-            targetValue = colorScheme.onTertiary,
-            animationSpec = tween(300), label = "onTertiary"
-        ).value,
-        tertiaryContainer = animateColorAsState(
-            targetValue = colorScheme.tertiaryContainer,
-            animationSpec = tween(300), label = "tertiaryContainer"
-        ).value,
-        onTertiaryContainer = animateColorAsState(
-            targetValue = colorScheme.onTertiaryContainer,
-            animationSpec = tween(300), label = "onTertiaryContainer"
-        ).value,
-        error = animateColorAsState(
-            targetValue = colorScheme.error,
-            animationSpec = tween(300), label = "error"
-        ).value,
-        onError = animateColorAsState(
-            targetValue = colorScheme.onError,
-            animationSpec = tween(300), label = "onError"
-        ).value,
-        errorContainer = animateColorAsState(
-            targetValue = colorScheme.errorContainer,
-            animationSpec = tween(300), label = "errorContainer"
-        ).value,
-        onErrorContainer = animateColorAsState(
-            targetValue = colorScheme.onErrorContainer,
-            animationSpec = tween(300), label = "onErrorContainer"
-        ).value,
-        background = animateColorAsState(
-            targetValue = colorScheme.background,
-            animationSpec = tween(300), label = "background"
-        ).value,
-        onBackground = animateColorAsState(
-            targetValue = colorScheme.onBackground,
-            animationSpec = tween(300), label = "onBackground"
-        ).value,
-        surface = animateColorAsState(
-            targetValue = colorScheme.surface,
-            animationSpec = tween(300), label = "surface"
-        ).value,
-        onSurface = animateColorAsState(
-            targetValue = colorScheme.onSurface,
-            animationSpec = tween(300), label = "onSurface"
-        ).value,
-        surfaceVariant = animateColorAsState(
-            targetValue = colorScheme.surfaceVariant,
-            animationSpec = tween(300), label = "surfaceVariant"
-        ).value,
-        onSurfaceVariant = animateColorAsState(
-            targetValue = colorScheme.onSurfaceVariant,
-            animationSpec = tween(300), label = "onSurfaceVariant"
-        ).value,
-        outline = animateColorAsState(
-            targetValue = colorScheme.outline,
-            animationSpec = tween(300), label = "outline"
-        ).value,
-        outlineVariant = animateColorAsState(
-            targetValue = colorScheme.outlineVariant,
-            animationSpec = tween(300), label = "outlineVariant"
-        ).value,
-        scrim = animateColorAsState(
-            targetValue = colorScheme.scrim,
-            animationSpec = tween(300), label = "scrim"
-        ).value,
-        inverseSurface = animateColorAsState(
-            targetValue = colorScheme.inverseSurface,
-            animationSpec = tween(300), label = "inverseSurface"
-        ).value,
-        inverseOnSurface = animateColorAsState(
-            targetValue = colorScheme.inverseOnSurface,
-            animationSpec = tween(300), label = "inverseOnSurface"
-        ).value,
-        inversePrimary = animateColorAsState(
-            targetValue = colorScheme.inversePrimary,
-            animationSpec = tween(300), label = "inversePrimary"
-        ).value,
-        surfaceDim = animateColorAsState(
-            targetValue = colorScheme.surfaceDim,
-            animationSpec = tween(300), label = "surfaceDim"
-        ).value,
-        surfaceBright = animateColorAsState(
-            targetValue = colorScheme.surfaceBright,
-            animationSpec = tween(300), label = "surfaceBright"
-        ).value,
-        surfaceContainerLowest = animateColorAsState(
-            targetValue = colorScheme.surfaceContainerLowest,
-            animationSpec = tween(300), label = "surfaceContainerLowest"
-        ).value,
-        surfaceContainerLow = animateColorAsState(
-            targetValue = colorScheme.surfaceContainerLow,
-            animationSpec = tween(300), label = "surfaceContainerLow"
-        ).value,
-        surfaceContainer = animateColorAsState(
-            targetValue = colorScheme.surfaceContainer,
-            animationSpec = tween(300), label = "surfaceContainer"
-        ).value,
-        surfaceContainerHigh = animateColorAsState(
-            targetValue = colorScheme.surfaceContainerHigh,
-            animationSpec = tween(300), label = "surfaceContainerHigh"
-        ).value,
-        surfaceContainerHighest = animateColorAsState(
-            targetValue = colorScheme.surfaceContainerHighest,
-            animationSpec = tween(300), label = "surfaceContainerHighest"
-        ).value
-    )
-
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = animatedColorScheme.background.toArgb()
+            window.statusBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
     MaterialTheme(
-        colorScheme = animatedColorScheme,
+        colorScheme = colorScheme,
         typography = EnhancedTypography,
         content = content
     )

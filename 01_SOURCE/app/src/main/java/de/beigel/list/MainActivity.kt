@@ -16,9 +16,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.*
 import de.beigel.list.data.TaskDatabase
 import de.beigel.list.repository.TaskRepository
-import de.beigel.list.ui.screens.TaskListScreen
+import de.beigel.list.ui.screens.EnhancedTaskListScreen // FIXED: Verwende EnhancedTaskListScreen
 import de.beigel.list.ui.screens.HistoryScreen
-import de.beigel.list.ui.screens.SettingsScreen
+import de.beigel.list.ui.screens.EnhancedSettingsScreen // FIXED: Verwende EnhancedSettingsScreen
 import de.beigel.list.ui.theme.DailyListTheme
 import de.beigel.list.viewmodel.TaskViewModel
 
@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
                         }
                     ) {
                         composable("task_list") {
-                            TaskListScreen(
+                            EnhancedTaskListScreen( // FIXED: Verwende Enhanced Version
                                 viewModel = viewModel,
                                 onNavigateToHistory = {
                                     navController.navigate("history") {
@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("settings") {
-                            SettingsScreen(
+                            EnhancedSettingsScreen( // FIXED: Verwende Enhanced Version
                                 onNavigateBack = {
                                     navController.popBackStack()
                                 }
