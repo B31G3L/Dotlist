@@ -19,7 +19,7 @@ import de.beigel.list.data.TaskPriority
 import de.beigel.list.viewmodel.TaskViewModel
 import de.beigel.list.viewmodel.DialogState
 import de.beigel.list.viewmodel.ViewType
-import de.beigel.list.ui.dialogs.AddEditTaskDialog
+import de.beigel.list.ui.dialogs.AddTaskBottomSheet
 import de.beigel.list.ui.dialogs.TaskDetailsDialog
 import de.beigel.list.ui.components.TaskItem
 import de.beigel.list.settings.SettingsManager
@@ -48,21 +48,23 @@ fun TaskListScreen(
     // Handle Dialog States
     when (val dialogState = uiState.dialogState) {
         is DialogState.AddTask -> {
-            AddEditTaskDialog(
+            AddTaskBottomSheet(
+                isVisible = true,
                 onDismiss = { viewModel.setDialogState(DialogState.None) },
-                onSave = { title, description, priority ->
-                    viewModel.addTask(title, description, priority, dialogState.addToDaily)
+                onSave = { title, description, priority, addToDaily ->
+                    viewModel.addTask(title, description, priority, addToDaily)
                 },
                 showDestinationChoice = true,
                 initialAddToDaily = dialogState.addToDaily
             )
         }
         is DialogState.EditTask -> {
-            AddEditTaskDialog(
+            AddTaskBottomSheet(
+                isVisible = true,
                 isEditing = true,
                 initialTask = dialogState.task,
                 onDismiss = { viewModel.setDialogState(DialogState.None) },
-                onSave = { title, description, priority ->
+                onSave = { title, description, priority, _ ->
                     viewModel.updateTask(
                         dialogState.task.copy(
                             title = title,
@@ -153,7 +155,7 @@ fun TaskListScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            FloatingActionButton(
                 onClick = {
                     viewModel.setDialogState(
                         DialogState.AddTask(addToDaily = uiState.currentView == ViewType.DAILY)
@@ -163,13 +165,6 @@ fun TaskListScreen(
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Aufgabe hinzufügen")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    when (uiState.currentView) {
-                        ViewType.DAILY -> "Zur Liste"
-                        ViewType.BACKLOG -> "Zum Backlog"
-                    }
-                )
             }
         }
     ) { paddingValues ->
@@ -281,7 +276,7 @@ fun DailyTasksContent(
         // Task List or Empty State
         if (tasks.isNotEmpty()) {
             LazyColumn(
-                modifier = Modifier.weight(1f), // ✅ FIXED: Entfernt die zusätzlichen Klammern
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(tasks, key = { it.id }) { task ->
@@ -301,7 +296,7 @@ fun DailyTasksContent(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f) // ✅ FIXED: Entfernt die zusätzlichen Klammern
+                    .weight(1f)
             ) {
                 Column(
                     modifier = Modifier
@@ -352,7 +347,7 @@ fun BacklogTasksContent(
     ) {
         if (tasks.isNotEmpty()) {
             LazyColumn(
-                modifier = Modifier.weight(1f), // ✅ FIXED: Entfernt die zusätzlichen Klammern
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
@@ -363,8 +358,8 @@ fun BacklogTasksContent(
                         onEdit = { viewModel.setDialogState(DialogState.EditTask(task)) },
                         onDelete = { viewModel.deleteTask(task) },
                         onShowDetails = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
-                        showMoveToBacklog = true,
-                        onMoveToBacklog = { viewModel.moveTaskToBacklog(task) }
+                        showMoveToDaily = true,
+                        onMoveToDaily = { viewModel.moveTaskToDaily(task) }
                     )
                 }
             }
@@ -373,7 +368,7 @@ fun BacklogTasksContent(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f) // ✅ FIXED: Entfernt die zusätzlichen Klammern
+                    .weight(1f)
             ) {
                 Column(
                     modifier = Modifier
