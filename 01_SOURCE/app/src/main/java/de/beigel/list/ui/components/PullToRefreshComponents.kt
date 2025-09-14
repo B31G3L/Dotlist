@@ -6,48 +6,74 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
-// Vereinfachte Pull-to-Refresh Implementation ohne experimentelle APIs
+// Moderne Pull-to-Refresh mit Material 3 API
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PullToRefreshLazyColumn(
+fun ModernPullToRefreshLazyColumn(
     modifier: Modifier = Modifier,
     onRefresh: suspend () -> Unit,
     refreshing: Boolean = false,
     lazyListState: LazyListState = rememberLazyListState(),
-    content: LazyListScope.() -> Unit
+    content: @Composable LazyListScope.() -> Unit
 ) {
     var internalRefreshing by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier) {
-        // Simple refresh indicator
-        if (internalRefreshing || refreshing) {
-            LinearProgressIndicator(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
+    val pullToRefreshState = rememberPullToRefreshState()
 
+    // Handle refresh trigger
+    LaunchedEffect(pullToRefreshState.isRefreshing) {
+        if (pullToRefreshState.isRefreshing && !internalRefreshing && !refreshing) {
+            internalRefreshing = true
+            try {
+                onRefresh()
+            } finally {
+                delay(500) // Minimum refresh time for UX
+                internalRefreshing = false
+            }
+        }
+    }
+
+    // Reset state when refresh completes
+    LaunchedEffect(refreshing, internalRefreshing) {
+        if (!refreshing && !internalRefreshing) {
+            pullToRefreshState.endRefresh()
+        }
+    }
+
+    Box(
+        modifier = modifier.nestedScroll(pullToRefreshState.nestedScrollConnection)
+    ) {
         LazyColumn(
             state = lazyListState,
             modifier = Modifier.fillMaxSize(),
             content = content
         )
+
+        if (pullToRefreshState.isRefreshing || internalRefreshing || refreshing) {
+            PullToRefreshContainer(
+                modifier = Modifier.align(Alignment.TopCenter),
+                state = pullToRefreshState,
+            )
+        }
     }
 }
 
-// Fallback für ältere Compose Versionen
+// Alternative: Fallback für ältere Compose Versionen
 @Composable
 fun FallbackPullToRefreshLazyColumn(
     modifier: Modifier = Modifier,
     onRefresh: suspend () -> Unit,
     refreshing: Boolean = false,
     lazyListState: LazyListState = rememberLazyListState(),
-    content: LazyListScope.() -> Unit
+    content: @Composable LazyListScope.() -> Unit
 ) {
     var internalRefreshing by remember { mutableStateOf(false) }
 
@@ -87,14 +113,25 @@ fun SmartPullToRefreshLazyColumn(
     onRefresh: suspend () -> Unit,
     refreshing: Boolean = false,
     lazyListState: LazyListState = rememberLazyListState(),
-    content: LazyListScope.() -> Unit
+    content: @Composable LazyListScope.() -> Unit
 ) {
-    // Verwende einfache Implementation
-    PullToRefreshLazyColumn(
-        modifier = modifier,
-        onRefresh = onRefresh,
-        refreshing = refreshing,
-        lazyListState = lazyListState,
-        content = content
-    )
+    // Versuche moderne Implementation, fallback zu einfacher Version
+    try {
+        ModernPullToRefreshLazyColumn(
+            modifier = modifier,
+            onRefresh = onRefresh,
+            refreshing = refreshing,
+            lazyListState = lazyListState,
+            content = content
+        )
+    } catch (e: Exception) {
+        // Fallback zur einfachen Version wenn moderne APIs nicht verfügbar
+        FallbackPullToRefreshLazyColumn(
+            modifier = modifier,
+            onRefresh = onRefresh,
+            refreshing = refreshing,
+            lazyListState = lazyListState,
+            content = content
+        )
+    }
 }
