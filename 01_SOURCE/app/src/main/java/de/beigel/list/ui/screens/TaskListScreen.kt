@@ -533,9 +533,9 @@ fun EmptyStateCard(
 ) {
     Column(
         modifier = Modifier
-            .fillMaxWidth().padding(32.dp),
-            Modifier.weight(1f),
-
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
