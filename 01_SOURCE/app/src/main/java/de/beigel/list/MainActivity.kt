@@ -26,7 +26,6 @@ import de.beigel.list.settings.SettingsManager
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // Splash Screen
-        installSplashScreen()
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

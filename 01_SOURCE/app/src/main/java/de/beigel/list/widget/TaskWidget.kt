@@ -43,16 +43,12 @@ class TaskWidget : GlanceAppWidget() {
             TaskWidgetContent(
                 tasks = displayTasks,
                 totalTasks = tasks,
-                onTaskClick = {
-                    actionRunCallback<ToggleTaskAction>()
-                },
-                onWidgetClick = {
-                    actionStartActivity(
-                        intent = Intent(context, MainActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        }
-                    )
-                }
+                onTaskClick = actionRunCallback<ToggleTaskAction>(),
+                onWidgetClick = actionStartActivity(
+                    intent = Intent(context, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
+                )
             )
         }
     }
@@ -62,8 +58,8 @@ class TaskWidget : GlanceAppWidget() {
 fun TaskWidgetContent(
     tasks: List<TaskEntity>,
     totalTasks: List<TaskEntity>,
-    onTaskClick: () -> androidx.glance.action.Action,
-    onWidgetClick: () -> androidx.glance.action.Action
+    onTaskClick: androidx.glance.action.Action,
+    onWidgetClick: androidx.glance.action.Action
 ) {
     val completedCount = totalTasks.count { it.isCompleted }
     val totalCount = totalTasks.size
@@ -74,7 +70,7 @@ fun TaskWidgetContent(
             .fillMaxSize()
             .background(ColorProvider(day = Color.White, night = Color(0xFF1E1E1E)))
             .padding(16.dp)
-            .clickable(onWidgetClick())
+            .clickable(onWidgetClick)
     ) {
         // Header
         Row(
@@ -124,14 +120,14 @@ fun TaskWidgetContent(
                         .fillMaxHeight()
                         .width((120 * progress).dp)
                         .background(ColorProvider(day = Color(0xFF009966), night = Color(0xFF00CC88)))
-                )
+                ) {}
                 // Remaining portion
                 Box(
                     modifier = GlanceModifier
                         .fillMaxHeight()
                         .width((120 * (1 - progress)).dp)
                         .background(ColorProvider(day = Color(0xFFE0E0E0), night = Color(0xFF444444)))
-                )
+                ) {}
             }
 
             Spacer(modifier = GlanceModifier.height(12.dp))
@@ -185,12 +181,12 @@ fun TaskWidgetContent(
 @Composable
 fun TaskWidgetItem(
     task: TaskEntity,
-    onTaskClick: () -> androidx.glance.action.Action
+    onTaskClick: androidx.glance.action.Action
 ) {
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .clickable(onTaskClick()),
+            .clickable(onTaskClick),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Checkbox indicator
@@ -211,8 +207,8 @@ fun TaskWidgetItem(
         Box(
             modifier = GlanceModifier
                 .size(6.dp)
-                .background(ColorProvider(Color(task.priority.color)))
-        )
+                .background(ColorProvider(day = Color(task.priority.color), night = Color(task.priority.color)))
+        ) {}
 
         Spacer(modifier = GlanceModifier.width(8.dp))
 

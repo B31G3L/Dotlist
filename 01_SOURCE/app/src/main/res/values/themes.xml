@@ -45,12 +45,9 @@
         <item name="android:enforceStatusBarContrast">false</item>
     </style>
 
-    <!-- Splash screen theme -->
+    <!-- Splash screen theme - Simplified for compatibility -->
     <style name="Theme.DailyList.Splash" parent="Theme.SplashScreen">
-        <item name="android:windowSplashScreenBackground">@color/app_green</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
-        <item name="android:windowSplashScreenIconSize">144dp</item>
-        <item name="android:windowSplashScreenBrandingImage">@drawable/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.DailyList</item>
+        <!-- Basic splash screen configuration - more attributes will be added via values-v31 -->
     </style>
 </resources>

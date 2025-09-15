@@ -2,8 +2,9 @@ package de.beigel.list.ui.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -12,133 +13,76 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.beigel.list.data.TaskEntity
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SwipeableTaskItem(
+fun SelectableTaskItem(
     task: TaskEntity,
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
     onToggleComplete: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    onShowDetails: () -> Unit,
-    modifier: Modifier = Modifier,
-    showMoveToDaily: Boolean = false,
-    showMoveToBacklog: Boolean = false,
-    onMoveToDaily: () -> Unit = {},
-    onMoveToBacklog: () -> Unit = {}
+    onToggleSelection: () -> Unit,
+    onSingleTap: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { dismissValue ->
-            when (dismissValue) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    // Swipe nach rechts: Aufgabe als erledigt markieren
-                    onToggleComplete()
-                    false // Nicht dismissen, nur Action ausführen
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    // Swipe nach links: Löschen
-                    onDelete()
-                    true // Dismissen
-                }
-                SwipeToDismissBoxValue.Settled -> false
-            }
-        }
+    val animatedElevation by animateDpAsState(
+        targetValue = if (isSelected) 8.dp else 2.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "elevation"
     )
 
-    SwipeToDismissBox(
-        state = dismissState,
-        modifier = modifier,
-        backgroundContent = {
-            SwipeBackground(
-                dismissDirection = dismissState.dismissDirection,
-                isCompleted = task.isCompleted
-            )
-        },
-        content = {
-            AnimatedTaskContent(
-                task = task,
-                onEdit = onEdit,
-                onShowDetails = onShowDetails,
-                showMoveToDaily = showMoveToDaily,
-                showMoveToBacklog = showMoveToBacklog,
-                onMoveToDaily = onMoveToDaily,
-                onMoveToBacklog = onMoveToBacklog
-            )
-        }
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isSelected) 0.98f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "scale"
     )
-}
 
-@Composable
-fun SwipeBackground(
-    dismissDirection: SwipeToDismissBoxValue,
-    isCompleted: Boolean
-) {
-    val color = when (dismissDirection) {
-        SwipeToDismissBoxValue.StartToEnd -> {
-            if (isCompleted) Color(0xFFFF9800) else Color(0xFF4CAF50) // Orange für uncomplete, Grün für complete
-        }
-        SwipeToDismissBoxValue.EndToStart -> Color(0xFFE53E3E) // Rot für Delete
-        SwipeToDismissBoxValue.Settled -> Color.Transparent
-    }
-
-    val icon = when (dismissDirection) {
-        SwipeToDismissBoxValue.StartToEnd -> {
-            if (isCompleted) Icons.Default.Undo else Icons.Default.Check
-        }
-        SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
-        SwipeToDismissBoxValue.Settled -> Icons.Default.Clear
-    }
-
-    val alignment = when (dismissDirection) {
-        SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-        SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
-        SwipeToDismissBoxValue.Settled -> Alignment.Center
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(color)
-            .padding(horizontal = 20.dp),
-        contentAlignment = alignment
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(24.dp)
-        )
-    }
-}
-
-@Composable
-fun AnimatedTaskContent(
-    task: TaskEntity,
-    onEdit: () -> Unit,
-    onShowDetails: () -> Unit,
-    showMoveToDaily: Boolean,
-    showMoveToBacklog: Boolean,
-    onMoveToDaily: () -> Unit,
-    onMoveToBacklog: () -> Unit
-) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clickable { onShowDetails() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            .graphicsLayer {
+                scaleX = animatedScale
+                scaleY = animatedScale
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        if (isSelectionMode) {
+                            onToggleSelection()
+                        } else {
+                            onSingleTap()
+                        }
+                    },
+                    onLongPress = {
+                        if (!isSelectionMode) {
+                            onToggleSelection()
+                        }
+                    }
+                )
+            },
+        elevation = CardDefaults.cardElevation(defaultElevation = animatedElevation),
         colors = CardDefaults.cardColors(
-            containerColor = if (task.isCompleted)
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-            else MaterialTheme.colorScheme.surface
-        )
+            containerColor = when {
+                isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                task.isCompleted -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                else -> MaterialTheme.colorScheme.surface
+            }
+        ),
+        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Row(
             modifier = Modifier
@@ -146,173 +90,311 @@ fun AnimatedTaskContent(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Priority Indicator mit Animation
+            // Selection Checkbox (nur im Selection Mode)
             AnimatedVisibility(
-                visible = true,
-                enter = scaleIn(animationSpec = tween(300))
+                visible = isSelectionMode,
+                enter = slideInHorizontally(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                ) + fadeIn(),
+                exit = slideOutHorizontally() + fadeOut()
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color(task.priority.color))
-                )
+                Row {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onToggleSelection() },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = MaterialTheme.colorScheme.primary,
+                            uncheckedColor = MaterialTheme.colorScheme.outline
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Animated Checkbox
-            AnimatedCheckbox(
-                checked = task.isCompleted,
-                onCheckedChange = { /* Handled by swipe */ }
+            // Priority Indicator
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(if (isSelectionMode) 40.dp else 48.dp)
+                    .background(
+                        Color(task.priority.color),
+                        RoundedCornerShape(2.dp)
+                    )
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-            // Task Content mit Animation
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AnimatedContent(
-                        targetState = task.title,
-                        transitionSpec = {
-                            slideInHorizontally() togetherWith slideOutHorizontally()
-                        },
-                        label = "title_animation"
-                    ) { title ->
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = Color(0xFF3C3C3C),
-                            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
+            // Complete/Incomplete Indicator
+            AnimatedVisibility(
+                visible = !isSelectionMode,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
+                Row {
+                    IconButton(
+                        onClick = onToggleComplete,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (task.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                            contentDescription = null,
+                            tint = if (task.isCompleted) Color(0xFF009966) else MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-
-                    // Daily/Backlog Indicator mit Animation
-                    if (!task.isInDailyList) {
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = fadeIn() + scaleIn(),
-                            exit = fadeOut() + scaleOut()
-                        ) {
-                            Badge(
-                                containerColor = Color(0xFF666666).copy(alpha = 0.7f)
-                            ) {
-                                Text(
-                                    text = "B",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White
-                                )
-                            }
-                        }
-                    }
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
+            }
 
-                if (task.description.isNotBlank()) {
-                    AnimatedVisibility(
-                        visible = task.description.isNotBlank(),
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
+            // Task Content
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                    ),
+                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
+                    maxLines = if (isSelectionMode) 1 else 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = when {
+                        isSelected -> MaterialTheme.colorScheme.primary
+                        task.isCompleted -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
+                )
+
+                // Description (nur wenn nicht im Selection Mode und vorhanden)
+                AnimatedVisibility(
+                    visible = task.description.isNotBlank() && !isSelectionMode,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column {
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = task.description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF3C3C3C).copy(alpha = 0.7f),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
-                // Priority Badge mit Animation
-                AnimatedContent(
-                    targetState = task.priority,
-                    transitionSpec = {
-                        fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
-                    },
-                    label = "priority_animation"
-                ) { priority ->
-                    Text(
-                        text = priority.displayName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(priority.color)
-                    )
+                // Metadata row
+                AnimatedVisibility(
+                    visible = !isSelectionMode,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Priority badge
+                            Surface(
+                                color = Color(task.priority.color).copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    text = task.priority.displayName.first().toString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(task.priority.color),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+
+                            // Location indicator
+                            if (!task.isInDailyList) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Inventory,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(10.dp),
+                                            tint = MaterialTheme.colorScheme.outline
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "B",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
-            // Action Buttons mit Animationen
-            Row {
-                // Move Buttons
-                AnimatedVisibility(
-                    visible = showMoveToDaily,
-                    enter = slideInHorizontally() + fadeIn(),
-                    exit = slideOutHorizontally() + fadeOut()
-                ) {
-                    IconButton(onClick = onMoveToDaily) {
-                        Icon(
-                            Icons.Default.Today,
-                            contentDescription = "Zu Heute",
-                            tint = Color(0xFF009966)
-                        )
-                    }
-                }
+            // Selection indicator oder More-Icon
+            AnimatedVisibility(
+                visible = !isSelectionMode,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
+                Icon(
+                    Icons.Default.MoreVert,
+                    contentDescription = "Mehr Optionen",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
 
-                AnimatedVisibility(
-                    visible = showMoveToBacklog,
-                    enter = slideInHorizontally() + fadeIn(),
-                    exit = slideOutHorizontally() + fadeOut()
-                ) {
-                    IconButton(onClick = onMoveToBacklog) {
-                        Icon(
-                            Icons.Default.Inventory,
-                            contentDescription = "Zu Backlog",
-                            tint = Color(0xFF666666)
-                        )
-                    }
-                }
-
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Bearbeiten",
-                        tint = Color(0xFF009966)
-                    )
-                }
+            // Selected indicator im Selection Mode
+            AnimatedVisibility(
+                visible = isSelectionMode && isSelected,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = "Ausgewählt",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
 }
 
+// Floating Action Menu für selected Tasks
 @Composable
-fun AnimatedCheckbox(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+fun SelectionFloatingActionMenu(
+    selectedTasks: List<TaskEntity>,
+    onEditSelected: () -> Unit,
+    onDeleteSelected: () -> Unit,
+    onMoveToDaily: () -> Unit,
+    onMoveToBacklog: () -> Unit,
+    onClearSelection: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val animatedProgress by animateFloatAsState(
-        targetValue = if (checked) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = 300,
-            easing = FastOutSlowInEasing
-        ),
-        label = "checkbox_animation"
-    )
+    val canMoveToDaily = selectedTasks.any { !it.isInDailyList }
+    val canMoveToBacklog = selectedTasks.any { it.isInDailyList }
 
-    Checkbox(
-        checked = checked,
-        onCheckedChange = onCheckedChange,
-        colors = CheckboxDefaults.colors(
-            checkedColor = Color(0xFF009966),
-            uncheckedColor = Color(0xFF009966).copy(alpha = animatedProgress)
-        ),
-        modifier = Modifier.graphicsLayer {
-            scaleX = 0.8f + (0.2f * animatedProgress)
-            scaleY = 0.8f + (0.2f * animatedProgress)
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Individual action buttons mit Animationen
+        AnimatedVisibility(
+            visible = canMoveToDaily,
+            enter = slideInVertically() + scaleIn() + fadeIn(),
+            exit = slideOutVertically() + scaleOut() + fadeOut()
+        ) {
+            SmallFloatingActionButton(
+                onClick = onMoveToDaily,
+                containerColor = Color(0xFF009966),
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Today, contentDescription = "Zu Heute")
+            }
         }
-    )
+
+        AnimatedVisibility(
+            visible = canMoveToBacklog,
+            enter = slideInVertically() + scaleIn() + fadeIn(),
+            exit = slideOutVertically() + scaleOut() + fadeOut()
+        ) {
+            SmallFloatingActionButton(
+                onClick = onMoveToBacklog,
+                containerColor = Color(0xFF666666),
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Inventory, contentDescription = "Zu Backlog")
+            }
+        }
+
+        // Edit nur bei einem ausgewählten Task
+        AnimatedVisibility(
+            visible = selectedTasks.size == 1,
+            enter = slideInVertically() + scaleIn() + fadeIn(),
+            exit = slideOutVertically() + scaleOut() + fadeOut()
+        ) {
+            SmallFloatingActionButton(
+                onClick = onEditSelected,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                Icon(Icons.Default.Edit, contentDescription = "Bearbeiten")
+            }
+        }
+
+        // Delete button
+        SmallFloatingActionButton(
+            onClick = onDeleteSelected,
+            containerColor = Color(0xFFE53E3E),
+            contentColor = Color.White
+        ) {
+            Icon(Icons.Default.Delete, contentDescription = "Löschen")
+        }
+
+        // Close selection mode
+        FloatingActionButton(
+            onClick = onClearSelection,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ) {
+            Icon(Icons.Default.Close, contentDescription = "Auswahl aufheben")
+        }
+    }
+}
+
+// Selection Header für Bulk-Aktionen
+@Composable
+fun SelectionHeader(
+    selectedCount: Int,
+    totalCount: Int,
+    onSelectAll: () -> Unit,
+    onClearSelection: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$selectedCount von $totalCount ausgewählt",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium
+            )
+
+            Row {
+                if (selectedCount < totalCount) {
+                    TextButton(onClick = onSelectAll) {
+                        Text("Alle auswählen", color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
+                TextButton(onClick = onClearSelection) {
+                    Text("Abbrechen", color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+    }
 }

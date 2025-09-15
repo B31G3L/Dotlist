@@ -2,7 +2,6 @@ package de.beigel.list.ui.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -13,39 +12,36 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import de.beigel.list.data.TaskEntity
 
 @Composable
-fun SelectableTaskItem(
+fun ContextMenuTaskItem(
     task: TaskEntity,
-    isSelected: Boolean,
-    isSelectionMode: Boolean,
     onToggleComplete: () -> Unit,
-    onToggleSelection: () -> Unit,
-    onSingleTap: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onMoveToDaily: () -> Unit = {},
+    onMoveToBacklog: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isSelected) 8.dp else 2.dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "elevation"
-    )
+    var showContextMenu by remember { mutableStateOf(false) }
+    var isPressed by remember { mutableStateOf(false) }
 
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isSelected) 0.98f else 1f,
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
+            stiffness = Spring.StiffnessLow
         ),
         label = "scale"
     )
@@ -55,34 +51,30 @@ fun SelectableTaskItem(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
+                scaleX = scale
+                scaleY = scale
             }
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onTap = {
-                        if (isSelectionMode) {
-                            onToggleSelection()
-                        } else {
-                            onSingleTap()
-                        }
-                    },
-                    onLongPress = {
-                        if (!isSelectionMode) {
-                            onToggleSelection()
-                        }
+                    onTap = { onToggleComplete() },
+                    onLongPress = { showContextMenu = true },
+                    onPress = {
+                        isPressed = true
+                        tryAwaitRelease()
+                        isPressed = false
                     }
                 )
             },
-        elevation = CardDefaults.cardElevation(defaultElevation = animatedElevation),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isPressed) 8.dp else 2.dp
+        ),
         colors = CardDefaults.cardColors(
             containerColor = when {
-                isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                 task.isCompleted -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                isPressed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                 else -> MaterialTheme.colorScheme.surface
             }
-        ),
-        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+        )
     ) {
         Row(
             modifier = Modifier
@@ -90,35 +82,11 @@ fun SelectableTaskItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Selection Checkbox (nur im Selection Mode)
-            AnimatedVisibility(
-                visible = isSelectionMode,
-                enter = slideInHorizontally(
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMedium
-                    )
-                ) + fadeIn(),
-                exit = slideOutHorizontally() + fadeOut()
-            ) {
-                Row {
-                    Checkbox(
-                        checked = isSelected,
-                        onCheckedChange = { onToggleSelection() },
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = MaterialTheme.colorScheme.primary,
-                            uncheckedColor = MaterialTheme.colorScheme.outline
-                        )
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-            }
-
             // Priority Indicator
             Box(
                 modifier = Modifier
                     .width(4.dp)
-                    .height(if (isSelectionMode) 40.dp else 48.dp)
+                    .height(48.dp)
                     .background(
                         Color(task.priority.color),
                         RoundedCornerShape(2.dp)
@@ -127,274 +95,216 @@ fun SelectableTaskItem(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Complete/Incomplete Indicator
-            AnimatedVisibility(
-                visible = !isSelectionMode,
-                enter = scaleIn() + fadeIn(),
-                exit = scaleOut() + fadeOut()
+            // Completion Checkbox
+            IconButton(
+                onClick = onToggleComplete,
+                modifier = Modifier.size(32.dp)
             ) {
-                Row {
-                    IconButton(
-                        onClick = onToggleComplete,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (task.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                            contentDescription = null,
-                            tint = if (task.isCompleted) Color(0xFF009966) else MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
+                Icon(
+                    imageVector = if (task.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                    contentDescription = if (task.isCompleted) "Erledigt" else "Noch offen",
+                    tint = if (task.isCompleted) Color(0xFF009966) else MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(20.dp)
+                )
             }
+
+            Spacer(modifier = Modifier.width(8.dp))
 
             // Task Content
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = task.title,
                     style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                        fontWeight = FontWeight.Medium
                     ),
                     textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
-                    maxLines = if (isSelectionMode) 1 else 2,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    color = when {
-                        isSelected -> MaterialTheme.colorScheme.primary
-                        task.isCompleted -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        else -> MaterialTheme.colorScheme.onSurface
-                    }
+                    color = if (task.isCompleted)
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    else
+                        MaterialTheme.colorScheme.onSurface
                 )
 
-                // Description (nur wenn nicht im Selection Mode und vorhanden)
-                AnimatedVisibility(
-                    visible = task.description.isNotBlank() && !isSelectionMode,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    Column {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = task.description,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                if (task.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = task.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
-                // Metadata row
-                AnimatedVisibility(
-                    visible = !isSelectionMode,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
+                // Metadata Row
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Priority badge
-                            Surface(
-                                color = Color(task.priority.color).copy(alpha = 0.1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(
-                                    text = task.priority.displayName.first().toString(),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(task.priority.color),
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                )
-                            }
+                    // Priority Badge
+                    Surface(
+                        color = Color(task.priority.color).copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = task.priority.displayName,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(task.priority.color),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
 
-                            // Location indicator
-                            if (!task.isInDailyList) {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Inventory,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(10.dp),
-                                            tint = MaterialTheme.colorScheme.outline
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = "B",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.outline
-                                        )
-                                    }
-                                }
+                    // Location Indicator
+                    if (!task.isInDailyList) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Inventory,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(10.dp),
+                                    tint = MaterialTheme.colorScheme.outline
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Backlog",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
                             }
                         }
                     }
                 }
             }
 
-            // Selection indicator oder More-Icon
-            AnimatedVisibility(
-                visible = !isSelectionMode,
-                enter = scaleIn() + fadeIn(),
-                exit = scaleOut() + fadeOut()
-            ) {
-                Icon(
-                    Icons.Default.MoreVert,
-                    contentDescription = "Mehr Optionen",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-
-            // Selected indicator im Selection Mode
-            AnimatedVisibility(
-                visible = isSelectionMode && isSelected,
-                enter = scaleIn() + fadeIn(),
-                exit = scaleOut() + fadeOut()
-            ) {
-                Icon(
-                    Icons.Default.CheckCircle,
-                    contentDescription = "Ausgewählt",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-    }
-}
-
-// Floating Action Menu für selected Tasks
-@Composable
-fun SelectionFloatingActionMenu(
-    selectedTasks: List<TaskEntity>,
-    onEditSelected: () -> Unit,
-    onDeleteSelected: () -> Unit,
-    onMoveToDaily: () -> Unit,
-    onMoveToBacklog: () -> Unit,
-    onClearSelection: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val canMoveToDaily = selectedTasks.any { !it.isInDailyList }
-    val canMoveToBacklog = selectedTasks.any { it.isInDailyList }
-
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Individual action buttons mit Animationen
-        AnimatedVisibility(
-            visible = canMoveToDaily,
-            enter = slideInVertically() + scaleIn() + fadeIn(),
-            exit = slideOutVertically() + scaleOut() + fadeOut()
-        ) {
-            SmallFloatingActionButton(
-                onClick = onMoveToDaily,
-                containerColor = Color(0xFF009966),
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Default.Today, contentDescription = "Zu Heute")
-            }
-        }
-
-        AnimatedVisibility(
-            visible = canMoveToBacklog,
-            enter = slideInVertically() + scaleIn() + fadeIn(),
-            exit = slideOutVertically() + scaleOut() + fadeOut()
-        ) {
-            SmallFloatingActionButton(
-                onClick = onMoveToBacklog,
-                containerColor = Color(0xFF666666),
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Default.Inventory, contentDescription = "Zu Backlog")
-            }
-        }
-
-        // Edit nur bei einem ausgewählten Task
-        AnimatedVisibility(
-            visible = selectedTasks.size == 1,
-            enter = slideInVertically() + scaleIn() + fadeIn(),
-            exit = slideOutVertically() + scaleOut() + fadeOut()
-        ) {
-            SmallFloatingActionButton(
-                onClick = onEditSelected,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "Bearbeiten")
-            }
-        }
-
-        // Delete button
-        SmallFloatingActionButton(
-            onClick = onDeleteSelected,
-            containerColor = Color(0xFFE53E3E),
-            contentColor = Color.White
-        ) {
-            Icon(Icons.Default.Delete, contentDescription = "Löschen")
-        }
-
-        // Close selection mode
-        FloatingActionButton(
-            onClick = onClearSelection,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        ) {
-            Icon(Icons.Default.Close, contentDescription = "Auswahl aufheben")
-        }
-    }
-}
-
-// Selection Header für Bulk-Aktionen
-@Composable
-fun SelectionHeader(
-    selectedCount: Int,
-    totalCount: Int,
-    onSelectAll: () -> Unit,
-    onClearSelection: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "$selectedCount von $totalCount ausgewählt",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium
+            // Context Menu Indicator
+            Icon(
+                Icons.Default.MoreVert,
+                contentDescription = "Kontextmenü",
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp)
             )
-
-            Row {
-                if (selectedCount < totalCount) {
-                    TextButton(onClick = onSelectAll) {
-                        Text("Alle auswählen", color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-
-                TextButton(onClick = onClearSelection) {
-                    Text("Abbrechen", color = MaterialTheme.colorScheme.primary)
-                }
-            }
         }
+
+        // Context Menu
+        if (showContextMenu) {
+            ContextMenu(
+                task = task,
+                onDismiss = { showContextMenu = false },
+                onEdit = {
+                    onEdit()
+                    showContextMenu = false
+                },
+                onDelete = {
+                    onDelete()
+                    showContextMenu = false
+                },
+                onMoveToDaily = {
+                    onMoveToDaily()
+                    showContextMenu = false
+                },
+                onMoveToBacklog = {
+                    onMoveToBacklog()
+                    showContextMenu = false
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ContextMenu(
+    task: TaskEntity,
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onMoveToDaily: () -> Unit,
+    onMoveToBacklog: () -> Unit
+) {
+    DropdownMenu(
+        expanded = true,
+        onDismissRequest = onDismiss,
+        offset = DpOffset((-16).dp, 0.dp)
+    ) {
+        // Edit
+        DropdownMenuItem(
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Bearbeiten")
+                }
+            },
+            onClick = onEdit
+        )
+
+        // Move actions
+        if (!task.isInDailyList) {
+            DropdownMenuItem(
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Today,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = Color(0xFF009966)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Zu Heute")
+                    }
+                },
+                onClick = onMoveToDaily
+            )
+        } else {
+            DropdownMenuItem(
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Inventory,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = Color(0xFF666666)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Zu Backlog")
+                    }
+                },
+                onClick = onMoveToBacklog
+            )
+        }
+
+        Divider()
+
+        // Delete
+        DropdownMenuItem(
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "Löschen",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            onClick = onDelete
+        )
     }
 }
