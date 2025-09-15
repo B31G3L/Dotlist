@@ -10,21 +10,28 @@ import de.beigel.list.settings.SettingsManager
 class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
-            intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
-
-            // Reschedule midnight reset
-            MidnightResetWorker.scheduleInitialWork(context)
-
-            // Reschedule notifications if enabled
-            val settingsManager = SettingsManager(context)
-            if (settingsManager.notificationsEnabled) {
-                NotificationWorker.scheduleDaily(
-                    context,
-                    settingsManager.notificationHour,
-                    settingsManager.notificationMinute
-                )
+        when (intent.action) {
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            Intent.ACTION_PACKAGE_REPLACED -> {
+                rescheduleWorkers(context)
             }
+        }
+    }
+
+    private fun rescheduleWorkers(context: Context) {
+        val settingsManager = SettingsManager(context)
+
+        // Always reschedule midnight reset
+        MidnightResetWorker.scheduleInitialWork(context)
+
+        // Reschedule notifications if enabled
+        if (settingsManager.notificationsEnabled) {
+            NotificationWorker.scheduleDaily(
+                context,
+                settingsManager.notificationHour,
+                settingsManager.notificationMinute
+            )
         }
     }
 }

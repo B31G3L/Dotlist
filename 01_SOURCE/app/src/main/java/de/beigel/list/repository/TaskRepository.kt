@@ -19,6 +19,10 @@ class TaskRepository(private val taskDao: TaskDao) {
         return taskDao.getDailyTasksForDate(date.toString())
     }
 
+    fun getAllTasksForDate(date: LocalDate): Flow<List<TaskEntity>> {
+        return taskDao.getAllTasksForDate(date.toString())
+    }
+
     fun getTasksForLast7Days(): Flow<List<TaskEntity>> {
         val endDate = LocalDate.now()
         val startDate = endDate.minusDays(6)
@@ -63,7 +67,6 @@ class TaskRepository(private val taskDao: TaskDao) {
 
     suspend fun moveTaskToDaily(task: TaskEntity): Boolean {
         val currentDailyCount = taskDao.getTotalDailyTasksCount(LocalDate.now().toString())
-        // Hier könnte man das Limit prüfen, aber wir lassen manuelles Hinzufügen zu
         taskDao.moveTaskToDailyList(
             taskId = task.id,
             date = LocalDate.now().toString(),
@@ -98,9 +101,5 @@ class TaskRepository(private val taskDao: TaskDao) {
         val completed = taskDao.getCompletedDailyTasksCount(dateString)
         val total = taskDao.getTotalDailyTasksCount(dateString)
         return if (total > 0) completed.toFloat() / total.toFloat() else 0f
-    }
-
-    suspend fun getAllTasksForDate(date: LocalDate): Flow<List<TaskEntity>> {
-        return taskDao.getAllTasksForDate(date.toString())
     }
 }

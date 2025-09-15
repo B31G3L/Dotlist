@@ -17,28 +17,46 @@ class ToggleTaskAction : ActionCallback {
         parameters: ActionParameters
     ) {
         // Da ActionParameters problematisch sind, verwenden wir eine einfachere Lösung
-        // Das Widget wird bei Klick einfach alle unerledigten Aufgaben durchschalten
+        // Das Widget wird bei Klick die erste unerledigte Aufgabe als erledigt markieren
 
         val database = TaskDatabase.getDatabase(context)
         val taskDao = database.taskDao()
 
-        // FIXED: Verwende getDailyTasksForDate statt getTasksForDate
-        val allTasks: List<TaskEntity> = taskDao.getDailyTasksForDate(
-            java.time.LocalDate.now().toString()
-        ).first()
+        try {
+            val allTasks: List<TaskEntity> = taskDao.getDailyTasksForDate(
+                java.time.LocalDate.now().toString()
+            ).first()
 
-        // FIXED: Explizite Typisierung für firstOrNull
-        val firstIncompleteTask: TaskEntity? = allTasks.firstOrNull { !it.isCompleted }
+            // Finde die erste unerledigte Aufgabe
+            val firstIncompleteTask: TaskEntity? = allTasks.firstOrNull { !it.isCompleted }
 
-        if (firstIncompleteTask != null) {
-            val updatedTask = firstIncompleteTask.copy(
-                isCompleted = true,
-                completedAt = LocalDateTime.now().toString()
-            )
-            taskDao.updateTask(updatedTask)
+            if (firstIncompleteTask != null) {
+                val updatedTask = firstIncompleteTask.copy(
+                    isCompleted = true,
+                    completedAt = LocalDateTime.now().toString()
+                )
+                taskDao.updateTask(updatedTask)
+
+                // Update widget
+                TaskWidget().update(context, glanceId)
+            } else {
+                // Wenn alle Aufgaben erledigt sind, markiere die erste erledigte als unerledigt
+                val firstCompletedTask: TaskEntity? = allTasks.firstOrNull { it.isCompleted }
+
+                if (firstCompletedTask != null) {
+                    val updatedTask = firstCompletedTask.copy(
+                        isCompleted = false,
+                        completedAt = null
+                    )
+                    taskDao.updateTask(updatedTask)
+
+                    // Update widget
+                    TaskWidget().update(context, glanceId)
+                }
+            }
+        } catch (e: Exception) {
+            // Fehlerbehandlung: Widget trotzdem aktualisieren
+            TaskWidget().update(context, glanceId)
         }
-
-        // Update widget
-        TaskWidget().update(context, glanceId)
     }
 }

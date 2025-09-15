@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp) // KSP statt Kapt
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -34,6 +34,7 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            isDebuggable = true
         }
     }
 
@@ -48,6 +49,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -86,7 +88,7 @@ dependencies {
     // Room Database (mit KSP)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler) // KSP statt kapt
+    ksp(libs.androidx.room.compiler)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
@@ -98,6 +100,9 @@ dependencies {
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
 
+    // Permission handling
+    implementation("androidx.activity:activity-compose:1.8.2")
+
     // Test dependencies
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -106,9 +111,4 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    // Coroutines (falls noch nicht vorhanden)
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-    // Für Permissions
-    implementation("androidx.activity:activity-compose:1.8.2")
 }

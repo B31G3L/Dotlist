@@ -38,7 +38,7 @@ interface TaskDao {
     @Query("SELECT COUNT(*) FROM tasks WHERE date = :date AND isInDailyList = 1")
     suspend fun getTotalDailyTasksCount(date: String): Int
 
-    // NEU: Backlog-spezifische Queries
+    // Backlog-spezifische Queries
     @Query("SELECT * FROM tasks WHERE isInDailyList = 0 AND isCompleted = 0 ORDER BY priority DESC, backlogPosition ASC LIMIT :limit")
     suspend fun getTopBacklogTasks(limit: Int): List<TaskEntity>
 
@@ -50,4 +50,7 @@ interface TaskDao {
 
     @Query("SELECT MAX(backlogPosition) FROM tasks WHERE isInDailyList = 0")
     suspend fun getMaxBacklogPosition(): Int?
+
+    @Query("SELECT MAX(position) FROM tasks WHERE isInDailyList = 1 AND date = :date")
+    suspend fun getMaxDailyPosition(date: String): Int?
 }

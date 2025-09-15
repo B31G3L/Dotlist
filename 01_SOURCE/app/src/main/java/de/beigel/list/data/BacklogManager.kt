@@ -65,4 +65,79 @@ class BacklogManager(
             }
         }
     }
+
+    /**
+     * Analysiert die Backlog-Performance
+     */
+    suspend fun getBacklogStats(): BacklogStats {
+        return withContext(Dispatchers.IO) {
+            val backlogTasks = repository.getBacklogTasks().first()
+            val todayTasks = repository.getDailyTasksForToday().first()
+
+            BacklogStats(
+                totalBacklogTasks = backlogTasks.size,
+                completedBacklogTasks = backlogTasks.count { it.isCompleted },
+                todayTasksCount = todayTasks.size,
+                maxDailyLimit = settingsManager.maxDailyTasks,
+                isAutoBacklogEnabled = settingsManager.autoBacklogEnabled
+            )
+        }
+    }
+
+    /**
+     * Empfiehlt optimale Einstellungen basierend auf Nutzungsverhalten
+     */
+    suspend fun getOptimizationSuggestions(): List<OptimizationSuggestion> {
+        return withContext(Dispatchers.IO) {
+            val suggestions = mutableListOf<OptimizationSuggestion>()
+            val stats = getBacklogStats()
+
+            // Zu viele Tasks im Backlog
+            if (stats.totalBacklogTasks > 20) {
+                suggestions.add(
+                    OptimizationSuggestion(
+                        type = SuggestionType.INCREASE_DAILY_LIMIT,
+                        title = "Tägliches Limit erhöhen",
+                        description = "Du hast viele Aufgaben im Backlog. Erwäge das tägliche Limit zu erhöhen.",
+                        recommendedValue = minOf(stats.maxDailyLimit + 2, 10)
+                    )
+                )
+            }
+
+            // Zu wenige Tasks im Daily
+            if (stats.todayTasksCount < stats.maxDailyLimit * 0.7) {
+                suggestions.add(
+                    OptimizationSuggestion(
+                        type = SuggestionType.ENABLE_AUTO_BACKLOG,
+                        title = "Auto-Backlog aktivieren",
+                        description = "Lass das System automatisch Aufgaben aus dem Backlog hinzufügen."
+                    )
+                )
+            }
+
+            suggestions
+        }
+    }
+}
+
+data class BacklogStats(
+    val totalBacklogTasks: Int,
+    val completedBacklogTasks: Int,
+    val todayTasksCount: Int,
+    val maxDailyLimit: Int,
+    val isAutoBacklogEnabled: Boolean
+)
+
+data class OptimizationSuggestion(
+    val type: SuggestionType,
+    val title: String,
+    val description: String,
+    val recommendedValue: Int? = null
+)
+
+enum class SuggestionType {
+    INCREASE_DAILY_LIMIT,
+    DECREASE_DAILY_LIMIT,
+    ENABLE_AUTO_BACKLOG,
+    DISABLE_AUTO_BACKLOG
 }

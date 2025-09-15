@@ -1,6 +1,5 @@
 package de.beigel.list
 
-
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -48,9 +47,9 @@ class DailyListApplication : Application() {
     }
 
     private fun migrateExistingData() {
-        // Führt eine einmalige Datenmigration für Updates von Version 1.0 durch
+        // Führt eine einmalige Datenmigration für Updates durch
         val prefs = getSharedPreferences("app_migration", Context.MODE_PRIVATE)
-        val hasRunBacklogMigration = prefs.getBoolean("backlog_migration_v2", false)
+        val hasRunBacklogMigration = prefs.getBoolean("backlog_migration_v3", false)
 
         if (!hasRunBacklogMigration) {
             applicationScope.launch {
@@ -64,7 +63,7 @@ class DailyListApplication : Application() {
                     backlogManager.optimizeDaily()
 
                     // Markiere Migration als abgeschlossen
-                    prefs.edit().putBoolean("backlog_migration_v2", true).apply()
+                    prefs.edit().putBoolean("backlog_migration_v3", true).apply()
                 } catch (e: Exception) {
                     // Log error if needed
                 }

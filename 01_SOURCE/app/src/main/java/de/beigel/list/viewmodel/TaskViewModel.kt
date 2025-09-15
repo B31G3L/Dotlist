@@ -8,7 +8,6 @@ import de.beigel.list.data.TaskPriority
 import de.beigel.list.repository.TaskRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import java.time.LocalDateTime
 
 class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
@@ -30,16 +29,68 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             initialValue = emptyList()
         )
 
-    fun addTask(title: String, description: String = "", priority: TaskPriority = TaskPriority.MEDIUM, addToDaily: Boolean = true) {
+    // Filtered tasks basierend auf UI State
+    val filteredTodayTasks = combine(
+        todayTasks,
+        _uiState
+    ) { tasks, state ->
+        filterTasks(tasks, state)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val filteredBacklogTasks = combine(
+        backlogTasks,
+        _uiState
+    ) { tasks, state ->
+        filterTasks(tasks, state)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    private fun filterTasks(tasks: List<TaskEntity>, state: TaskUiState): List<TaskEntity> {
+        return tasks.filter { task ->
+            // Search filter
+            val matchesSearch = if (state.searchQuery.isBlank()) {
+                true
+            } else {
+                task.title.contains(state.searchQuery, ignoreCase = true) ||
+                        task.description.contains(state.searchQuery, ignoreCase = true)
+            }
+
+            // Priority filter
+            val matchesPriority = state.priorityFilter?.let { filter ->
+                task.priority == filter
+            } ?: true
+
+            // Completion filter
+            val matchesCompletion = if (state.showCompletedTasks) {
+                true
+            } else {
+                !task.isCompleted
+            }
+
+            matchesSearch && matchesPriority && matchesCompletion
+        }
+    }
+
+    fun addTask(
+        title: String,
+        description: String = "",
+        priority: TaskPriority = TaskPriority.MEDIUM,
+        addToDaily: Boolean = true
+    ) {
         if (title.isBlank()) return
 
         viewModelScope.launch {
             val newTask = TaskEntity(
                 title = title.trim(),
                 description = description.trim(),
-                priority = priority,
-                position = if (addToDaily) todayTasks.value.size else 0,
-                backlogPosition = if (!addToDaily) backlogTasks.value.size else 0
+                priority = priority
             )
             repository.insertTask(newTask, addToDaily)
         }
@@ -85,55 +136,74 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
-    // NEU: Fehlende Methode für Drag & Drop
-    fun updateTaskPositions(tasks: List<TaskEntity>) {
-        viewModelScope.launch {
-            repository.updateTaskPositions(tasks)
-        }
-    }
-
-    // NEU: Reorder Methoden für bessere UX
-    fun moveTask(fromIndex: Int, toIndex: Int, isDaily: Boolean = true) {
-        viewModelScope.launch {
-            val currentTasks = if (isDaily) todayTasks.value else backlogTasks.value
-            if (fromIndex in currentTasks.indices && toIndex in currentTasks.indices) {
-                val reorderedTasks = currentTasks.toMutableList()
-                val movedTask = reorderedTasks.removeAt(fromIndex)
-                reorderedTasks.add(toIndex, movedTask)
-
-                // Update positions in database
-                updateTaskPositions(reorderedTasks)
+    // Selection Mode Functions
+    fun toggleTaskSelection(taskId: String) {
+        _uiState.update { currentState ->
+            val selectedTasks = currentState.selectedTaskIds.toMutableSet()
+            if (selectedTasks.contains(taskId)) {
+                selectedTasks.remove(taskId)
+            } else {
+                selectedTasks.add(taskId)
             }
+
+            currentState.copy(
+                selectedTaskIds = selectedTasks,
+                isSelectionMode = selectedTasks.isNotEmpty()
+            )
         }
     }
 
-    // NEU: Batch-Operationen
-    fun markMultipleTasksComplete(taskIds: List<String>, completed: Boolean = true) {
-        viewModelScope.launch {
-            taskIds.forEach { taskId ->
-                val allTasks = todayTasks.value + backlogTasks.value
-                val task = allTasks.find { it.id == taskId }
-                task?.let {
-                    val updatedTask = it.copy(
-                        isCompleted = completed,
-                        completedAt = if (completed) LocalDateTime.now().toString() else null
-                    )
-                    repository.updateTask(updatedTask)
-                }
-            }
-        }
+    fun clearSelection() {
+        _uiState.update { it.copy(selectedTaskIds = emptySet(), isSelectionMode = false) }
     }
 
-    fun deleteMultipleTasks(taskIds: List<String>) {
+    fun deleteSelectedTasks() {
         viewModelScope.launch {
-            taskIds.forEach { taskId ->
-                val allTasks = todayTasks.value + backlogTasks.value
+            val selectedIds = _uiState.value.selectedTaskIds
+            val allTasks = todayTasks.value + backlogTasks.value
+
+            selectedIds.forEach { taskId ->
                 val task = allTasks.find { it.id == taskId }
                 task?.let { repository.deleteTask(it) }
             }
+
+            clearSelection()
         }
     }
 
+    fun moveSelectedTasksToDaily() {
+        viewModelScope.launch {
+            val selectedIds = _uiState.value.selectedTaskIds
+            val allTasks = todayTasks.value + backlogTasks.value
+
+            selectedIds.forEach { taskId ->
+                val task = allTasks.find { it.id == taskId }
+                if (task != null && !task.isInDailyList) {
+                    repository.moveTaskToDaily(task)
+                }
+            }
+
+            clearSelection()
+        }
+    }
+
+    fun moveSelectedTasksToBacklog() {
+        viewModelScope.launch {
+            val selectedIds = _uiState.value.selectedTaskIds
+            val allTasks = todayTasks.value + backlogTasks.value
+
+            selectedIds.forEach { taskId ->
+                val task = allTasks.find { it.id == taskId }
+                if (task != null && task.isInDailyList) {
+                    repository.moveTaskToBacklog(task)
+                }
+            }
+
+            clearSelection()
+        }
+    }
+
+    // UI State Updates
     fun setShowCompleted(show: Boolean) {
         _uiState.update { it.copy(showCompletedTasks = show) }
     }
@@ -144,78 +214,36 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
 
     fun setCurrentView(view: ViewType) {
         _uiState.update { it.copy(currentView = view) }
+        clearSelection() // Clear selection when switching views
     }
 
-    // NEU: Search functionality
-    fun searchTasks(query: String) {
+    fun setSearchQuery(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
     }
 
-    // NEU: Filter functionality
-    fun filterByPriority(priority: TaskPriority?) {
+    fun setPriorityFilter(priority: TaskPriority?) {
         _uiState.update { it.copy(priorityFilter = priority) }
     }
 
-    // NEU: Computed properties für gefilterte Listen
-    val filteredTodayTasks = combine(
-        todayTasks,
-        _uiState
-    ) { tasks, state ->
-        tasks.filter { task ->
-            val matchesSearch = if (state.searchQuery.isBlank()) {
-                true
-            } else {
-                task.title.contains(state.searchQuery, ignoreCase = true) ||
-                        task.description.contains(state.searchQuery, ignoreCase = true)
-            }
+    fun setInteractionMode(mode: InteractionMode) {
+        _uiState.update { it.copy(interactionMode = mode) }
+        clearSelection()
+    }
 
-            val matchesPriority = state.priorityFilter?.let { filter ->
-                task.priority == filter
-            } ?: true
+    // Helper functions
+    fun getSelectedTasks(): List<TaskEntity> {
+        val selectedIds = _uiState.value.selectedTaskIds
+        val allTasks = todayTasks.value + backlogTasks.value
+        return allTasks.filter { it.id in selectedIds }
+    }
 
-            val matchesCompletion = if (state.showCompletedTasks) {
-                true
-            } else {
-                !task.isCompleted
-            }
+    fun canMoveSelectedToDaily(): Boolean {
+        return getSelectedTasks().any { !it.isInDailyList }
+    }
 
-            matchesSearch && matchesPriority && matchesCompletion
-        }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
-
-    val filteredBacklogTasks = combine(
-        backlogTasks,
-        _uiState
-    ) { tasks, state ->
-        tasks.filter { task ->
-            val matchesSearch = if (state.searchQuery.isBlank()) {
-                true
-            } else {
-                task.title.contains(state.searchQuery, ignoreCase = true) ||
-                        task.description.contains(state.searchQuery, ignoreCase = true)
-            }
-
-            val matchesPriority = state.priorityFilter?.let { filter ->
-                task.priority == filter
-            } ?: true
-
-            val matchesCompletion = if (state.showCompletedTasks) {
-                true
-            } else {
-                !task.isCompleted
-            }
-
-            matchesSearch && matchesPriority && matchesCompletion
-        }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    fun canMoveSelectedToBacklog(): Boolean {
+        return getSelectedTasks().any { it.isInDailyList }
+    }
 }
 
 data class TaskUiState(
@@ -225,11 +253,20 @@ data class TaskUiState(
     val searchQuery: String = "",
     val priorityFilter: TaskPriority? = null,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val selectedTaskIds: Set<String> = emptySet(),
+    val isSelectionMode: Boolean = false,
+    val interactionMode: InteractionMode = InteractionMode.MINIMAL
 )
 
 enum class ViewType {
     DAILY, BACKLOG
+}
+
+enum class InteractionMode {
+    MINIMAL,      // Nur Swipe-Gesten
+    CONTEXT_MENU, // Long press für Context Menu
+    SELECTION     // Multi-Select mit floating actions
 }
 
 sealed class DialogState {
@@ -237,4 +274,5 @@ sealed class DialogState {
     data class AddTask(val addToDaily: Boolean = true) : DialogState()
     data class EditTask(val task: TaskEntity) : DialogState()
     data class TaskDetails(val task: TaskEntity) : DialogState()
+    data class ContextMenu(val task: TaskEntity, val position: androidx.compose.ui.geometry.Offset) : DialogState()
 }

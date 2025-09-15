@@ -1,13 +1,16 @@
 package de.beigel.list.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack // FIXED: AutoMirrored
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,14 +36,19 @@ fun HistoryScreen(
 ) {
     var historyData by remember { mutableStateOf<List<HistoryDayData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var selectedPeriod by remember { mutableStateOf(HistoryPeriod.WEEK) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(selectedPeriod) {
         isLoading = true
         val data = mutableListOf<HistoryDayData>()
 
-        for (i in 0..6) {
+        val daysToShow = when (selectedPeriod) {
+            HistoryPeriod.WEEK -> 7
+            HistoryPeriod.MONTH -> 30
+        }
+
+        for (i in 0 until daysToShow) {
             val date = LocalDate.now().minusDays(i.toLong())
-            // FIXED: Verwende getAllTasksForDate statt getTasksForDate
             val tasks: List<TaskEntity> = repository.getAllTasksForDate(date).first()
             val completionRate = repository.getCompletionRate(date)
 
@@ -69,18 +77,73 @@ fun HistoryScreen(
         ) {
             IconButton(onClick = onNavigateBack) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack, // FIXED: AutoMirrored
+                    Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Zurück",
-                    tint = Color(0xFF009966)
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
 
-            Text(
-                text = "Historie (7 Tage)",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color(0xFF3C3C3C),
-                fontWeight = FontWeight.Bold
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Historie",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = when (selectedPeriod) {
+                        HistoryPeriod.WEEK -> "Letzte 7 Tage"
+                        HistoryPeriod.MONTH -> "Letzter Monat"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Period Selector
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                HistoryPeriod.values().forEach { period ->
+                    FilterChip(
+                        selected = selectedPeriod == period,
+                        onClick = { selectedPeriod = period },
+                        label = {
+                            Text(
+                                when (period) {
+                                    HistoryPeriod.WEEK -> "7 Tage"
+                                    HistoryPeriod.MONTH -> "30 Tage"
+                                }
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.CalendarToday,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -90,14 +153,38 @@ fun HistoryScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = Color(0xFF009966))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Lade Historie...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
             }
         } else {
+            // Statistics Overview
+            if (historyData.isNotEmpty()) {
+                HistoryStatsCard(historyData = historyData)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(historyData) { dayData ->
-                    HistoryDayCard(dayData = dayData)
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = slideInVertically() + fadeIn(),
+                        exit = slideOutVertically() + fadeOut()
+                    ) {
+                        HistoryDayCard(dayData = dayData)
+                    }
                 }
             }
         }
@@ -105,16 +192,104 @@ fun HistoryScreen(
 }
 
 @Composable
+fun HistoryStatsCard(historyData: List<HistoryDayData>) {
+    val totalTasks = historyData.sumOf { it.tasks.size }
+    val completedTasks = historyData.sumOf { it.tasks.count { task -> task.isCompleted } }
+    val averageCompletion = if (historyData.isNotEmpty()) {
+        historyData.map { it.completionRate }.average()
+    } else 0.0
+    val productiveDays = historyData.count { it.completionRate >= 0.8f }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "Übersicht",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatItem(
+                    label = "Aufgaben",
+                    value = totalTasks.toString(),
+                    subtitle = "$completedTasks erledigt"
+                )
+
+                StatItem(
+                    label = "Ø Abschlussrate",
+                    value = "${(averageCompletion * 100).toInt()}%",
+                    subtitle = "pro Tag"
+                )
+
+                StatItem(
+                    label = "Produktive Tage",
+                    value = productiveDays.toString(),
+                    subtitle = "≥80% erledigt"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun StatItem(
+    label: String,
+    value: String,
+    subtitle: String
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@Composable
 fun HistoryDayCard(dayData: HistoryDayData) {
     val isToday = dayData.date == LocalDate.now()
+    val isYesterday = dayData.date == LocalDate.now().minusDays(1)
     val completedTasks = dayData.tasks.filter { it.isCompleted }
     val totalTasks = dayData.tasks.size
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isToday) 4.dp else 2.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isToday) 6.dp else 2.dp
+        ),
         colors = CardDefaults.cardColors(
-            containerColor = if (isToday) Color(0xFF009966).copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
+            containerColor = when {
+                isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                dayData.completionRate >= 0.8f -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.05f)
+                else -> MaterialTheme.colorScheme.surface
+            }
         )
     ) {
         Column(
@@ -130,128 +305,149 @@ fun HistoryDayCard(dayData: HistoryDayData) {
             ) {
                 Column {
                     Text(
-                        text = dayData.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
+                        text = when {
+                            isToday -> "Heute"
+                            isYesterday -> "Gestern"
+                            else -> dayData.date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.GERMAN)
+                        },
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color(0xFF3C3C3C),
+                        color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
 
                     Text(
-                        text = if (isToday) "Heute" else dayData.date.dayOfWeek.getDisplayName(
-                            TextStyle.FULL, Locale.GERMAN
-                        ),
+                        text = dayData.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isToday) Color(0xFF009966) else Color(0xFF3C3C3C).copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                 }
 
-                // Completion Rate
+                // Completion Rate Circle
                 if (totalTasks > 0) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "${(dayData.completionRate * 100).toInt()}%",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color(0xFF009966),
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(
-                                    when {
-                                        dayData.completionRate >= 0.8f -> Color(0xFF009966)
-                                        dayData.completionRate >= 0.5f -> Color(0xFFFF8C00)
-                                        else -> Color(0xFFE53E3E)
-                                    }
-                                )
-                        )
-                    }
+                    CompletionCircle(
+                        completionRate = dayData.completionRate,
+                        completedTasks = completedTasks.size,
+                        totalTasks = totalTasks
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Progress Bar - FIXED: Deprecated API
             if (totalTasks > 0) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Progress Bar
                 LinearProgressIndicator(
-                    progress = { dayData.completionRate }, // FIXED: Lambda-Version
+                    progress = { dayData.completionRate },
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFF009966),
-                    trackColor = Color(0xFF009966).copy(alpha = 0.3f)
+                    color = when {
+                        dayData.completionRate >= 0.8f -> MaterialTheme.colorScheme.tertiary
+                        dayData.completionRate >= 0.5f -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.error
+                    },
+                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "$completedTasks von $totalTasks Aufgaben erledigt",
+                    text = "${completedTasks.size} von $totalTasks Aufgaben erledigt",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF3C3C3C).copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
+
+                // Task Preview
+                if (dayData.tasks.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val displayTasks = dayData.tasks.take(3)
+                    displayTasks.forEach { task ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color(task.priority.color))
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Text(
+                                text = task.title,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (task.isCompleted)
+                                    MaterialTheme.colorScheme.tertiary
+                                else
+                                    MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            if (task.isCompleted) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = "Erledigt",
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (dayData.tasks.size > 3) {
+                        Text(
+                            text = "und ${dayData.tasks.size - 3} weitere...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                        )
+                    }
+                }
             } else {
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Keine Aufgaben",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF3C3C3C).copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
             }
-
-            // Task Preview
-            if (dayData.tasks.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-
-                val displayTasks = dayData.tasks.take(3)
-                displayTasks.forEach { task ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color(task.priority.color))
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Text(
-                            text = task.title,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (task.isCompleted) Color(0xFF009966) else Color(0xFF3C3C3C),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        if (task.isCompleted) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = "Erledigt",
-                                tint = Color(0xFF009966),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
-
-                if (dayData.tasks.size > 3) {
-                    Text(
-                        text = "und ${dayData.tasks.size - 3} weitere...",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF3C3C3C).copy(alpha = 0.5f),
-                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
-                    )
-                }
-            }
         }
+    }
+}
+
+@Composable
+fun CompletionCircle(
+    completionRate: Float,
+    completedTasks: Int,
+    totalTasks: Int
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.size(48.dp)
+    ) {
+        CircularProgressIndicator(
+            progress = { completionRate },
+            modifier = Modifier.fillMaxSize(),
+            color = when {
+                completionRate >= 0.8f -> MaterialTheme.colorScheme.tertiary
+                completionRate >= 0.5f -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.error
+            },
+            strokeWidth = 4.dp,
+            trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        )
+
+        Text(
+            text = "${(completionRate * 100).toInt()}%",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -260,3 +456,7 @@ data class HistoryDayData(
     val tasks: List<TaskEntity>,
     val completionRate: Float
 )
+
+enum class HistoryPeriod {
+    WEEK, MONTH
+}

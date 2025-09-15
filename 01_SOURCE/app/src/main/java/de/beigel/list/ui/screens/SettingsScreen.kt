@@ -5,6 +5,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -15,12 +18,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import de.beigel.list.notification.NotificationWorker
 import de.beigel.list.settings.SettingsManager
+import de.beigel.list.viewmodel.InteractionMode
+import de.beigel.list.data.TaskPriority
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,13 +35,20 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
+
+    // Settings States
     var notificationsEnabled by remember { mutableStateOf(settingsManager.notificationsEnabled) }
     var notificationHour by remember { mutableStateOf(settingsManager.notificationHour) }
     var notificationMinute by remember { mutableStateOf(settingsManager.notificationMinute) }
     var maxDailyTasks by remember { mutableIntStateOf(settingsManager.maxDailyTasks) }
     var autoBacklogEnabled by remember { mutableStateOf(settingsManager.autoBacklogEnabled) }
-    var showTimePicker by remember { mutableStateOf(false) }
+    var interactionMode by remember { mutableStateOf(settingsManager.interactionMode) }
+    var isDarkMode by remember { mutableStateOf(settingsManager.isDarkMode) }
+    var useSystemTheme by remember { mutableStateOf(settingsManager.useSystemTheme) }
+    var enableAnimations by remember { mutableStateOf(settingsManager.enableAnimations) }
+    var enableHapticFeedback by remember { mutableStateOf(settingsManager.enableHapticFeedback) }
 
+    var showTimePicker by remember { mutableStateOf(false) }
 
     // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -95,7 +108,7 @@ fun SettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         }
@@ -105,150 +118,448 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // ========== NEU: Backlog Einstellungen ==========
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+            // ========== Aufgabenverwaltung ==========
+            SettingsGroup(
+                title = "Aufgabenverwaltung",
+                icon = Icons.Default.Task
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+                // Maximale tägliche Aufgaben
+                SettingsSlider(
+                    title = "Maximale tägliche Aufgaben",
+                    subtitle = "Anzahl der Aufgaben, die täglich angezeigt werden",
+                    value = maxDailyTasks,
+                    valueRange = 1f..20f,
+                    onValueChange = { value ->
+                        maxDailyTasks = value.toInt()
+                        settingsManager.maxDailyTasks = value.toInt()
+                    }
+                )
+
+                // Auto-Backlog
+                SettingsSwitch(
+                    title = "Automatisches Backlog",
+                    subtitle = "Tägliche Liste automatisch aus Backlog auffüllen",
+                    checked = autoBacklogEnabled,
+                    onCheckedChange = { enabled ->
+                        autoBacklogEnabled = enabled
+                        settingsManager.autoBacklogEnabled = enabled
+                    }
+                )
+            }
+
+            // ========== Interaktion ==========
+            SettingsGroup(
+                title = "Interaktion",
+                icon = Icons.Default.TouchApp
+            ) {
+                // Interaktionsmodus
+                SettingsSelection(
+                    title = "Interaktionsmodus",
+                    subtitle = when (interactionMode) {
+                        InteractionMode.MINIMAL -> "Minimal - Nur Tipp & Gedrückt halten"
+                        InteractionMode.CONTEXT_MENU -> "Kontextmenü - Gedrückt halten für Optionen"
+                        InteractionMode.SELECTION -> "Auswahl - Multi-Select Modus"
+                    },
+                    options = InteractionMode.values().map { mode ->
+                        when (mode) {
+                            InteractionMode.MINIMAL -> "Minimal"
+                            InteractionMode.CONTEXT_MENU -> "Kontextmenü"
+                            InteractionMode.SELECTION -> "Auswahl"
+                        }
+                    },
+                    selectedIndex = InteractionMode.values().indexOf(interactionMode),
+                    onSelectionChange = { index ->
+                        interactionMode = InteractionMode.values()[index]
+                        settingsManager.interactionMode = interactionMode
+                    }
+                )
+
+                // Animationen
+                SettingsSwitch(
+                    title = "Animationen",
+                    subtitle = "Sanfte Übergänge und Animationen aktivieren",
+                    checked = enableAnimations,
+                    onCheckedChange = { enabled ->
+                        enableAnimations = enabled
+                        settingsManager.enableAnimations = enabled
+                    }
+                )
+
+                // Haptisches Feedback
+                SettingsSwitch(
+                    title = "Haptisches Feedback",
+                    subtitle = "Vibration bei Interaktionen",
+                    checked = enableHapticFeedback,
+                    onCheckedChange = { enabled ->
+                        enableHapticFeedback = enabled
+                        settingsManager.enableHapticFeedback = enabled
+                    }
+                )
+            }
+
+            // ========== Design ==========
+            SettingsGroup(
+                title = "Design",
+                icon = Icons.Default.Palette
+            ) {
+                // System Theme
+                SettingsSwitch(
+                    title = "System-Theme verwenden",
+                    subtitle = "Automatisch zwischen Hell und Dunkel wechseln",
+                    checked = useSystemTheme,
+                    onCheckedChange = { enabled ->
+                        useSystemTheme = enabled
+                        settingsManager.useSystemTheme = enabled
+                    }
+                )
+
+                // Manual Dark Mode (nur wenn System-Theme deaktiviert)
+                AnimatedVisibility(
+                    visible = !useSystemTheme,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
                 ) {
-                    Text(
-                        text = "Aufgabenverwaltung",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                    SettingsSwitch(
+                        title = "Dunkler Modus",
+                        subtitle = "Dunkles Design aktivieren",
+                        checked = isDarkMode,
+                        onCheckedChange = { enabled ->
+                            isDarkMode = enabled
+                            settingsManager.isDarkMode = enabled
+                        }
                     )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Maximale tägliche Aufgaben
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Maximale tägliche Aufgaben",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = "Anzahl der Aufgaben, die täglich angezeigt werden",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                        }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    if (maxDailyTasks > 1) {
-                                        maxDailyTasks--
-                                        settingsManager.maxDailyTasks = maxDailyTasks
-                                    }
-                                }
-                            ) {
-                                Icon(Icons.Default.Remove, contentDescription = "Weniger")
-                            }
-
-                            Text(
-                                text = maxDailyTasks.toString(),
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-
-                            IconButton(
-                                onClick = {
-                                    if (maxDailyTasks < 20) {
-                                        maxDailyTasks++
-                                        settingsManager.maxDailyTasks = maxDailyTasks
-                                    }
-                                }
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = "Mehr")
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Auto-Backlog
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Automatisches Backlog",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = "Tägliche Liste automatisch aus Backlog auffüllen",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                        }
-
-                        Switch(
-                            checked = autoBacklogEnabled,
-                            onCheckedChange = { enabled ->
-                                autoBacklogEnabled = enabled
-                                settingsManager.autoBacklogEnabled = enabled
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.primary
-                            )
-                        )
-                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // App Info Section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+            // ========== Benachrichtigungen ==========
+            SettingsGroup(
+                title = "Benachrichtigungen",
+                icon = Icons.Default.Notifications
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+                // Benachrichtigungen aktivieren
+                SettingsSwitch(
+                    title = "Tägliche Erinnerungen",
+                    subtitle = if (hasNotificationPermission) {
+                        "Erhalte tägliche Benachrichtigungen für offene Aufgaben"
+                    } else {
+                        "Berechtigung erforderlich"
+                    },
+                    checked = notificationsEnabled && hasNotificationPermission,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !hasNotificationPermission) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        } else {
+                            notificationsEnabled = enabled
+                            settingsManager.notificationsEnabled = enabled
+
+                            if (enabled) {
+                                NotificationWorker.scheduleDaily(context, notificationHour, notificationMinute)
+                            } else {
+                                NotificationWorker.cancelNotifications(context)
+                            }
+                        }
+                    }
+                )
+
+                // Benachrichtigungszeit (nur wenn aktiviert)
+                AnimatedVisibility(
+                    visible = notificationsEnabled && hasNotificationPermission,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
                 ) {
-                    Text(
-                        text = "App-Information",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                    SettingsClickable(
+                        title = "Benachrichtigungszeit",
+                        subtitle = String.format("%02d:%02d", notificationHour, notificationMinute),
+                        onClick = { showTimePicker = true }
                     )
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+            // ========== App-Information ==========
+            SettingsGroup(
+                title = "App-Information",
+                icon = Icons.Default.Info
+            ) {
+                InfoRow(
+                    icon = Icons.Default.Info,
+                    title = "Version",
+                    subtitle = "1.0.0"
+                )
 
-                    InfoRow(
-                        icon = Icons.Default.Info,
-                        title = "Version",
-                        subtitle = "1.0.0"
-                    )
+                InfoRow(
+                    icon = Icons.Default.Build,
+                    title = "Entwickelt mit",
+                    subtitle = "Jetpack Compose & Material 3"
+                )
 
-                    InfoRow(
-                        icon = Icons.Default.Build,
-                        title = "Entwickelt mit",
-                        subtitle = "Jetpack Compose & Material 3"
-                    )
+                InfoRow(
+                    icon = Icons.Default.Storage,
+                    title = "Datenspeicherung",
+                    subtitle = "Lokal auf dem Gerät (Room Database)"
+                )
 
-                    InfoRow(
-                        icon = Icons.Default.Storage,
-                        title = "Datenspeicherung",
-                        subtitle = "Lokal auf dem Gerät (Room Database)"
-                    )
+                InfoRow(
+                    icon = Icons.Default.Security,
+                    title = "Datenschutz",
+                    subtitle = "Alle Daten bleiben auf deinem Gerät"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsGroup(
+    title: String,
+    icon: ImageVector,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            content()
+        }
+    }
+}
+
+@Composable
+fun SettingsSwitch(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        }
+
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.primary
+            )
+        )
+    }
+}
+
+@Composable
+fun SettingsSlider(
+    title: String,
+    subtitle: String,
+    value: Int,
+    valueRange: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
+
+            Text(
+                text = value.toString(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Slider(
+            value = value.toFloat(),
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = (valueRange.endInclusive - valueRange.start).toInt() - 1,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary
+            )
+        )
+    }
+}
+
+@Composable
+fun SettingsClickable(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        }
+
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+        )
+    }
+}
+
+@Composable
+fun SettingsSelection(
+    title: String,
+    subtitle: String,
+    options: List<String>,
+    selectedIndex: Int,
+    onSelectionChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
+
+            Icon(
+                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+        }
+
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column(
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                options.forEachIndexed { index, option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSelectionChange(index)
+                                expanded = false
+                            }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedIndex == index,
+                            onClick = {
+                                onSelectionChange(index)
+                                expanded = false
+                            },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = option,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
             }
         }
@@ -257,7 +568,7 @@ fun SettingsScreen(
 
 @Composable
 fun InfoRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     subtitle: String
 ) {

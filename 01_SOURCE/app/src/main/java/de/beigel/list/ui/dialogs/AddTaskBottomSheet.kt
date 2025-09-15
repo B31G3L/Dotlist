@@ -41,12 +41,12 @@ fun AddTaskBottomSheet(
         skipPartiallyExpanded = false
     )
 
-    var title by remember { mutableStateOf(initialTask?.title ?: "") }
-    var description by remember { mutableStateOf(initialTask?.description ?: "") }
-    var selectedPriority by remember { mutableStateOf(initialTask?.priority ?: TaskPriority.MEDIUM) }
-    var addToDaily by remember { mutableStateOf(initialAddToDaily) }
+    var title by remember(initialTask) { mutableStateOf(initialTask?.title ?: "") }
+    var description by remember(initialTask) { mutableStateOf(initialTask?.description ?: "") }
+    var selectedPriority by remember(initialTask) { mutableStateOf(initialTask?.priority ?: TaskPriority.MEDIUM) }
+    var addToDaily by remember(initialAddToDaily) { mutableStateOf(initialAddToDaily) }
 
-    // Expansion states for different sections
+    // Expansion states für verschiedene Sektionen
     var showDescription by remember { mutableStateOf(false) }
     var showPriority by remember { mutableStateOf(false) }
     var showDestination by remember { mutableStateOf(false) }
@@ -143,7 +143,7 @@ fun AddTaskBottomSheet(
                         }
                     )
 
-                    // Destination Icon (only when adding new tasks)
+                    // Destination Icon (nur beim Hinzufügen neuer Tasks)
                     if (showDestinationChoice && !isEditing) {
                         ExpandableIcon(
                             icon = if (addToDaily) Icons.Default.Today else Icons.Default.Inventory,

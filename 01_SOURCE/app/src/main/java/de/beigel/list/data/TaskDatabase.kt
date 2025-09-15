@@ -3,11 +3,11 @@ package de.beigel.list.data
 import androidx.room.*
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import java.time.LocalDate
+import android.content.Context
 
 @Database(
     entities = [TaskEntity::class],
-    version = 2, // Version erhöht wegen neuer Felder
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -41,14 +41,14 @@ abstract class TaskDatabase : RoomDatabase() {
             }
         }
 
-        fun getDatabase(context: android.content.Context): TaskDatabase {
+        fun getDatabase(context: Context): TaskDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     TaskDatabase::class.java,
                     "task_database"
                 )
-                    .addMigrations(MIGRATION_1_2) // Migration hinzufügen
+                    .addMigrations(MIGRATION_1_2)
                     .build()
                 INSTANCE = instance
                 instance

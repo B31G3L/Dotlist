@@ -21,10 +21,11 @@ import de.beigel.list.ui.screens.HistoryScreen
 import de.beigel.list.ui.screens.SettingsScreen
 import de.beigel.list.ui.theme.DailyListTheme
 import de.beigel.list.viewmodel.TaskViewModel
+import de.beigel.list.settings.SettingsManager
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Einfache Splash Screen Installation
+        // Splash Screen
         installSplashScreen()
 
         super.onCreate(savedInstanceState)
@@ -33,9 +34,16 @@ class MainActivity : ComponentActivity() {
         // Initialize database and repository
         val database = TaskDatabase.getDatabase(this)
         val repository = TaskRepository(database.taskDao())
+        val settingsManager = SettingsManager(this)
 
         setContent {
-            DailyListTheme {
+            DailyListTheme(
+                darkTheme = if (settingsManager.useSystemTheme) {
+                    androidx.compose.foundation.isSystemInDarkTheme()
+                } else {
+                    settingsManager.isDarkMode
+                }
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -45,21 +53,38 @@ class MainActivity : ComponentActivity() {
                         TaskViewModel(repository)
                     }
 
-                    // Einfache Navigation ohne komplexe Animationen
+                    // Apply saved interaction mode
+                    LaunchedEffect(Unit) {
+                        viewModel.setInteractionMode(settingsManager.interactionMode)
+                    }
+
+                    // Navigation with animations
                     NavHost(
                         navController = navController,
                         startDestination = "task_list",
                         enterTransition = {
-                            fadeIn(animationSpec = tween(300))
+                            slideInHorizontally(
+                                initialOffsetX = { it },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(300))
                         },
                         exitTransition = {
-                            fadeOut(animationSpec = tween(300))
+                            slideOutHorizontally(
+                                targetOffsetX = { -it },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween(300))
                         },
                         popEnterTransition = {
-                            fadeIn(animationSpec = tween(300))
+                            slideInHorizontally(
+                                initialOffsetX = { -it },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(300))
                         },
                         popExitTransition = {
-                            fadeOut(animationSpec = tween(300))
+                            slideOutHorizontally(
+                                targetOffsetX = { it },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween(300))
                         }
                     ) {
                         composable("task_list") {

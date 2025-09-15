@@ -15,7 +15,7 @@ data class TaskEntity(
     val date: String = LocalDate.now().toString(),
     val createdAt: String = LocalDateTime.now().toString(),
     val completedAt: String? = null,
-    val isInDailyList: Boolean = false,
+    val isInDailyList: Boolean = true,
     val backlogPosition: Int = 0
 )
 

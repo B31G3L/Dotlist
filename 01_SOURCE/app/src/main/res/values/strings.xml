@@ -11,6 +11,7 @@
     <string name="notification_title">Daily List</string>
     <string name="notification_text_single">Du hast noch 1 offene Aufgabe für heute</string>
     <string name="notification_text_multiple">Du hast noch %d offene Aufgaben für heute</string>
+    <string name="notification_text_completed">Alle Aufgaben für heute erledigt! 🎉</string>
 
     <!-- Task Actions -->
     <string name="add_task">Aufgabe hinzufügen</string>
@@ -41,6 +42,8 @@
     <string name="add_first_task">Tippe auf \'+\' um eine neue Aufgabe hinzuzufügen</string>
     <string name="great_work">Großartige Arbeit! 🎉</string>
     <string name="no_tasks">Keine Aufgaben</string>
+    <string name="backlog_empty">Backlog ist leer</string>
+    <string name="backlog_empty_description">Alle zusätzlichen Aufgaben werden hier gespeichert</string>
 
     <!-- Actions -->
     <string name="save">Speichern</string>
@@ -48,12 +51,21 @@
     <string name="close">Schließen</string>
     <string name="edit">Bearbeiten</string>
     <string name="ok">OK</string>
+    <string name="select_all">Alle auswählen</string>
+    <string name="clear_selection">Auswahl aufheben</string>
 
     <!-- History -->
     <string name="history_7_days">Historie (7 Tage)</string>
+    <string name="history_30_days">Historie (30 Tage)</string>
     <string name="today">Heute</string>
+    <string name="yesterday">Gestern</string>
     <string name="completed_tasks_count">%d von %d Aufgaben erledigt</string>
     <string name="and_more">und %d weitere…</string>
+    <string name="overview">Übersicht</string>
+    <string name="average_completion">Ø Abschlussrate</string>
+    <string name="productive_days">Produktive Tage</string>
+    <string name="per_day">pro Tag</string>
+    <string name="completion_threshold">≥80%% erledigt</string>
 
     <!-- Settings -->
     <string name="notifications">Benachrichtigungen</string>
@@ -72,37 +84,36 @@
     <string name="tech_stack">Jetpack Compose &amp; Material 3</string>
     <string name="data_storage">Datenspeicherung</string>
     <string name="storage_description">Lokal auf dem Gerät (Room Database)</string>
+    <string name="privacy">Datenschutz</string>
+    <string name="privacy_description">Alle Daten bleiben auf deinem Gerät</string>
 
-    <!-- Features -->
-    <string name="features">Features</string>
-    <string name="feature_daily_lists">✅ Tägliche Aufgabenlisten</string>
-    <string name="feature_priorities">✅ Prioritäten &amp; Farben</string>
-    <string name="feature_drag_drop">✅ Drag &amp; Drop Sortierung</string>
-    <string name="feature_history">✅ 7-Tage Historie</string>
-    <string name="feature_widget">✅ Home Screen Widget</string>
-    <string name="feature_themes">✅ Dark/Light Mode</string>
-    <string name="feature_offline">✅ Offline-Funktionalität</string>
+    <!-- Task Management -->
+    <string name="task_management">Aufgabenverwaltung</string>
+    <string name="max_daily_tasks">Maximale tägliche Aufgaben</string>
+    <string name="max_daily_tasks_description">Anzahl der Aufgaben, die täglich angezeigt werden</string>
+    <string name="auto_backlog">Automatisches Backlog</string>
+    <string name="auto_backlog_description">Tägliche Liste automatisch aus Backlog auffüllen</string>
+    <string name="daily_limit_exceeded">⚠️ Du hast %d Aufgaben über dem Limit</string>
+    <string name="tasks_count_today">%d/%d heute</string>
+    <string name="tasks_count_backlog">%d im Backlog</string>
 
-    <!-- Accessibility -->
-    <string name="task_completed">Aufgabe erledigt</string>
-    <string name="task_pending">Aufgabe ausstehend</string>
-    <string name="show_completed_tasks">Erledigte Aufgaben anzeigen</string>
-    <string name="hide_completed_tasks">Erledigte Aufgaben ausblenden</string>
-    <string name="priority_indicator">Prioritätsindikator</string>
-    <string name="task_checkbox">Aufgaben-Checkbox</string>
-    <string name="edit_task_button">Aufgabe bearbeiten</string>
-    <string name="delete_task_button">Aufgabe löschen</string>
+    <!-- Interaction -->
+    <string name="interaction">Interaktion</string>
+    <string name="interaction_mode">Interaktionsmodus</string>
+    <string name="interaction_minimal">Minimal - Nur Tipp &amp; Gedrückt halten</string>
+    <string name="interaction_context_menu">Kontextmenü - Gedrückt halten für Optionen</string>
+    <string name="interaction_selection">Auswahl - Multi-Select Modus</string>
+    <string name="animations">Animationen</string>
+    <string name="animations_description">Sanfte Übergänge und Animationen aktivieren</string>
+    <string name="haptic_feedback">Haptisches Feedback</string>
+    <string name="haptic_feedback_description">Vibration bei Interaktionen</string>
 
-    <!-- Error Messages -->
-    <string name="error_loading_tasks">Fehler beim Laden der Aufgaben</string>
-    <string name="error_saving_task">Fehler beim Speichern der Aufgabe</string>
-    <string name="task_title_required">Titel ist erforderlich</string>
-
-    <!-- Success Messages -->
-    <string name="task_added">Aufgabe hinzugefügt</string>
-    <string name="task_updated">Aufgabe aktualisiert</string>
-    <string name="task_deleted">Aufgabe gelöscht</string>
-    <string name="task_completed_success">Aufgabe als erledigt markiert</string>
+    <!-- Design -->
+    <string name="design">Design</string>
+    <string name="use_system_theme">System-Theme verwenden</string>
+    <string name="use_system_theme_description">Automatisch zwischen Hell und Dunkel wechseln</string>
+    <string name="dark_mode">Dunkler Modus</string>
+    <string name="dark_mode_description">Dunkles Design aktivieren</string>
 
     <!-- Backlog System -->
     <string name="backlog">Backlog</string>
@@ -111,14 +122,45 @@
     <string name="add_to_today">Zur Liste</string>
     <string name="add_to_backlog">Zum Backlog</string>
     <string name="fill_from_backlog">Aus Backlog auffüllen</string>
-    <string name="max_daily_tasks">Maximale tägliche Aufgaben</string>
-    <string name="max_daily_tasks_description">Anzahl der Aufgaben, die täglich angezeigt werden</string>
-    <string name="auto_backlog">Automatisches Backlog</string>
-    <string name="auto_backlog_description">Tägliche Liste automatisch aus Backlog auffüllen</string>
-    <string name="task_management">Aufgabenverwaltung</string>
-    <string name="daily_limit_exceeded">⚠️ Du hast %d Aufgaben über dem Limit</string>
-    <string name="backlog_empty">Backlog ist leer</string>
-    <string name="backlog_empty_description">Alle zusätzlichen Aufgaben werden hier gespeichert</string>
-    <string name="tasks_count_today">%d/%d heute</string>
-    <string name="tasks_count_backlog">%d im Backlog</string>
+    <string name="move_to_today_action">Zu Heute verschieben</string>
+    <string name="move_to_backlog_action">Zu Backlog verschieben</string>
+
+    <!-- Selection Mode -->
+    <string name="selection_mode">%d von %d ausgewählt</string>
+    <string name="selection_clear">Auswahl aufheben</string>
+
+    <!-- Actions Accessibility -->
+    <string name="task_completed">Aufgabe erledigt</string>
+    <string name="task_pending">Aufgabe ausstehend</string>
+    <string name="show_completed_tasks">Erledigte Aufgaben anzeigen</string>
+    <string name="hide_completed_tasks">Erledigte Aufgaben ausblenden</string>
+    <string name="priority_indicator">Prioritätsindikator</string>
+    <string name="task_checkbox">Aufgaben-Checkbox</string>
+    <string name="edit_task_button">Aufgabe bearbeiten</string>
+    <string name="delete_task_button">Aufgabe löschen</string>
+    <string name="more_options">Mehr Optionen</string>
+
+    <!-- Error Messages -->
+    <string name="error_loading_tasks">Fehler beim Laden der Aufgaben</string>
+    <string name="error_saving_task">Fehler beim Speichern der Aufgabe</string>
+    <string name="task_title_required">Titel ist erforderlich</string>
+    <string name="loading_history">Lade Historie…</string>
+
+    <!-- Success Messages -->
+    <string name="task_added">Aufgabe hinzugefügt</string>
+    <string name="task_updated">Aufgabe aktualisiert</string>
+    <string name="task_deleted">Aufgabe gelöscht</string>
+    <string name="task_completed_success">Aufgabe als erledigt markiert</string>
+
+    <!-- Content Descriptions -->
+    <string name="priority_high_color">Hohe Priorität</string>
+    <string name="priority_medium_color">Mittlere Priorität</string>
+    <string name="priority_low_color">Niedrige Priorität</string>
+    <string name="task_in_daily_list">In täglicher Liste</string>
+    <string name="task_in_backlog">Im Backlog</string>
+
+    <!-- Common -->
+    <string name="loading">Wird geladen…</string>
+    <string name="retry">Wiederholen</string>
+    <string name="unknown">Unbekannt</string>
 </resources>
