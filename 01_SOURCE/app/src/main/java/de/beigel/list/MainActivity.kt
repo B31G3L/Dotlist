@@ -26,7 +26,6 @@ import de.beigel.list.settings.SettingsManager
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // Splash Screen
-
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
@@ -36,11 +35,21 @@ class MainActivity : ComponentActivity() {
         val settingsManager = SettingsManager(this)
 
         setContent {
+            // Theme State für Live-Updates
+            var useSystemTheme by remember { mutableStateOf(settingsManager.useSystemTheme) }
+            var isDarkMode by remember { mutableStateOf(settingsManager.isDarkMode) }
+
+            // Theme Callback für Settings
+            val onThemeChange: (Boolean, Boolean) -> Unit = { systemTheme, darkMode ->
+                useSystemTheme = systemTheme
+                isDarkMode = darkMode
+            }
+
             DailyListTheme(
-                darkTheme = if (settingsManager.useSystemTheme) {
+                darkTheme = if (useSystemTheme) {
                     androidx.compose.foundation.isSystemInDarkTheme()
                 } else {
-                    settingsManager.isDarkMode
+                    isDarkMode
                 }
             ) {
                 Surface(
@@ -115,7 +124,8 @@ class MainActivity : ComponentActivity() {
                             SettingsScreen(
                                 onNavigateBack = {
                                     navController.popBackStack()
-                                }
+                                },
+                                onThemeChange = onThemeChange
                             )
                         }
                     }

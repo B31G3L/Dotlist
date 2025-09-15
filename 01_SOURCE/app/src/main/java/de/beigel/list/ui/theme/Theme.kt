@@ -71,6 +71,11 @@ fun DailyListTheme(
     dynamicColor: Boolean = false, // Deaktiviert für konsistente App-Farben
     content: @Composable () -> Unit
 ) {
+    // Debug: Log theme changes
+    androidx.compose.runtime.LaunchedEffect(darkTheme) {
+        android.util.Log.d("DailyListTheme", "Theme changed to: ${if (darkTheme) "Dark" else "Light"}")
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
@@ -83,9 +88,31 @@ fun DailyListTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            try {
+                val window = (view.context as Activity).window
+                // Status bar color anpassen
+                window.statusBarColor = if (darkTheme) {
+                    Color(0xFF121212).toArgb()
+                } else {
+                    Color.White.toArgb()
+                }
+
+                // Navigation bar color anpassen
+                window.navigationBarColor = if (darkTheme) {
+                    Color(0xFF121212).toArgb()
+                } else {
+                    Color.White.toArgb()
+                }
+
+                // System bar appearance
+                val windowInsetsController = WindowCompat.getInsetsController(window, view)
+                windowInsetsController.isAppearanceLightStatusBars = !darkTheme
+                windowInsetsController.isAppearanceLightNavigationBars = !darkTheme
+
+            } catch (e: Exception) {
+                // Fallback für Fälle wo Activity nicht verfügbar ist
+                android.util.Log.w("DailyListTheme", "Could not set system bar colors: ${e.message}")
+            }
         }
     }
 

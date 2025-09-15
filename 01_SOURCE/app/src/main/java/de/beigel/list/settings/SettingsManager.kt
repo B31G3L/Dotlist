@@ -41,14 +41,22 @@ class SettingsManager(context: Context) {
         }
         set(value) = prefs.edit().putString("interaction_mode", value.name).apply()
 
-    // Theme Einstellungen
+    // Theme Einstellungen - Verbessert
     var isDarkMode: Boolean
         get() = prefs.getBoolean("dark_mode", false)
-        set(value) = prefs.edit().putBoolean("dark_mode", value).apply()
+        set(value) {
+            prefs.edit().putBoolean("dark_mode", value).apply()
+            // Debug Log
+            android.util.Log.d("SettingsManager", "Dark mode set to: $value")
+        }
 
     var useSystemTheme: Boolean
         get() = prefs.getBoolean("use_system_theme", true)
-        set(value) = prefs.edit().putBoolean("use_system_theme", value).apply()
+        set(value) {
+            prefs.edit().putBoolean("use_system_theme", value).apply()
+            // Debug Log
+            android.util.Log.d("SettingsManager", "Use system theme set to: $value")
+        }
 
     // Widget Einstellungen
     var widgetShowCompleted: Boolean
@@ -71,6 +79,65 @@ class SettingsManager(context: Context) {
     var defaultPriority: String
         get() = prefs.getString("default_priority", "MEDIUM") ?: "MEDIUM"
         set(value) = prefs.edit().putString("default_priority", value).apply()
+
+    // ========== ERWEITERTE THEME-FUNKTIONEN ==========
+
+    // Schnelle Theme-Umschaltung
+    fun toggleTheme() {
+        if (useSystemTheme) {
+            // Wechsle zu manuellem Modus und aktiviere Dark Mode
+            useSystemTheme = false
+            isDarkMode = true
+        } else {
+            // Toggle zwischen Hell und Dunkel
+            isDarkMode = !isDarkMode
+        }
+    }
+
+    // Theme-Status abrufen
+    fun getCurrentTheme(): ThemeMode {
+        return when {
+            useSystemTheme -> ThemeMode.SYSTEM
+            isDarkMode -> ThemeMode.DARK
+            else -> ThemeMode.LIGHT
+        }
+    }
+
+    // Theme explizit setzen
+    fun setTheme(mode: ThemeMode) {
+        when (mode) {
+            ThemeMode.SYSTEM -> {
+                useSystemTheme = true
+            }
+            ThemeMode.LIGHT -> {
+                useSystemTheme = false
+                isDarkMode = false
+            }
+            ThemeMode.DARK -> {
+                useSystemTheme = false
+                isDarkMode = true
+            }
+        }
+    }
+
+    // Theme-Einstellungen batch-weise setzen
+    fun updateThemeSettings(useSystem: Boolean, dark: Boolean) {
+        val editor = prefs.edit()
+        editor.putBoolean("use_system_theme", useSystem)
+        editor.putBoolean("dark_mode", dark)
+        editor.apply()
+
+        // Debug Log
+        android.util.Log.d("SettingsManager", "Theme updated - System: $useSystem, Dark: $dark")
+    }
+
+    // Theme Debug Info
+    fun getThemeDebugInfo(): String {
+        return "Theme Settings:\n" +
+                "- Use System: $useSystemTheme\n" +
+                "- Dark Mode: $isDarkMode\n" +
+                "- Current Mode: ${getCurrentTheme()}"
+    }
 
     // Reset alle Einstellungen
     fun resetToDefaults() {
@@ -95,4 +162,8 @@ class SettingsManager(context: Context) {
         }
         editor.apply()
     }
+}
+
+enum class ThemeMode {
+    SYSTEM, LIGHT, DARK
 }

@@ -7,9 +7,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -25,30 +28,39 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import de.beigel.list.notification.NotificationWorker
 import de.beigel.list.settings.SettingsManager
+import de.beigel.list.settings.ThemeMode
 import de.beigel.list.viewmodel.InteractionMode
-import de.beigel.list.data.TaskPriority
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onThemeChange: ((Boolean, Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
 
-    // Settings States
+    // Settings States mit sofortiger Aktualisierung
     var notificationsEnabled by remember { mutableStateOf(settingsManager.notificationsEnabled) }
     var notificationHour by remember { mutableStateOf(settingsManager.notificationHour) }
     var notificationMinute by remember { mutableStateOf(settingsManager.notificationMinute) }
     var maxDailyTasks by remember { mutableIntStateOf(settingsManager.maxDailyTasks) }
     var autoBacklogEnabled by remember { mutableStateOf(settingsManager.autoBacklogEnabled) }
     var interactionMode by remember { mutableStateOf(settingsManager.interactionMode) }
-    var isDarkMode by remember { mutableStateOf(settingsManager.isDarkMode) }
     var useSystemTheme by remember { mutableStateOf(settingsManager.useSystemTheme) }
+    var isDarkMode by remember { mutableStateOf(settingsManager.isDarkMode) }
     var enableAnimations by remember { mutableStateOf(settingsManager.enableAnimations) }
     var enableHapticFeedback by remember { mutableStateOf(settingsManager.enableHapticFeedback) }
 
     var showTimePicker by remember { mutableStateOf(false) }
+
+    // Theme-Update Funktion
+    fun updateTheme(newUseSystemTheme: Boolean, newIsDarkMode: Boolean) {
+        useSystemTheme = newUseSystemTheme
+        isDarkMode = newIsDarkMode
+        settingsManager.updateThemeSettings(newUseSystemTheme, newIsDarkMode)
+        onThemeChange?.invoke(newUseSystemTheme, newIsDarkMode)
+    }
 
     // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -200,37 +212,83 @@ fun SettingsScreen(
                 )
             }
 
-            // ========== Design ==========
+            // ========== Design - Verbessert ==========
             SettingsGroup(
                 title = "Design",
                 icon = Icons.Default.Palette
             ) {
-                // System Theme
+                // Aktueller Theme-Status Anzeige
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Aktuell: ${
+                                when {
+                                    useSystemTheme -> "System-Theme"
+                                    isDarkMode -> "Dunkler Modus"
+                                    else -> "Heller Modus"
+                                }
+                            }",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // System Theme Switch
                 SettingsSwitch(
                     title = "System-Theme verwenden",
                     subtitle = "Automatisch zwischen Hell und Dunkel wechseln",
                     checked = useSystemTheme,
                     onCheckedChange = { enabled ->
-                        useSystemTheme = enabled
-                        settingsManager.useSystemTheme = enabled
+                        updateTheme(enabled, isDarkMode)
                     }
                 )
 
                 // Manual Dark Mode (nur wenn System-Theme deaktiviert)
                 AnimatedVisibility(
                     visible = !useSystemTheme,
-                    enter = expandVertically() + fadeIn(),
+                    enter = expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    ) + fadeIn(),
                     exit = shrinkVertically() + fadeOut()
                 ) {
-                    SettingsSwitch(
-                        title = "Dunkler Modus",
-                        subtitle = "Dunkles Design aktivieren",
-                        checked = isDarkMode,
-                        onCheckedChange = { enabled ->
-                            isDarkMode = enabled
-                            settingsManager.isDarkMode = enabled
-                        }
-                    )
+                    Column {
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        SettingsSwitch(
+                            title = "Dunkler Modus",
+                            subtitle = "Dunkles Design aktivieren",
+                            checked = isDarkMode,
+                            onCheckedChange = { enabled ->
+                                updateTheme(useSystemTheme, enabled)
+                            }
+                        )
+
+
+                    }
                 }
             }
 
