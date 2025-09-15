@@ -39,6 +39,7 @@ fun TaskListScreen(
     val backlogTasks by viewModel.backlogTasks.collectAsState()
     val filteredTodayTasks by viewModel.filteredTodayTasks.collectAsState()
     val filteredBacklogTasks by viewModel.filteredBacklogTasks.collectAsState()
+    val updatingTaskIds by viewModel.updatingTaskIds.collectAsState()
 
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
@@ -215,12 +216,14 @@ fun TaskListScreen(
                         totalTasks = todayTasks,
                         maxTasks = settingsManager.maxDailyTasks,
                         uiState = uiState,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        updatingTaskIds = updatingTaskIds
                     )
                     ViewType.BACKLOG -> BacklogTasksContent(
                         tasks = currentTasks,
                         uiState = uiState,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        updatingTaskIds = updatingTaskIds
                     )
                 }
             }
@@ -368,7 +371,8 @@ fun DailyTasksContent(
     totalTasks: List<TaskEntity>,
     maxTasks: Int,
     uiState: TaskUiState,
-    viewModel: TaskViewModel
+    viewModel: TaskViewModel,
+    updatingTaskIds: Set<String>
 ) {
     Column(
         modifier = Modifier
@@ -439,7 +443,8 @@ fun DailyTasksContent(
                     TaskItemByMode(
                         task = task,
                         uiState = uiState,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        isUpdating = updatingTaskIds.contains(task.id)
                     )
                 }
             }
@@ -457,7 +462,8 @@ fun DailyTasksContent(
 fun BacklogTasksContent(
     tasks: List<TaskEntity>,
     uiState: TaskUiState,
-    viewModel: TaskViewModel
+    viewModel: TaskViewModel,
+    updatingTaskIds: Set<String>
 ) {
     Column(
         modifier = Modifier
@@ -474,7 +480,8 @@ fun BacklogTasksContent(
                     TaskItemByMode(
                         task = task,
                         uiState = uiState,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        isUpdating = updatingTaskIds.contains(task.id)
                     )
                 }
             }
@@ -492,14 +499,16 @@ fun BacklogTasksContent(
 fun TaskItemByMode(
     task: TaskEntity,
     uiState: TaskUiState,
-    viewModel: TaskViewModel
+    viewModel: TaskViewModel,
+    isUpdating: Boolean
 ) {
     when (uiState.interactionMode) {
         InteractionMode.MINIMAL -> {
             MinimalTaskItem(
                 task = task,
                 onToggleComplete = { viewModel.toggleTaskCompletion(task) },
-                onLongPress = { viewModel.setDialogState(DialogState.TaskDetails(task)) }
+                onLongPress = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
+                isUpdating = isUpdating
             )
         }
         InteractionMode.CONTEXT_MENU -> {
@@ -509,7 +518,8 @@ fun TaskItemByMode(
                 onEdit = { viewModel.setDialogState(DialogState.EditTask(task)) },
                 onDelete = { viewModel.deleteTask(task) },
                 onMoveToDaily = { viewModel.moveTaskToDaily(task) },
-                onMoveToBacklog = { viewModel.moveTaskToBacklog(task) }
+                onMoveToBacklog = { viewModel.moveTaskToBacklog(task) },
+                isUpdating = isUpdating
             )
         }
         InteractionMode.SELECTION -> {
@@ -519,7 +529,8 @@ fun TaskItemByMode(
                 isSelectionMode = uiState.isSelectionMode,
                 onToggleComplete = { viewModel.toggleTaskCompletion(task) },
                 onToggleSelection = { viewModel.toggleTaskSelection(task.id) },
-                onSingleTap = { viewModel.setDialogState(DialogState.TaskDetails(task)) }
+                onSingleTap = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
+                isUpdating = isUpdating
             )
         }
     }

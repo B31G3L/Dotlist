@@ -15,8 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,18 +33,26 @@ fun ContextMenuTaskItem(
     onDelete: () -> Unit,
     onMoveToDaily: () -> Unit = {},
     onMoveToBacklog: () -> Unit = {},
+    isUpdating: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     var isPressed by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1f,
+        targetValue = if (isPressed && !isUpdating) 0.95f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
         ),
         label = "scale"
+    )
+
+    val alpha by animateFloatAsState(
+        targetValue = if (isUpdating) 0.6f else 1f,
+        animationSpec = tween(150),
+        label = "alpha"
     )
 
     Card(
@@ -53,23 +62,33 @@ fun ContextMenuTaskItem(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
+                this.alpha = alpha
             }
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onToggleComplete() },
-                    onLongPress = { showContextMenu = true },
-                    onPress = {
-                        isPressed = true
-                        tryAwaitRelease()
-                        isPressed = false
-                    }
-                )
+            .pointerInput(isUpdating) {
+                if (!isUpdating) {
+                    detectTapGestures(
+                        onTap = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onToggleComplete()
+                        },
+                        onLongPress = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            showContextMenu = true
+                        },
+                        onPress = {
+                            isPressed = true
+                            tryAwaitRelease()
+                            isPressed = false
+                        }
+                    )
+                }
             },
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isPressed) 8.dp else 2.dp
+            defaultElevation = if (isPressed && !isUpdating) 8.dp else 2.dp
         ),
         colors = CardDefaults.cardColors(
             containerColor = when {
+                isUpdating -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 task.isCompleted -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                 isPressed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                 else -> MaterialTheme.colorScheme.surface
@@ -88,7 +107,7 @@ fun ContextMenuTaskItem(
                     .width(4.dp)
                     .height(48.dp)
                     .background(
-                        Color(task.priority.color),
+                        Color(task.priority.color).copy(alpha = if (isUpdating) 0.5f else 1f),
                         RoundedCornerShape(2.dp)
                     )
             )
@@ -97,15 +116,29 @@ fun ContextMenuTaskItem(
 
             // Completion Checkbox
             IconButton(
-                onClick = onToggleComplete,
+                onClick = {
+                    if (!isUpdating) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onToggleComplete()
+                    }
+                },
+                enabled = !isUpdating,
                 modifier = Modifier.size(32.dp)
             ) {
-                Icon(
-                    imageVector = if (task.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                    contentDescription = if (task.isCompleted) "Erledigt" else "Noch offen",
-                    tint = if (task.isCompleted) Color(0xFF009966) else MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(20.dp)
-                )
+                if (isUpdating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    Icon(
+                        imageVector = if (task.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                        contentDescription = if (task.isCompleted) "Erledigt" else "Noch offen",
+                        tint = if (task.isCompleted) Color(0xFF009966) else MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -120,10 +153,11 @@ fun ContextMenuTaskItem(
                     textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    color = if (task.isCompleted)
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    else
-                        MaterialTheme.colorScheme.onSurface
+                    color = when {
+                        isUpdating -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        task.isCompleted -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
                 )
 
                 if (task.description.isNotBlank()) {
@@ -131,7 +165,9 @@ fun ContextMenuTaskItem(
                     Text(
                         text = task.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = if (isUpdating) 0.3f else 0.7f
+                        ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -145,13 +181,17 @@ fun ContextMenuTaskItem(
                 ) {
                     // Priority Badge
                     Surface(
-                        color = Color(task.priority.color).copy(alpha = 0.1f),
+                        color = Color(task.priority.color).copy(
+                            alpha = if (isUpdating) 0.05f else 0.1f
+                        ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
                             text = task.priority.displayName,
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color(task.priority.color),
+                            color = Color(task.priority.color).copy(
+                                alpha = if (isUpdating) 0.5f else 1f
+                            ),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                         )
                     }
@@ -159,7 +199,9 @@ fun ContextMenuTaskItem(
                     // Location Indicator
                     if (!task.isInDailyList) {
                         Surface(
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                            color = MaterialTheme.colorScheme.outline.copy(
+                                alpha = if (isUpdating) 0.05f else 0.1f
+                            ),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Row(
@@ -170,13 +212,17 @@ fun ContextMenuTaskItem(
                                     Icons.Default.Inventory,
                                     contentDescription = null,
                                     modifier = Modifier.size(10.dp),
-                                    tint = MaterialTheme.colorScheme.outline
+                                    tint = MaterialTheme.colorScheme.outline.copy(
+                                        alpha = if (isUpdating) 0.3f else 1f
+                                    )
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "Backlog",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.outline
+                                    color = MaterialTheme.colorScheme.outline.copy(
+                                        alpha = if (isUpdating) 0.3f else 1f
+                                    )
                                 )
                             }
                         }
@@ -188,13 +234,15 @@ fun ContextMenuTaskItem(
             Icon(
                 Icons.Default.MoreVert,
                 contentDescription = "Kontextmenü",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                tint = MaterialTheme.colorScheme.onSurface.copy(
+                    alpha = if (isUpdating) 0.2f else 0.5f
+                ),
                 modifier = Modifier.size(16.dp)
             )
         }
 
         // Context Menu
-        if (showContextMenu) {
+        if (showContextMenu && !isUpdating) {
             ContextMenu(
                 task = task,
                 onDismiss = { showContextMenu = false },
@@ -285,7 +333,7 @@ private fun ContextMenu(
             )
         }
 
-        Divider()
+        HorizontalDivider()
 
         // Delete
         DropdownMenuItem(

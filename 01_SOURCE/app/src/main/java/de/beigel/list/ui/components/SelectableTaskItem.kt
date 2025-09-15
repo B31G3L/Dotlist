@@ -15,7 +15,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,10 +32,13 @@ fun SelectableTaskItem(
     onToggleComplete: () -> Unit,
     onToggleSelection: () -> Unit,
     onSingleTap: () -> Unit,
+    isUpdating: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
+
     val animatedElevation by animateDpAsState(
-        targetValue = if (isSelected) 8.dp else 2.dp,
+        targetValue = if (isSelected && !isUpdating) 8.dp else 2.dp,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
@@ -42,12 +47,18 @@ fun SelectableTaskItem(
     )
 
     val animatedScale by animateFloatAsState(
-        targetValue = if (isSelected) 0.98f else 1f,
+        targetValue = if (isSelected && !isUpdating) 0.98f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
         ),
         label = "scale"
+    )
+
+    val alpha by animateFloatAsState(
+        targetValue = if (isUpdating) 0.6f else 1f,
+        animationSpec = tween(150),
+        label = "alpha"
     )
 
     Card(
@@ -57,32 +68,38 @@ fun SelectableTaskItem(
             .graphicsLayer {
                 scaleX = animatedScale
                 scaleY = animatedScale
+                this.alpha = alpha
             }
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        if (isSelectionMode) {
-                            onToggleSelection()
-                        } else {
-                            onSingleTap()
+            .pointerInput(isUpdating, isSelectionMode) {
+                if (!isUpdating) {
+                    detectTapGestures(
+                        onTap = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            if (isSelectionMode) {
+                                onToggleSelection()
+                            } else {
+                                onSingleTap()
+                            }
+                        },
+                        onLongPress = {
+                            if (!isSelectionMode) {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onToggleSelection()
+                            }
                         }
-                    },
-                    onLongPress = {
-                        if (!isSelectionMode) {
-                            onToggleSelection()
-                        }
-                    }
-                )
+                    )
+                }
             },
         elevation = CardDefaults.cardElevation(defaultElevation = animatedElevation),
         colors = CardDefaults.cardColors(
             containerColor = when {
+                isUpdating -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                 task.isCompleted -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                 else -> MaterialTheme.colorScheme.surface
             }
         ),
-        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+        border = if (isSelected && !isUpdating) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Row(
             modifier = Modifier
@@ -104,7 +121,13 @@ fun SelectableTaskItem(
                 Row {
                     Checkbox(
                         checked = isSelected,
-                        onCheckedChange = { onToggleSelection() },
+                        onCheckedChange = {
+                            if (!isUpdating) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onToggleSelection()
+                            }
+                        },
+                        enabled = !isUpdating,
                         colors = CheckboxDefaults.colors(
                             checkedColor = MaterialTheme.colorScheme.primary,
                             uncheckedColor = MaterialTheme.colorScheme.outline
@@ -120,7 +143,7 @@ fun SelectableTaskItem(
                     .width(4.dp)
                     .height(if (isSelectionMode) 40.dp else 48.dp)
                     .background(
-                        Color(task.priority.color),
+                        Color(task.priority.color).copy(alpha = if (isUpdating) 0.5f else 1f),
                         RoundedCornerShape(2.dp)
                     )
             )
@@ -135,15 +158,29 @@ fun SelectableTaskItem(
             ) {
                 Row {
                     IconButton(
-                        onClick = onToggleComplete,
+                        onClick = {
+                            if (!isUpdating) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onToggleComplete()
+                            }
+                        },
+                        enabled = !isUpdating,
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Icon(
-                            imageVector = if (task.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                            contentDescription = null,
-                            tint = if (task.isCompleted) Color(0xFF009966) else MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        if (isUpdating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            Icon(
+                                imageVector = if (task.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                contentDescription = null,
+                                tint = if (task.isCompleted) Color(0xFF009966) else MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                 }
@@ -154,12 +191,13 @@ fun SelectableTaskItem(
                 Text(
                     text = task.title,
                     style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                        fontWeight = if (isSelected && !isUpdating) FontWeight.SemiBold else FontWeight.Medium
                     ),
                     textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
                     maxLines = if (isSelectionMode) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
                     color = when {
+                        isUpdating -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                         isSelected -> MaterialTheme.colorScheme.primary
                         task.isCompleted -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         else -> MaterialTheme.colorScheme.onSurface
@@ -177,7 +215,9 @@ fun SelectableTaskItem(
                         Text(
                             text = task.description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            color = MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = if (isUpdating) 0.3f else 0.7f
+                            ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -198,13 +238,17 @@ fun SelectableTaskItem(
                         ) {
                             // Priority badge
                             Surface(
-                                color = Color(task.priority.color).copy(alpha = 0.1f),
+                                color = Color(task.priority.color).copy(
+                                    alpha = if (isUpdating) 0.05f else 0.1f
+                                ),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text(
                                     text = task.priority.displayName.first().toString(),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color(task.priority.color),
+                                    color = Color(task.priority.color).copy(
+                                        alpha = if (isUpdating) 0.5f else 1f
+                                    ),
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                 )
                             }
@@ -212,7 +256,9 @@ fun SelectableTaskItem(
                             // Location indicator
                             if (!task.isInDailyList) {
                                 Surface(
-                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                    color = MaterialTheme.colorScheme.outline.copy(
+                                        alpha = if (isUpdating) 0.05f else 0.1f
+                                    ),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Row(
@@ -223,13 +269,17 @@ fun SelectableTaskItem(
                                             Icons.Default.Inventory,
                                             contentDescription = null,
                                             modifier = Modifier.size(10.dp),
-                                            tint = MaterialTheme.colorScheme.outline
+                                            tint = MaterialTheme.colorScheme.outline.copy(
+                                                alpha = if (isUpdating) 0.3f else 1f
+                                            )
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
                                             text = "B",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.outline
+                                            color = MaterialTheme.colorScheme.outline.copy(
+                                                alpha = if (isUpdating) 0.3f else 1f
+                                            )
                                         )
                                     }
                                 }
@@ -245,17 +295,25 @@ fun SelectableTaskItem(
                 enter = scaleIn() + fadeIn(),
                 exit = scaleOut() + fadeOut()
             ) {
-                Icon(
-                    Icons.Default.MoreVert,
-                    contentDescription = "Mehr Optionen",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                    modifier = Modifier.size(16.dp)
-                )
+                if (isUpdating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = "Mehr Optionen",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
 
             // Selected indicator im Selection Mode
             AnimatedVisibility(
-                visible = isSelectionMode && isSelected,
+                visible = isSelectionMode && isSelected && !isUpdating,
                 enter = scaleIn() + fadeIn(),
                 exit = scaleOut() + fadeOut()
             ) {
@@ -264,6 +322,19 @@ fun SelectableTaskItem(
                     contentDescription = "Ausgewählt",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Loading indicator im Selection Mode
+            AnimatedVisibility(
+                visible = isSelectionMode && isUpdating,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                 )
             }
         }

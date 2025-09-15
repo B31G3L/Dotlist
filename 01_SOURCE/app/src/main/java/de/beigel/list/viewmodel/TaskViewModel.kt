@@ -15,6 +15,10 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(TaskUiState())
     val uiState: StateFlow<TaskUiState> = _uiState.asStateFlow()
 
+    // Track tasks that are currently being updated to prevent race conditions
+    private val _updatingTaskIds = MutableStateFlow<Set<String>>(emptySet())
+    val updatingTaskIds: StateFlow<Set<String>> = _updatingTaskIds.asStateFlow()
+
     val todayTasks = repository.getDailyTasksForToday()
         .stateIn(
             scope = viewModelScope,
@@ -97,12 +101,29 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     }
 
     fun toggleTaskCompletion(task: TaskEntity) {
+        // Prevent multiple rapid clicks on the same task
+        if (_updatingTaskIds.value.contains(task.id)) {
+            return
+        }
+
         viewModelScope.launch {
-            val updatedTask = task.copy(
-                isCompleted = !task.isCompleted,
-                completedAt = if (!task.isCompleted) LocalDateTime.now().toString() else null
-            )
-            repository.updateTask(updatedTask)
+            try {
+                // Add task to updating set
+                _updatingTaskIds.value = _updatingTaskIds.value + task.id
+
+                val updatedTask = task.copy(
+                    isCompleted = !task.isCompleted,
+                    completedAt = if (!task.isCompleted) LocalDateTime.now().toString() else null
+                )
+                repository.updateTask(updatedTask)
+
+                // Short delay to prevent too rapid clicking
+                kotlinx.coroutines.delay(200)
+
+            } finally {
+                // Always remove task from updating set
+                _updatingTaskIds.value = _updatingTaskIds.value - task.id
+            }
         }
     }
 
@@ -215,6 +236,8 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     fun setCurrentView(view: ViewType) {
         _uiState.update { it.copy(currentView = view) }
         clearSelection() // Clear selection when switching views
+        // Clear any pending updates when switching views
+        _updatingTaskIds.value = emptySet()
     }
 
     fun setSearchQuery(query: String) {
@@ -228,6 +251,8 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     fun setInteractionMode(mode: InteractionMode) {
         _uiState.update { it.copy(interactionMode = mode) }
         clearSelection()
+        // Clear any pending updates when switching interaction modes
+        _updatingTaskIds.value = emptySet()
     }
 
     // Helper functions
@@ -243,6 +268,11 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
 
     fun canMoveSelectedToBacklog(): Boolean {
         return getSelectedTasks().any { it.isInDailyList }
+    }
+
+    // Check if a task is currently being updated
+    fun isTaskUpdating(taskId: String): Boolean {
+        return _updatingTaskIds.value.contains(taskId)
     }
 }
 
