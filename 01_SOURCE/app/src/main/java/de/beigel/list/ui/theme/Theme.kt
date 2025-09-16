@@ -18,17 +18,17 @@ import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
     primary = AppGreen,
-    secondary = GreenSecondary,
-    tertiary = GreenTertiary,
+    secondary = Color(0xFF00CC88),
+    tertiary = Color(0xFF66DDAA),
     background = Color(0xFF121212),
     surface = Color(0xFF1E1E1E),
     onPrimary = Color.White,
     onSecondary = Color.White,
     onTertiary = Color.White,
-    onBackground = OnSurfaceDark,
-    onSurface = OnSurfaceDark,
-    surfaceVariant = SurfaceVariantDark,
-    onSurfaceVariant = OnSurfaceVariantDark,
+    onBackground = Color(0xFFE0E0E0),
+    onSurface = Color(0xFFE0E0E0),
+    surfaceVariant = Color(0xFF2A2A2A),
+    onSurfaceVariant = Color(0xFFB0B0B0),
     outline = Color(0xFF5A5A5A),
     outlineVariant = Color(0xFF444444),
     surfaceContainer = Color(0xFF252525),
@@ -42,17 +42,17 @@ private val DarkColorScheme = darkColorScheme(
 
 private val LightColorScheme = lightColorScheme(
     primary = AppGreen,
-    secondary = GreenSecondary,
-    tertiary = GreenTertiary,
+    secondary = Color(0xFF00CC88),
+    tertiary = Color(0xFF66DDAA),
     background = Color.White,
     surface = Color.White,
     onPrimary = Color.White,
     onSecondary = Color.White,
     onTertiary = Color.White,
-    onBackground = OnSurfaceLight,
-    onSurface = OnSurfaceLight,
-    surfaceVariant = SurfaceVariantLight,
-    onSurfaceVariant = OnSurfaceVariantLight,
+    onBackground = Color(0xFF3C3C3C),
+    onSurface = Color(0xFF3C3C3C),
+    surfaceVariant = Color(0xFFF5F5F5),
+    onSurfaceVariant = Color(0xFF5A5A5A),
     outline = Color(0xFF999999),
     outlineVariant = Color(0xFFCCCCCC),
     surfaceContainer = Color(0xFFFAFAFA),
@@ -118,7 +118,7 @@ fun DailyListTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = DailyListTypography,
         content = content
     )
 }

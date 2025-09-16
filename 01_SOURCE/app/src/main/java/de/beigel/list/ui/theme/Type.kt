@@ -7,7 +7,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 // Set of Material typography styles optimized for Daily List
-val Typography = Typography(
+val DailyListTypography = Typography(
     // Display styles
     displayLarge = TextStyle(
         fontFamily = FontFamily.Default,

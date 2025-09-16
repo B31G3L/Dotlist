@@ -11,7 +11,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.*
 import de.beigel.list.data.TaskDatabase
@@ -25,7 +24,6 @@ import de.beigel.list.settings.SettingsManager
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Splash Screen
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
@@ -66,7 +64,7 @@ class MainActivity : ComponentActivity() {
                         viewModel.setInteractionMode(settingsManager.interactionMode)
                     }
 
-                    // Navigation with animations
+                    // Standard Navigation mit einfachen Animationen
                     NavHost(
                         navController = navController,
                         startDestination = "task_list",
