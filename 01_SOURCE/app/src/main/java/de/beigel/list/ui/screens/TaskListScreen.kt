@@ -114,7 +114,8 @@ fun TaskListScreen(
                         }
                     )
                 } else {
-                    MainTopBar(
+                    // Use the new menu version instead of the old one
+                    MainTopBar( // or just MainTopBar for simpler version
                         uiState = uiState,
                         todayTasksCount = todayTasks.size,
                         backlogTasksCount = backlogTasks.size,
@@ -244,6 +245,8 @@ fun MainTopBar(
     onFillFromBacklog: () -> Unit,
     onInteractionModeChange: (InteractionMode) -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     TopAppBar(
         title = {
             Column {
@@ -263,63 +266,160 @@ fun MainTopBar(
             }
         },
         actions = {
-            // Fill from Backlog Button (nur bei Daily View)
-            if (uiState.currentView == ViewType.DAILY && backlogTasksCount > 0) {
+            // Single Menu Button
+            Box {
                 IconButton(
-                    onClick = onFillFromBacklog
+                    onClick = { showMenu = true }
                 ) {
                     Icon(
-                        Icons.Default.PlaylistAdd,
-                        contentDescription = "Aus Backlog auffüllen",
+                        Icons.Default.MoreVert,
+                        contentDescription = "Menü",
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-            }
 
-            // Interaction Mode Toggle
-            IconButton(
-                onClick = {
-                    val nextMode = when (uiState.interactionMode) {
-                        InteractionMode.MINIMAL -> InteractionMode.CONTEXT_MENU
-                        InteractionMode.CONTEXT_MENU -> InteractionMode.SELECTION
-                        InteractionMode.SELECTION -> InteractionMode.MINIMAL
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    modifier = Modifier.width(250.dp)
+                ) {
+                    // Fill from Backlog (nur bei Daily View und wenn Backlog nicht leer)
+                    if (uiState.currentView == ViewType.DAILY && backlogTasksCount > 0) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.PlaylistAdd,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text("Aus Backlog auffüllen")
+                                }
+                            },
+                            onClick = {
+                                onFillFromBacklog()
+                                showMenu = false
+                            }
+                        )
+                        HorizontalDivider()
                     }
-                    onInteractionModeChange(nextMode)
+
+                    // Interaction Mode
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    when (uiState.interactionMode) {
+                                        InteractionMode.MINIMAL -> Icons.Default.TouchApp
+                                        InteractionMode.CONTEXT_MENU -> Icons.Default.MoreVert
+                                        InteractionMode.SELECTION -> Icons.Default.CheckBox
+                                    },
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Column {
+                                    Text("Interaktionsmodus")
+                                    Text(
+                                        text = when (uiState.interactionMode) {
+                                            InteractionMode.MINIMAL -> "Minimal"
+                                            InteractionMode.CONTEXT_MENU -> "Kontextmenü"
+                                            InteractionMode.SELECTION -> "Auswahl"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                        },
+                        onClick = {
+                            val nextMode = when (uiState.interactionMode) {
+                                InteractionMode.MINIMAL -> InteractionMode.CONTEXT_MENU
+                                InteractionMode.CONTEXT_MENU -> InteractionMode.SELECTION
+                                InteractionMode.SELECTION -> InteractionMode.MINIMAL
+                            }
+                            onInteractionModeChange(nextMode)
+                            showMenu = false
+                        }
+                    )
+
+                    // Show/Hide Completed
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    if (uiState.showCompletedTasks) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    if (uiState.showCompletedTasks) "Erledigte ausblenden" else "Erledigte anzeigen"
+                                )
+                            }
+                        },
+                        onClick = {
+                            onToggleCompleted()
+                            showMenu = false
+                        }
+                    )
+
+                    HorizontalDivider()
+
+                    // History
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.History,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text("Historie")
+                            }
+                        },
+                        onClick = {
+                            onNavigateToHistory()
+                            showMenu = false
+                        }
+                    )
+
+                    // Settings
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Settings,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text("Einstellungen")
+                            }
+                        },
+                        onClick = {
+                            onNavigateToSettings()
+                            showMenu = false
+                        }
+                    )
                 }
-            ) {
-                Icon(
-                    when (uiState.interactionMode) {
-                        InteractionMode.MINIMAL -> Icons.Default.TouchApp
-                        InteractionMode.CONTEXT_MENU -> Icons.Default.MoreVert
-                        InteractionMode.SELECTION -> Icons.Default.CheckBox
-                    },
-                    contentDescription = "Interaktionsmodus",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            IconButton(onClick = onNavigateToHistory) {
-                Icon(
-                    Icons.Default.History,
-                    contentDescription = "Historie",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            IconButton(onClick = onNavigateToSettings) {
-                Icon(
-                    Icons.Default.Settings,
-                    contentDescription = "Einstellungen",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            IconButton(onClick = onToggleCompleted) {
-                Icon(
-                    if (uiState.showCompletedTasks) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                    contentDescription = if (uiState.showCompletedTasks) "Erledigte ausblenden" else "Erledigte anzeigen",
-                    tint = MaterialTheme.colorScheme.primary
-                )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
