@@ -163,4 +163,61 @@
     <string name="loading">Wird geladen…</string>
     <string name="retry">Wiederholen</string>
     <string name="unknown">Unbekannt</string>
+
+    <!-- Widget Descriptions -->
+    <string name="today_tasks_widget_description">Zeigt deine heutigen Aufgaben mit Fortschritt direkt auf dem Homescreen</string>
+    <string name="quick_add_widget_description">Neue Aufgaben sofort vom Homescreen hinzufügen ohne die App zu öffnen</string>
+
+    <!-- Widget Labels -->
+    <string name="widget_today_tasks">Heutige Aufgaben</string>
+    <string name="widget_quick_add">Schnell hinzufügen</string>
+    <string name="widget_loading">Widget wird geladen...</string>
+    <string name="widget_no_tasks">Keine Aufgaben für heute</string>
+    <string name="widget_tap_to_add">Tippe hier um eine hinzuzufügen</string>
+
+    <!-- Widget Actions -->
+    <string name="widget_action_completed">✓ Erledigt</string>
+    <string name="widget_action_pending">○ Offen</string>
+    <string name="widget_progress_format">%1$d/%2$d erledigt</string>
+    <string name="widget_and_more">und %d weitere...</string>
+    <string name="widget_over_limit">⚠️ %d über Limit</string>
+
+    <!-- Quick Add Actions -->
+    <string name="widget_quick_important">🔥 Wichtige Aufgabe</string>
+    <string name="widget_quick_normal">📝 Normale Aufgabe</string>
+    <string name="widget_quick_later">⏰ Später erledigen</string>
+    <string name="widget_custom_task">➕ Eigene Aufgabe erstellen</string>
+
+    <!-- Common Quick Tasks -->
+    <string name="widget_quick_emails">📧 E-Mails bearbeiten</string>
+    <string name="widget_quick_shopping">🛒 Einkaufen gehen</string>
+    <string name="widget_quick_call">📞 Wichtigen Anruf</string>
+    <string name="widget_quick_exercise">🏃 Sport machen</string>
+    <string name="widget_quick_planning">📅 Termine planen</string>
+    <string name="widget_quick_project">💼 Projekt bearbeiten</string>
+
+    <!-- Widget Error Messages -->
+    <string name="widget_error_add_task">Konnte Aufgabe nicht hinzufügen</string>
+    <string name="widget_error_update_task">Konnte Aufgabe nicht aktualisieren</string>
+    <string name="widget_error_open_app">Konnte App nicht öffnen</string>
+
+    <!-- Widget Success Messages -->
+    <string name="widget_success_task_added">Aufgabe hinzugefügt</string>
+    <string name="widget_success_task_updated">Aufgabe aktualisiert</string>
+    <string name="widget_success_task_completed">Aufgabe als erledigt markiert</string>
+
+    <!-- Widget Settings -->
+    <string name="widget_settings_title">Widget-Einstellungen</string>
+    <string name="widget_settings_show_completed">Erledigte Aufgaben anzeigen</string>
+    <string name="widget_settings_max_items">Maximale Anzahl Aufgaben</string>
+    <string name="widget_settings_compact_mode">Kompakter Modus</string>
+    <string name="widget_settings_auto_refresh">Automatisch aktualisieren</string>
+
+    <!-- Widget Configuration -->
+    <string name="widget_config_title">Widget konfigurieren</string>
+    <string name="widget_config_type">Widget-Typ auswählen</string>
+    <string name="widget_config_today_tasks">Heutige Aufgaben Widget</string>
+    <string name="widget_config_quick_add">Quick-Add Widget</string>
+    <string name="widget_config_add_widget">Widget hinzufügen</string>
+    <string name="widget_config_cancel">Abbrechen</string>
 </resources>

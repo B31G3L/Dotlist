@@ -10,6 +10,7 @@ import de.beigel.list.service.MidnightResetWorker
 import de.beigel.list.data.TaskDatabase
 import de.beigel.list.repository.TaskRepository
 import de.beigel.list.settings.SettingsManager
+import de.beigel.list.widget.WidgetManager
 import kotlinx.coroutines.*
 
 class DailyListApplication : Application() {
@@ -21,7 +22,8 @@ class DailyListApplication : Application() {
 
         createNotificationChannel()
         scheduleMidnightReset()
-
+        // Widget initialization
+        WidgetManager.initializeWidgets(this)
         // Einmalige Migration für bestehende Installationen
         migrateExistingData()
     }
@@ -75,4 +77,9 @@ class DailyListApplication : Application() {
         super.onTerminate()
         applicationScope.cancel()
     }
+    // Neue Methode für Widget-Updates nach Datenänderungen
+    fun updateWidgets() {
+        WidgetManager.updateAllWidgets(this)
+    }
+
 }

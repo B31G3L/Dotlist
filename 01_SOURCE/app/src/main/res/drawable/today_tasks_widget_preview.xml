@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="250dp"
+    android:height="200dp"
+    android:viewportWidth="250"
+    android:viewportHeight="200">
+
+    <!-- Widget Background -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#E0E0E0"
+        android:strokeWidth="2"
+        android:pathData="M8,8 L242,8 A8,8 0,0 1,250 16 L250,184 A8,8 0,0 1,242 192 L8,192 A8,8 0,0 1,0 184 L0,16 A8,8 0,0 1,8 8 Z" />
+
+    <!-- Title Bar -->
+    <path
+        android:fillColor="#009966"
+        android:pathData="M20,20 L80,20 L80,32 L20,32 Z" />
+
+    <!-- Progress Bar Track -->
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M20,50 L230,50 L230,54 L20,54 Z" />
+
+    <!-- Progress Bar Fill -->
+    <path
+        android:fillColor="#009966"
+        android:pathData="M20,50 L150,50 L150,54 L20,54 Z" />
+
+    <!-- Task Items (as simple rectangles) -->
+    <path
+        android:fillColor="#E53E3E"
+        android:pathData="M20,75 L26,75 L26,81 L20,81 Z" />
+
+    <path
+        android:fillColor="#009966"
+        android:pathData="M35,75 L45,75 L45,81 L35,81 Z" />
+
+    <path
+        android:fillColor="#CCCCCC"
+        android:pathData="M55,75 L200,75 L200,81 L55,81 Z" />
+
+    <path
+        android:fillColor="#009966"
+        android:pathData="M20,105 L26,105 L26,111 L20,111 Z" />
+
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M35,105 L45,105 L45,111 L35,111 Z" />
+
+    <path
+        android:fillColor="#666666"
+        android:pathData="M55,105 L180,105 L180,111 L55,111 Z" />
+
+    <!-- Add Button -->
+    <path
+        android:fillColor="#1A009966"
+        android:pathData="M20,140 L230,140 A4,4 0,0 1,234 144 L234,170 A4,4 0,0 1,230 174 L20,174 A4,4 0,0 1,16 170 L16,144 A4,4 0,0 1,20 140 Z" />
+
+</vector>

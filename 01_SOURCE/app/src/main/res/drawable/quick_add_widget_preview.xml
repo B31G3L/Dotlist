@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="250dp"
+    android:height="120dp"
+    android:viewportWidth="250"
+    android:viewportHeight="120">
+
+    <!-- Widget Background -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#E0E0E0"
+        android:strokeWidth="2"
+        android:pathData="M8,8 L242,8 A8,8 0,0 1,250 16 L250,104 A8,8 0,0 1,242 112 L8,112 A8,8 0,0 1,0 104 L0,16 A8,8 0,0 1,8 8 Z" />
+
+    <!-- Title Bar -->
+    <path
+        android:fillColor="#009966"
+        android:pathData="M20,20 L140,20 L140,32 L20,32 Z" />
+
+    <!-- Lightning Icon (simple) -->
+    <path
+        android:fillColor="#FFA500"
+        android:pathData="M220,22 L225,22 L222,28 L227,28 L222,34 L217,28 L220,28 Z" />
+
+    <!-- Quick Action Button 1 -->
+    <path
+        android:fillColor="#1A009966"
+        android:pathData="M20,45 L230,45 A4,4 0,0 1,234 49 L234,63 A4,4 0,0 1,230 67 L20,67 A4,4 0,0 1,16 63 L16,49 A4,4 0,0 1,20 45 Z" />
+
+    <!-- Fire Icon (simple square) -->
+    <path
+        android:fillColor="#E53E3E"
+        android:pathData="M26,52 L34,52 L34,60 L26,60 Z" />
+
+    <!-- Quick Action Button 2 -->
+    <path
+        android:fillColor="#1A009966"
+        android:pathData="M20,75 L230,75 A4,4 0,0 1,234 79 L234,97 A4,4 0,0 1,230 101 L20,101 A4,4 0,0 1,16 97 L16,79 A4,4 0,0 1,20 75 Z" />
+
+    <!-- Plus Icon (simple cross) -->
+    <path
+        android:fillColor="#009966"
+        android:pathData="M27,85 L33,85 L33,88 L36,88 L36,94 L33,94 L33,97 L27,97 L27,94 L24,94 L24,88 L27,88 Z" />
+
+</vector>

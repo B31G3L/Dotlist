@@ -34,9 +34,9 @@
             </intent-filter>
         </activity>
 
-        <!-- Widget Receiver -->
+        <!-- Today Tasks Widget Receiver -->
         <receiver
-            android:name=".widget.TaskWidgetReceiver"
+            android:name=".widget.TodayTasksWidgetReceiver"
             android:exported="true"
             android:enabled="true">
             <intent-filter>
@@ -45,7 +45,33 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/task_widget_info" />
+                android:resource="@xml/today_tasks_widget_info" />
+        </receiver>
+
+        <!-- Quick Add Widget Receiver -->
+        <receiver
+            android:name=".widget.QuickAddWidgetReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/quick_add_widget_info" />
+        </receiver>
+
+        <!-- Widget Action Receiver -->
+        <receiver
+            android:name=".widget.WidgetActionReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="TOGGLE_TASK" />
+                <action android:name="QUICK_ADD_TASK" />
+                <action android:name="REFRESH_WIDGET" />
+            </intent-filter>
         </receiver>
 
         <!-- Boot Receiver for rescheduling workers -->
