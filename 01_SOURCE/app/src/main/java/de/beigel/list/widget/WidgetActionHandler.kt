@@ -143,10 +143,10 @@ object WidgetActionHandler {
      */
     fun createActionPendingIntent(
         context: Context,
-        action: WidgetAction,
+        widgetAction: WidgetAction,
         requestCode: Int = 0
     ): PendingIntent {
-        val intent = when (action) {
+        val intent = when (widgetAction) {
             is WidgetAction.OpenApp -> {
                 Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -160,20 +160,20 @@ object WidgetActionHandler {
             }
             is WidgetAction.ToggleTask -> {
                 Intent(context, WidgetActionReceiver::class.java).apply {
-                    action = "TOGGLE_TASK"
-                    putExtra(WidgetAction.EXTRA_TASK_ID, action.taskId)
+                    setAction("TOGGLE_TASK")
+                    putExtra(WidgetAction.EXTRA_TASK_ID, widgetAction.taskId)
                 }
             }
             is WidgetAction.QuickAddTask -> {
                 Intent(context, WidgetActionReceiver::class.java).apply {
-                    action = "QUICK_ADD_TASK"
-                    putExtra(WidgetAction.EXTRA_TASK_TITLE, action.title)
-                    putExtra(WidgetAction.EXTRA_TASK_PRIORITY, action.priority.name)
+                    setAction("QUICK_ADD_TASK")
+                    putExtra(WidgetAction.EXTRA_TASK_TITLE, widgetAction.title)
+                    putExtra(WidgetAction.EXTRA_TASK_PRIORITY, widgetAction.priority.name)
                 }
             }
             is WidgetAction.RefreshWidget -> {
                 Intent(context, WidgetActionReceiver::class.java).apply {
-                    action = "REFRESH_WIDGET"
+                    setAction("REFRESH_WIDGET")
                 }
             }
         }
