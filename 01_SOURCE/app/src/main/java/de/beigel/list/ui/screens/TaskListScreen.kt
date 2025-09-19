@@ -705,15 +705,16 @@ fun TaskItemByMode(
 ) {
     when (uiState.interactionMode) {
         InteractionMode.MINIMAL -> {
-            MinimalTaskItem(
+            ModernTaskItem(
                 task = task,
                 onToggleComplete = { viewModel.toggleTaskCompletion(task) },
                 onLongPress = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
+                onMoreClick = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
                 isUpdating = isUpdating
             )
         }
         InteractionMode.CONTEXT_MENU -> {
-            ContextMenuTaskItem(
+            InteractiveTaskItem(
                 task = task,
                 onToggleComplete = { viewModel.toggleTaskCompletion(task) },
                 onEdit = { viewModel.setDialogState(DialogState.EditTask(task)) },
@@ -724,13 +725,16 @@ fun TaskItemByMode(
             )
         }
         InteractionMode.SELECTION -> {
-            SelectableTaskItem(
+            InteractiveTaskItem(
                 task = task,
+                onToggleComplete = { viewModel.toggleTaskCompletion(task) },
+                onEdit = { viewModel.setDialogState(DialogState.EditTask(task)) },
+                onDelete = { viewModel.deleteTask(task) },
+                onMoveToDaily = { viewModel.moveTaskToDaily(task) },
+                onMoveToBacklog = { viewModel.moveTaskToBacklog(task) },
                 isSelected = task.id in uiState.selectedTaskIds,
                 isSelectionMode = uiState.isSelectionMode,
-                onToggleComplete = { viewModel.toggleTaskCompletion(task) },
                 onToggleSelection = { viewModel.toggleTaskSelection(task.id) },
-                onSingleTap = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
                 isUpdating = isUpdating
             )
         }
