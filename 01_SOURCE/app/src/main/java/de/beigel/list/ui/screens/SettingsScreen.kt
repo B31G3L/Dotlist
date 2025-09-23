@@ -35,7 +35,9 @@ import de.beigel.list.viewmodel.InteractionMode
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
-    onThemeChange: ((Boolean, Boolean) -> Unit)? = null
+    onThemeChange: ((Boolean, Boolean) -> Unit)? = null,
+    onShowOnboarding: (() -> Unit)? = null // Neue Parameter
+
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
@@ -102,6 +104,7 @@ fun SettingsScreen(
         )
     }
 
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -161,7 +164,11 @@ fun SettingsScreen(
                     }
                 )
             }
-
+            onShowOnboarding?.let { callback ->
+                OnboardingSettingsSection(
+                    onShowOnboarding = callback
+                )
+            }
             // ========== Interaktion ==========
             SettingsGroup(
                 title = "Interaktion",
@@ -659,7 +666,28 @@ fun InfoRow(
         }
     }
 }
+@Composable
+fun OnboardingSettingsSection(
+    onShowOnboarding: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    SettingsGroup(
+        title = "Hilfe & Einführung",
+        icon = Icons.Default.Help
+    ) {
+        SettingsClickable(
+            title = "Onboarding erneut anzeigen",
+            subtitle = "Die Einführung zur App noch einmal durchgehen",
+            onClick = onShowOnboarding
+        )
 
+        InfoRow(
+            icon = Icons.Default.School,
+            title = "Erste Schritte",
+            subtitle = "Lerne alle Features der App kennen"
+        )
+    }
+}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePickerDialog(
