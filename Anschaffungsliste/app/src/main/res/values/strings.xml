@@ -1,0 +1,46 @@
+<resources>
+    <string name="app_name">Anschaffungsliste</string>
+
+    <!-- Navigation -->
+    <string name="nav_liste">Liste</string>
+    <string name="nav_einstellungen">Einstellungen</string>
+
+    <!-- Buttons -->
+    <string name="btn_hinzufuegen">Hinzufügen</string>
+    <string name="btn_speichern">Speichern</string>
+    <string name="btn_abbrechen">Abbrechen</string>
+    <string name="btn_loeschen">Löschen</string>
+    <string name="btn_bearbeiten">Bearbeiten</string>
+
+    <!-- Dialog -->
+    <string name="dialog_neue_anschaffung">Neue Anschaffung</string>
+    <string name="dialog_anschaffung_bearbeiten">Anschaffung bearbeiten</string>
+    <string name="dialog_name_label">Name</string>
+    <string name="dialog_preis_label">Preis (€)</string>
+    <string name="dialog_link_label">Link (optional)</string>
+    <string name="dialog_name_fehlt">Bitte geben Sie einen Namen ein</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_hinzufuegen">Anschaffung hinzufügen</string>
+    <string name="cd_bearbeiten">Anschaffung bearbeiten</string>
+    <string name="cd_loeschen">Anschaffung löschen</string>
+    <string name="cd_erledigt">Als erledigt markieren</string>
+    <string name="cd_offen">Als offen markieren</string>
+    <string name="cd_verschieben">Position ändern</string>
+    <string name="cd_link_oeffnen">Link öffnen</string>
+
+    <!-- Liste -->
+    <string name="liste_leer">Noch keine Anschaffungen geplant</string>
+    <string name="liste_leer_beschreibung">Tippen Sie auf das + Symbol, um eine neue Anschaffung hinzuzufügen</string>
+
+    <!-- Sharing -->
+    <string name="share_liste_titel">Liste teilen</string>
+    <string name="share_liste_code">Listen-Code: %1$s</string>
+    <string name="share_liste_beitreten">Liste beitreten</string>
+    <string name="share_code_eingeben">Listen-Code eingeben</string>
+
+    <!-- Fehler -->
+    <string name="error_netzwerk">Netzwerkfehler. Überprüfen Sie Ihre Internetverbindung.</string>
+    <string name="error_allgemein">Ein Fehler ist aufgetreten. Versuchen Sie es erneut.</string>
+    <string name="error_firebase">Synchronisierungsfehler. Änderungen werden lokal gespeichert.</string>
+</resources>
