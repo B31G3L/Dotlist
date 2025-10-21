@@ -67,54 +67,22 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun DailyListTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = false, // Deaktiviert für konsistente App-Farben
+    dynamicColor: Boolean = false,
+    customTheme: CustomTheme = CustomTheme.DAILYLIST,
     content: @Composable () -> Unit
 ) {
-    // Debug: Log theme changes
-    androidx.compose.runtime.LaunchedEffect(darkTheme) {
-        android.util.Log.d("DailyListTheme", "Theme changed to: ${if (darkTheme) "Dark" else "Light"}")
-    }
+    val themeConfig = getThemeConfig(customTheme)
 
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (darkTheme) dynamicDarkColorScheme(context)
+            else dynamicLightColorScheme(context)
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> themeConfig.darkColorScheme
+        else -> themeConfig.lightColorScheme
     }
 
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            try {
-                val window = (view.context as Activity).window
-                // Status bar color anpassen
-                window.statusBarColor = if (darkTheme) {
-                    Color(0xFF121212).toArgb()
-                } else {
-                    Color.White.toArgb()
-                }
-
-                // Navigation bar color anpassen
-                window.navigationBarColor = if (darkTheme) {
-                    Color(0xFF121212).toArgb()
-                } else {
-                    Color.White.toArgb()
-                }
-
-                // System bar appearance
-                val windowInsetsController = WindowCompat.getInsetsController(window, view)
-                windowInsetsController.isAppearanceLightStatusBars = !darkTheme
-                windowInsetsController.isAppearanceLightNavigationBars = !darkTheme
-
-            } catch (e: Exception) {
-                // Fallback für Fälle wo Activity nicht verfügbar ist
-                android.util.Log.w("DailyListTheme", "Could not set system bar colors: ${e.message}")
-            }
-        }
-    }
 
     MaterialTheme(
         colorScheme = colorScheme,

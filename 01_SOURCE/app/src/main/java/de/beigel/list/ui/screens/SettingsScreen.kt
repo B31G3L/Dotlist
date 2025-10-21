@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -30,19 +31,20 @@ import de.beigel.list.notification.NotificationWorker
 import de.beigel.list.settings.SettingsManager
 import de.beigel.list.settings.ThemeMode
 import de.beigel.list.viewmodel.InteractionMode
+import de.beigel.list.ui.theme.CustomTheme
+import de.beigel.list.ui.theme.getThemeConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
-    onThemeChange: ((Boolean, Boolean) -> Unit)? = null,
-    onShowOnboarding: (() -> Unit)? = null // Neue Parameter
-
+    onThemeChange: ((Boolean, Boolean, CustomTheme?) -> Unit)? = null,
+    onShowOnboarding: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
 
-    // Settings States mit sofortiger Aktualisierung
+    // Settings States
     var notificationsEnabled by remember { mutableStateOf(settingsManager.notificationsEnabled) }
     var notificationHour by remember { mutableStateOf(settingsManager.notificationHour) }
     var notificationMinute by remember { mutableStateOf(settingsManager.notificationMinute) }
@@ -51,17 +53,23 @@ fun SettingsScreen(
     var interactionMode by remember { mutableStateOf(settingsManager.interactionMode) }
     var useSystemTheme by remember { mutableStateOf(settingsManager.useSystemTheme) }
     var isDarkMode by remember { mutableStateOf(settingsManager.isDarkMode) }
+    var customTheme by remember { mutableStateOf(settingsManager.getCustomTheme()) }
     var enableAnimations by remember { mutableStateOf(settingsManager.enableAnimations) }
     var enableHapticFeedback by remember { mutableStateOf(settingsManager.enableHapticFeedback) }
 
     var showTimePicker by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
 
     // Theme-Update Funktion
-    fun updateTheme(newUseSystemTheme: Boolean, newIsDarkMode: Boolean) {
+    fun updateTheme(newUseSystemTheme: Boolean, newIsDarkMode: Boolean, newCustomTheme: CustomTheme? = null) {
         useSystemTheme = newUseSystemTheme
         isDarkMode = newIsDarkMode
+        newCustomTheme?.let { customTheme = it }
+
         settingsManager.updateThemeSettings(newUseSystemTheme, newIsDarkMode)
-        onThemeChange?.invoke(newUseSystemTheme, newIsDarkMode)
+        newCustomTheme?.let { settingsManager.setCustomTheme(it) }
+
+        onThemeChange?.invoke(newUseSystemTheme, newIsDarkMode, newCustomTheme)
     }
 
     // Permission launcher
@@ -85,6 +93,7 @@ fun SettingsScreen(
         true
     }
 
+    // Time Picker Dialog
     if (showTimePicker) {
         TimePickerDialog(
             initialHour = notificationHour,
@@ -104,6 +113,19 @@ fun SettingsScreen(
         )
     }
 
+    // Theme Selection Dialog
+    if (showThemeDialog) {
+        ThemeSelectionDialog(
+            currentTheme = customTheme,
+            onThemeSelected = { newTheme ->
+                customTheme = newTheme
+                settingsManager.setCustomTheme(newTheme)
+                updateTheme(useSystemTheme, isDarkMode, newTheme)
+                showThemeDialog = false
+            },
+            onDismiss = { showThemeDialog = false }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -136,6 +158,102 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // ========== Design & Themes ==========
+            SettingsGroup(
+                title = "Design & Themes",
+                icon = Icons.Default.Palette
+            ) {
+                // Theme Status Anzeige
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "Aktuelles Theme",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = getThemeConfig(customTheme).name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // Theme Color Preview
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Theme Auswahl
+                SettingsClickable(
+                    title = "App-Theme auswählen",
+                    subtitle = "Wähle dein bevorzugtes Farbschema",
+                    onClick = { showThemeDialog = true }
+                )
+
+                // System Theme Switch
+                SettingsSwitch(
+                    title = "System-Theme verwenden",
+                    subtitle = "Automatisch zwischen Hell und Dunkel wechseln",
+                    checked = useSystemTheme,
+                    onCheckedChange = { enabled ->
+                        updateTheme(enabled, isDarkMode, null)
+                    }
+                )
+
+                // Manual Dark Mode (nur wenn System-Theme deaktiviert)
+                AnimatedVisibility(
+                    visible = !useSystemTheme,
+                    enter = expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    ) + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        SettingsSwitch(
+                            title = "Dunkler Modus",
+                            subtitle = "Dunkles Design aktivieren",
+                            checked = isDarkMode,
+                            onCheckedChange = { enabled ->
+                                updateTheme(useSystemTheme, enabled, null)
+                            }
+                        )
+                    }
+                }
+            }
+
             // ========== Aufgabenverwaltung ==========
             SettingsGroup(
                 title = "Aufgabenverwaltung",
@@ -164,11 +282,7 @@ fun SettingsScreen(
                     }
                 )
             }
-            onShowOnboarding?.let { callback ->
-                OnboardingSettingsSection(
-                    onShowOnboarding = callback
-                )
-            }
+
             // ========== Interaktion ==========
             SettingsGroup(
                 title = "Interaktion",
@@ -219,86 +333,6 @@ fun SettingsScreen(
                 )
             }
 
-            // ========== Design - Verbessert ==========
-            SettingsGroup(
-                title = "Design",
-                icon = Icons.Default.Palette
-            ) {
-                // Aktueller Theme-Status Anzeige
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Aktuell: ${
-                                when {
-                                    useSystemTheme -> "System-Theme"
-                                    isDarkMode -> "Dunkler Modus"
-                                    else -> "Heller Modus"
-                                }
-                            }",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // System Theme Switch
-                SettingsSwitch(
-                    title = "System-Theme verwenden",
-                    subtitle = "Automatisch zwischen Hell und Dunkel wechseln",
-                    checked = useSystemTheme,
-                    onCheckedChange = { enabled ->
-                        updateTheme(enabled, isDarkMode)
-                    }
-                )
-
-                // Manual Dark Mode (nur wenn System-Theme deaktiviert)
-                AnimatedVisibility(
-                    visible = !useSystemTheme,
-                    enter = expandVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
-                    ) + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    Column {
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        SettingsSwitch(
-                            title = "Dunkler Modus",
-                            subtitle = "Dunkles Design aktivieren",
-                            checked = isDarkMode,
-                            onCheckedChange = { enabled ->
-                                updateTheme(useSystemTheme, enabled)
-                            }
-                        )
-
-
-                    }
-                }
-            }
-
             // ========== Benachrichtigungen ==========
             SettingsGroup(
                 title = "Benachrichtigungen",
@@ -345,6 +379,26 @@ fun SettingsScreen(
                 }
             }
 
+            // ========== Hilfe & Einführung ==========
+            if (onShowOnboarding != null) {
+                SettingsGroup(
+                    title = "Hilfe & Einführung",
+                    icon = Icons.Default.Help
+                ) {
+                    SettingsClickable(
+                        title = "Onboarding erneut anzeigen",
+                        subtitle = "Die Einführung zur App noch einmal durchgehen",
+                        onClick = onShowOnboarding
+                    )
+
+                    InfoRow(
+                        icon = Icons.Default.School,
+                        title = "Erste Schritte",
+                        subtitle = "Lerne alle Features der App kennen"
+                    )
+                }
+            }
+
             // ========== App-Information ==========
             SettingsGroup(
                 title = "App-Information",
@@ -377,6 +431,138 @@ fun SettingsScreen(
         }
     }
 }
+
+// ========== Theme Selection Dialog ==========
+@Composable
+fun ThemeSelectionDialog(
+    currentTheme: CustomTheme,
+    onThemeSelected: (CustomTheme) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Theme auswählen",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CustomTheme.values().forEach { theme ->
+                    ThemeSelectionItem(
+                        theme = theme,
+                        isSelected = theme == currentTheme,
+                        onClick = { onThemeSelected(theme) }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Schließen")
+            }
+        }
+    )
+}
+
+@Composable
+fun ThemeSelectionItem(
+    theme: CustomTheme,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val config = getThemeConfig(theme)
+    val animatedBackground by animateColorAsState(
+        targetValue = if (isSelected)
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        else
+            Color.Transparent,
+        label = "theme_selection_background"
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = animatedBackground
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = isSelected,
+                onClick = onClick,
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = MaterialTheme.colorScheme.primary
+                )
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = config.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Theme Color Preview
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Light Theme Colors
+                    Box(
+                        modifier = Modifier
+                            .size(width = 40.dp, height = 20.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(config.lightColorScheme.primary)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(width = 40.dp, height = 20.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(config.lightColorScheme.secondary)
+                    )
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    // Dark Theme Colors
+                    Box(
+                        modifier = Modifier
+                            .size(width = 40.dp, height = 20.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(config.darkColorScheme.primary)
+                    )
+                }
+            }
+
+            if (isSelected) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = "Ausgewählt",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    }
+}
+
+// ========== Settings Components ==========
 
 @Composable
 fun SettingsGroup(
@@ -666,28 +852,7 @@ fun InfoRow(
         }
     }
 }
-@Composable
-fun OnboardingSettingsSection(
-    onShowOnboarding: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    SettingsGroup(
-        title = "Hilfe & Einführung",
-        icon = Icons.Default.Help
-    ) {
-        SettingsClickable(
-            title = "Onboarding erneut anzeigen",
-            subtitle = "Die Einführung zur App noch einmal durchgehen",
-            onClick = onShowOnboarding
-        )
 
-        InfoRow(
-            icon = Icons.Default.School,
-            title = "Erste Schritte",
-            subtitle = "Lerne alle Features der App kennen"
-        )
-    }
-}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePickerDialog(

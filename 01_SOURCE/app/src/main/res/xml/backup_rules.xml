@@ -9,12 +9,6 @@
     <include domain="database" path="task_database-shm"/>
     <include domain="database" path="task_database-wal"/>
 
-    <!-- Exclude temporary files -->
-    <exclude domain="cache" path="."/>
-    <exclude domain="external" path="."/>
-
-    <!-- Exclude sensitive data that shouldn't be backed up -->
-    <exclude domain="sharedpref" path="device_specific.xml"/>
 
     <!-- Include only essential app data -->
     <include domain="file" path="important_data/"/>

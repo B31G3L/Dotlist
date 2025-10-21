@@ -2,6 +2,7 @@ package de.beigel.list.settings
 
 import android.content.Context
 import android.content.SharedPreferences
+import de.beigel.list.ui.theme.CustomTheme
 import de.beigel.list.viewmodel.InteractionMode
 
 class SettingsManager(context: Context) {
@@ -79,6 +80,25 @@ class SettingsManager(context: Context) {
     var defaultPriority: String
         get() = prefs.getString("default_priority", "MEDIUM") ?: "MEDIUM"
         set(value) = prefs.edit().putString("default_priority", value).apply()
+
+    // In SettingsManager.kt hinzufügen:
+
+    var selectedCustomTheme: String
+        get() = prefs.getString("selected_custom_theme", CustomTheme.DAILYLIST.name)
+            ?: CustomTheme.DAILYLIST.name
+        set(value) = prefs.edit().putString("selected_custom_theme", value).apply()
+
+    fun getCustomTheme(): CustomTheme {
+        return try {
+            CustomTheme.valueOf(selectedCustomTheme)
+        } catch (e: IllegalArgumentException) {
+            CustomTheme.DAILYLIST
+        }
+    }
+
+    fun setCustomTheme(theme: CustomTheme) {
+        selectedCustomTheme = theme.name
+    }
 
     // ========== ERWEITERTE THEME-FUNKTIONEN ==========
 

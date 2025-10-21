@@ -10,13 +10,7 @@
         <include domain="database" path="task_database-shm"/>
         <include domain="database" path="task_database-wal"/>
 
-        <!-- Exclude cache and temporary files -->
-        <exclude domain="cache" path="."/>
-        <exclude domain="external" path="."/>
-
-        <!-- Exclude device-specific data -->
-        <exclude domain="sharedpref" path="device_specific.xml"/>
-    </cloud-backup>
+  </cloud-backup>
 
     <device-transfer>
         <!-- Include all user data for device transfer -->
@@ -26,8 +20,5 @@
         <include domain="database" path="task_database-shm"/>
         <include domain="database" path="task_database-wal"/>
 
-        <!-- Exclude temporary and cache data -->
-        <exclude domain="cache" path="."/>
-        <exclude domain="external" path="."/>
     </device-transfer>
 </data-extraction-rules>
