@@ -50,7 +50,6 @@ fun SettingsScreen(
     var notificationMinute by remember { mutableStateOf(settingsManager.notificationMinute) }
     var maxDailyTasks by remember { mutableIntStateOf(settingsManager.maxDailyTasks) }
     var autoBacklogEnabled by remember { mutableStateOf(settingsManager.autoBacklogEnabled) }
-    var interactionMode by remember { mutableStateOf(settingsManager.interactionMode) }
     var useSystemTheme by remember { mutableStateOf(settingsManager.useSystemTheme) }
     var isDarkMode by remember { mutableStateOf(settingsManager.isDarkMode) }
     var customTheme by remember { mutableStateOf(settingsManager.getCustomTheme()) }
@@ -234,28 +233,6 @@ fun SettingsScreen(
                 title = "Interaktion",
                 icon = Icons.Default.TouchApp
             ) {
-                // Interaktionsmodus
-                SettingsSelection(
-                    title = "Interaktionsmodus",
-                    subtitle = when (interactionMode) {
-                        InteractionMode.MINIMAL -> "Minimal - Nur Tipp & Gedrückt halten"
-                        InteractionMode.CONTEXT_MENU -> "Kontextmenü - Gedrückt halten für Optionen"
-                        InteractionMode.SELECTION -> "Auswahl - Multi-Select Modus"
-                    },
-                    options = InteractionMode.values().map { mode ->
-                        when (mode) {
-                            InteractionMode.MINIMAL -> "Minimal"
-                            InteractionMode.CONTEXT_MENU -> "Kontextmenü"
-                            InteractionMode.SELECTION -> "Auswahl"
-                        }
-                    },
-                    selectedIndex = InteractionMode.values().indexOf(interactionMode),
-                    onSelectionChange = { index ->
-                        interactionMode = InteractionMode.values()[index]
-                        settingsManager.interactionMode = interactionMode
-                    }
-                )
-
                 // Animationen
                 SettingsSwitch(
                     title = "Animationen",

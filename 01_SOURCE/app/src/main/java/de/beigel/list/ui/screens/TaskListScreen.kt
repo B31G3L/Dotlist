@@ -456,6 +456,7 @@ fun TaskItemByMode(
                 onToggleComplete = { viewModel.toggleTaskCompletion(task) },
                 onLongPress = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
                 onMoreClick = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
+                onCardClick = { viewModel.setDialogState(DialogState.TaskDetails(task)) },
                 isUpdating = isUpdating
             )
         }
