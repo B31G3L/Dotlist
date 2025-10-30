@@ -72,6 +72,18 @@ fun SettingsScreen(
         onThemeChange?.invoke(newUseSystemTheme, newIsDarkMode, newCustomTheme)
     }
 
+    // Funktion zum Wechseln zum nächsten Theme
+    fun cycleToNextTheme() {
+        val allThemes = CustomTheme.values().filter { it != CustomTheme.UNKNOWN }
+        val currentIndex = allThemes.indexOf(customTheme)
+        val nextIndex = (currentIndex + 1) % allThemes.size
+        val nextTheme = allThemes[nextIndex]
+
+        customTheme = nextTheme
+        settingsManager.setCustomTheme(nextTheme)
+        updateTheme(useSystemTheme, isDarkMode, nextTheme)
+    }
+
     // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -163,55 +175,6 @@ fun SettingsScreen(
                 title = "Design & Themes",
                 icon = Icons.Default.Palette
             ) {
-                // Theme Status Anzeige
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Info,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = "Aktuelles Theme",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = getThemeConfig(customTheme).name,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        // Theme Color Preview
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.primary)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
                 // Theme Auswahl
                 SettingsClickable(
                     title = "App-Theme auswählen",
