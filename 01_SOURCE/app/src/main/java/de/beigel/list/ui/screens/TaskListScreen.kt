@@ -63,35 +63,43 @@ fun TaskListScreen(
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
 
-    // Pager State für Swipe-Funktionalität zwischen Today und Backlog
+    // Pager State für Swipe-Funktionalität zwischen allen Screens
     val pagerState = rememberPagerState(
-        initialPage = if (currentDestination == NavigationDestination.TODAY) 0 else 1,
-        pageCount = { 2 }
+        initialPage = when (currentDestination) {
+            NavigationDestination.ABOUT -> 0
+            NavigationDestination.TODAY -> 1
+            NavigationDestination.BACKLOG -> 2
+            NavigationDestination.SETTINGS -> 3
+        },
+        pageCount = { 4 }
     )
     val coroutineScope = rememberCoroutineScope()
 
     // Sync PagerState with Navigation
     LaunchedEffect(pagerState.currentPage) {
-        val newDestination = if (pagerState.currentPage == 0) {
-            NavigationDestination.TODAY
-        } else {
-            NavigationDestination.BACKLOG
+        val newDestination = when (pagerState.currentPage) {
+            0 -> NavigationDestination.ABOUT
+            1 -> NavigationDestination.TODAY
+            2 -> NavigationDestination.BACKLOG
+            3 -> NavigationDestination.SETTINGS
+            else -> NavigationDestination.TODAY
         }
-        if (currentDestination != newDestination &&
-            (currentDestination == NavigationDestination.TODAY || currentDestination == NavigationDestination.BACKLOG)) {
+        if (currentDestination != newDestination) {
             onNavigationChange(newDestination)
         }
     }
 
     // Sync Navigation with PagerState
     LaunchedEffect(currentDestination) {
-        if (currentDestination == NavigationDestination.TODAY && pagerState.currentPage != 0) {
+        val targetPage = when (currentDestination) {
+            NavigationDestination.ABOUT -> 0
+            NavigationDestination.TODAY -> 1
+            NavigationDestination.BACKLOG -> 2
+            NavigationDestination.SETTINGS -> 3
+        }
+        if (pagerState.currentPage != targetPage) {
             coroutineScope.launch {
-                pagerState.animateScrollToPage(0)
-            }
-        } else if (currentDestination == NavigationDestination.BACKLOG && pagerState.currentPage != 1) {
-            coroutineScope.launch {
-                pagerState.animateScrollToPage(1)
+                pagerState.animateScrollToPage(targetPage)
             }
         }
     }
@@ -140,35 +148,6 @@ fun TaskListScreen(
     }
 
     Scaffold(
-        topBar = {
-            if (uiState.isSelectionMode &&
-                (currentDestination == NavigationDestination.TODAY || currentDestination == NavigationDestination.BACKLOG)) {
-                SelectionTopBar(
-                    selectedCount = uiState.selectedTaskIds.size,
-                    totalCount = if (currentDestination == NavigationDestination.TODAY) todayTasks.size else backlogTasks.size,
-                    onClearSelection = { viewModel.clearSelection() },
-                    onSelectAll = {
-                        val allTasks = if (currentDestination == NavigationDestination.TODAY) todayTasks else backlogTasks
-                        allTasks.forEach { task ->
-                            if (task.id !in uiState.selectedTaskIds) {
-                                viewModel.toggleTaskSelection(task.id)
-                            }
-                        }
-                    }
-                )
-            } else if (currentDestination == NavigationDestination.TODAY || currentDestination == NavigationDestination.BACKLOG) {
-                TasksTopBar(
-                    uiState = uiState,
-                    todayTasksCount = todayTasks.size,
-                    backlogTasksCount = backlogTasks.size,
-                    maxDailyTasks = settingsManager.maxDailyTasks,
-                    currentDestination = currentDestination,
-                    onToggleCompleted = { viewModel.setShowCompleted(!uiState.showCompletedTasks) },
-                    onFillFromBacklog = { viewModel.fillFromBacklog(settingsManager.maxDailyTasks) },
-                    onInteractionModeChange = { viewModel.setInteractionMode(it) }
-                )
-            }
-        },
         bottomBar = {
             BottomNavigationBar(
                 currentDestination = currentDestination,
@@ -208,16 +187,57 @@ fun TaskListScreen(
             }
         }
     ) { paddingValues ->
-        when (currentDestination) {
-            NavigationDestination.ABOUT -> {
-                Box(modifier = Modifier.padding(paddingValues)) {
-                    //AboutScreen()
-                }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Selection Header (nur für Today und Backlog im Selection Mode)
+            AnimatedVisibility(
+                visible = uiState.isSelectionMode &&
+                        (currentDestination == NavigationDestination.TODAY || currentDestination == NavigationDestination.BACKLOG),
+                enter = slideInVertically() + fadeIn(),
+                exit = slideOutVertically() + fadeOut()
+            ) {
+                SelectionHeader(
+                    selectedCount = uiState.selectedTaskIds.size,
+                    totalCount = if (currentDestination == NavigationDestination.TODAY) todayTasks.size else backlogTasks.size,
+                    onSelectAll = {
+                        val allTasks = if (currentDestination == NavigationDestination.TODAY) todayTasks else backlogTasks
+                        allTasks.forEach { task ->
+                            if (task.id !in uiState.selectedTaskIds) {
+                                viewModel.toggleTaskSelection(task.id)
+                            }
+                        }
+                    },
+                    onClearSelection = { viewModel.clearSelection() }
+                )
             }
-            NavigationDestination.SETTINGS -> {
-                Box(modifier = Modifier.padding(paddingValues)) {
-                    SettingsScreen(
-                        onNavigateBack = { /* Not needed with bottom nav */ },
+
+            // Swipeable Content für alle Screens
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.weight(1f),
+                userScrollEnabled = !uiState.isSelectionMode
+            ) { page ->
+                when (page) {
+                    0 -> AboutScreen()
+                    1 -> DailyTasksContent(
+                        tasks = filteredTodayTasks,
+                        totalTasks = todayTasks,
+                        maxTasks = settingsManager.maxDailyTasks,
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        updatingTaskIds = updatingTaskIds
+                    )
+                    2 -> BacklogTasksContent(
+                        tasks = filteredBacklogTasks,
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        updatingTaskIds = updatingTaskIds
+                    )
+                    3 -> SettingsScreen(
+                        onNavigateBack = { /* Not needed with swipe */ },
                         onThemeChange = { useSystem, dark, customTheme ->
                             // Theme change wird automatisch von SettingsScreen gehandelt
                         },
@@ -225,72 +245,7 @@ fun TaskListScreen(
                             // Onboarding show logic if needed
                         }
                     )
-                }
-            }
-            NavigationDestination.TODAY, NavigationDestination.BACKLOG -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
-                    // Tab Row für Swipe zwischen Today und Backlog
-                    SwipeableTabRow(
-                        selectedTabIndex = pagerState.currentPage,
-                        pagerState = pagerState,
-                        todayTasksCount = todayTasks.size,
-                        backlogTasksCount = backlogTasks.size,
-                        maxDailyTasks = settingsManager.maxDailyTasks,
-                        onTabClick = { index ->
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(index)
-                            }
-                        }
-                    )
 
-                    // Selection Header (wenn im Selection Mode)
-                    AnimatedVisibility(
-                        visible = uiState.isSelectionMode,
-                        enter = slideInVertically() + fadeIn(),
-                        exit = slideOutVertically() + fadeOut()
-                    ) {
-                        SelectionHeader(
-                            selectedCount = uiState.selectedTaskIds.size,
-                            totalCount = if (currentDestination == NavigationDestination.TODAY) todayTasks.size else backlogTasks.size,
-                            onSelectAll = {
-                                val allTasks = if (currentDestination == NavigationDestination.TODAY) todayTasks else backlogTasks
-                                allTasks.forEach { task ->
-                                    if (task.id !in uiState.selectedTaskIds) {
-                                        viewModel.toggleTaskSelection(task.id)
-                                    }
-                                }
-                            },
-                            onClearSelection = { viewModel.clearSelection() }
-                        )
-                    }
-
-                    // Swipeable Content
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.weight(1f),
-                        userScrollEnabled = !uiState.isSelectionMode
-                    ) { page ->
-                        when (page) {
-                            0 -> DailyTasksContent(
-                                tasks = filteredTodayTasks,
-                                totalTasks = todayTasks,
-                                maxTasks = settingsManager.maxDailyTasks,
-                                uiState = uiState,
-                                viewModel = viewModel,
-                                updatingTaskIds = updatingTaskIds
-                            )
-                            1 -> BacklogTasksContent(
-                                tasks = filteredBacklogTasks,
-                                uiState = uiState,
-                                viewModel = viewModel,
-                                updatingTaskIds = updatingTaskIds
-                            )
-                        }
-                    }
                 }
             }
         }
@@ -360,262 +315,7 @@ fun BottomNavigationBar(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun SwipeableTabRow(
-    selectedTabIndex: Int,
-    pagerState: PagerState,
-    todayTasksCount: Int,
-    backlogTasksCount: Int,
-    maxDailyTasks: Int,
-    onTabClick: (Int) -> Unit
-) {
-    Column {
-        TabRow(
-            selectedTabIndex = selectedTabIndex,
-            containerColor = MaterialTheme.colorScheme.surface,
-            indicator = { tabPositions ->
-                TabRowDefaults.PrimaryIndicator(
-                    modifier = Modifier
-                        .tabIndicatorOffset(tabPositions[selectedTabIndex])
-                        .animateContentSize(),
-                    color = MaterialTheme.colorScheme.primary,
-                    height = 3.dp
-                )
-            }
-        ) {
-            Tab(
-                selected = selectedTabIndex == 0,
-                onClick = { onTabClick(0) },
-                text = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            "Heute",
-                            fontWeight = if (selectedTabIndex == 0) FontWeight.Bold else FontWeight.Normal
-                        )
-                        Text(
-                            "$todayTasksCount/$maxDailyTasks",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            )
-            Tab(
-                selected = selectedTabIndex == 1,
-                onClick = { onTabClick(1) },
-                text = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            "Backlog",
-                            fontWeight = if (selectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal
-                        )
-                        Text(
-                            "$backlogTasksCount",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            )
-        }
-
-        AnimatedVisibility(
-            visible = pagerState.isScrollInProgress,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            LinearProgressIndicator(
-                progress = { (pagerState.currentPageOffsetFraction + pagerState.currentPage).coerceIn(0f, 1f) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TasksTopBar(
-    uiState: TaskUiState,
-    todayTasksCount: Int,
-    backlogTasksCount: Int,
-    maxDailyTasks: Int,
-    currentDestination: NavigationDestination,
-    onToggleCompleted: () -> Unit,
-    onFillFromBacklog: () -> Unit,
-    onInteractionModeChange: (InteractionMode) -> Unit
-) {
-    var showMenu by remember { mutableStateOf(false) }
-
-    TopAppBar(
-        title = {
-            Text(
-                text = when (currentDestination) {
-                    NavigationDestination.TODAY -> "Heute"
-                    NavigationDestination.BACKLOG -> "Backlog"
-                    else -> "Daily List"
-                },
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        actions = {
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(
-                        Icons.Default.MoreVert,
-                        contentDescription = "Menü",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    modifier = Modifier.width(250.dp)
-                ) {
-                    if (currentDestination == NavigationDestination.TODAY && backlogTasksCount > 0) {
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.PlaylistAdd,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Text("Aus Backlog auffüllen")
-                                }
-                            },
-                            onClick = {
-                                onFillFromBacklog()
-                                showMenu = false
-                            }
-                        )
-                        HorizontalDivider()
-                    }
-
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Icon(
-                                    when (uiState.interactionMode) {
-                                        InteractionMode.MINIMAL -> Icons.Default.TouchApp
-                                        InteractionMode.CONTEXT_MENU -> Icons.Default.MoreVert
-                                        InteractionMode.SELECTION -> Icons.Default.CheckBox
-                                    },
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Column {
-                                    Text("Interaktionsmodus")
-                                    Text(
-                                        text = when (uiState.interactionMode) {
-                                            InteractionMode.MINIMAL -> "Minimal"
-                                            InteractionMode.CONTEXT_MENU -> "Kontextmenü"
-                                            InteractionMode.SELECTION -> "Auswahl"
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                    )
-                                }
-                            }
-                        },
-                        onClick = {
-                            val nextMode = when (uiState.interactionMode) {
-                                InteractionMode.MINIMAL -> InteractionMode.CONTEXT_MENU
-                                InteractionMode.CONTEXT_MENU -> InteractionMode.SELECTION
-                                InteractionMode.SELECTION -> InteractionMode.MINIMAL
-                            }
-                            onInteractionModeChange(nextMode)
-                            showMenu = false
-                        }
-                    )
-
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Icon(
-                                    if (uiState.showCompletedTasks) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    if (uiState.showCompletedTasks) "Erledigte ausblenden" else "Erledigte anzeigen"
-                                )
-                            }
-                        },
-                        onClick = {
-                            onToggleCompleted()
-                            showMenu = false
-                        }
-                    )
-                }
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SelectionTopBar(
-    selectedCount: Int,
-    totalCount: Int,
-    onClearSelection: () -> Unit,
-    onSelectAll: () -> Unit
-) {
-    TopAppBar(
-        title = {
-            Text(
-                text = "$selectedCount von $totalCount ausgewählt",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onClearSelection) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Auswahl aufheben"
-                )
-            }
-        },
-        actions = {
-            if (selectedCount < totalCount) {
-                TextButton(onClick = onSelectAll) {
-                    Text("Alle", color = MaterialTheme.colorScheme.primary)
-                }
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-        )
-    )
-}
-
-// DailyTasksContent und BacklogTasksContent bleiben unverändert wie vorher
+// DailyTasksContent und BacklogTasksContent bleiben unverändert
 @Composable
 fun DailyTasksContent(
     tasks: List<TaskEntity>,
@@ -827,5 +527,101 @@ fun EmptyStateCard(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
             textAlign = TextAlign.Center
         )
+    }
+}
+
+@Composable
+fun AboutScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.Info,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            "Daily List",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            "Version 1.0.0",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Über diese App",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    "Daily List hilft dir dabei, deine täglichen Aufgaben intelligent zu organisieren. " +
+                            "Mit dem automatischen Backlog-System behältst du immer den Überblick.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Build,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Entwickelt mit Jetpack Compose",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Security,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Alle Daten bleiben lokal auf deinem Gerät",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
     }
 }
