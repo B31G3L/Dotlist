@@ -24,7 +24,6 @@ import de.beigel.list.ui.theme.CustomTheme
 import de.beigel.list.viewmodel.TaskViewModel
 import de.beigel.list.settings.SettingsManager
 import de.beigel.list.utils.TestDataGenerator
-import de.beigel.list.widget.WidgetManager
 import de.beigel.list.viewmodel.DialogState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -156,7 +155,6 @@ class MainActivity : ComponentActivity() {
         // Apply saved interaction mode
         LaunchedEffect(Unit) {
             viewModel.setInteractionMode(settingsManager.interactionMode)
-            WidgetManager.initializeWidgets(this@MainActivity)
         }
 
         // Handle widget-triggered actions
@@ -184,7 +182,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        WidgetManager.updateAllWidgets(this)
     }
 
     private fun handleWidgetIntent(intent: Intent?) {
