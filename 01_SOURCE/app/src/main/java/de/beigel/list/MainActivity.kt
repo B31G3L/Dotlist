@@ -170,7 +170,9 @@ class MainActivity : ComponentActivity() {
                 currentDestination = destination
                 // Clear selection when changing destinations
                 viewModel.clearSelection()
-            }
+            },
+            onThemeChange = onThemeChange,
+            onShowOnboarding = onShowOnboarding
         )
     }
 
