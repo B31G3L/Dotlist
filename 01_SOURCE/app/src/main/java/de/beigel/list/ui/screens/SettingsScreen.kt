@@ -378,53 +378,6 @@ fun SettingsScreen(
                     )
                 }
             }
-
-            // ========== App-Information ==========
-            SettingsGroup(
-                title = "App-Information",
-                icon = Icons.Default.Info
-            ) {
-                InfoRow(
-                    icon = Icons.Default.Info,
-                    title = "Version",
-                    subtitle = "1.0.0"
-                )
-
-                InfoRow(
-                    icon = Icons.Default.Build,
-                    title = "Entwickelt mit",
-                    subtitle = "Jetpack Compose & Material 3"
-                )
-
-                InfoRow(
-                    icon = Icons.Default.Storage,
-                    title = "Datenspeicherung",
-                    subtitle = "Lokal auf dem Gerät (Room Database)"
-                )
-
-                InfoRow(
-                    icon = Icons.Default.Security,
-                    title = "Datenschutz",
-                    subtitle = "Alle Daten bleiben auf deinem Gerät"
-                )
-
-                // Hilfe & Einführung
-                if (onShowOnboarding != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    SettingsClickable(
-                        title = "Onboarding erneut anzeigen",
-                        subtitle = "Die Einführung zur App noch einmal durchgehen",
-                        onClick = onShowOnboarding
-                    )
-
-                    InfoRow(
-                        icon = Icons.Default.School,
-                        title = "Erste Schritte",
-                        subtitle = "Lerne alle Features der App kennen"
-                    )
-                }
-            }
         }
     }
 }
