@@ -379,26 +379,6 @@ fun SettingsScreen(
                 }
             }
 
-            // ========== Hilfe & Einführung ==========
-            if (onShowOnboarding != null) {
-                SettingsGroup(
-                    title = "Hilfe & Einführung",
-                    icon = Icons.Default.Help
-                ) {
-                    SettingsClickable(
-                        title = "Onboarding erneut anzeigen",
-                        subtitle = "Die Einführung zur App noch einmal durchgehen",
-                        onClick = onShowOnboarding
-                    )
-
-                    InfoRow(
-                        icon = Icons.Default.School,
-                        title = "Erste Schritte",
-                        subtitle = "Lerne alle Features der App kennen"
-                    )
-                }
-            }
-
             // ========== App-Information ==========
             SettingsGroup(
                 title = "App-Information",
@@ -427,6 +407,23 @@ fun SettingsScreen(
                     title = "Datenschutz",
                     subtitle = "Alle Daten bleiben auf deinem Gerät"
                 )
+
+                // Hilfe & Einführung
+                if (onShowOnboarding != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    SettingsClickable(
+                        title = "Onboarding erneut anzeigen",
+                        subtitle = "Die Einführung zur App noch einmal durchgehen",
+                        onClick = onShowOnboarding
+                    )
+
+                    InfoRow(
+                        icon = Icons.Default.School,
+                        title = "Erste Schritte",
+                        subtitle = "Lerne alle Features der App kennen"
+                    )
+                }
             }
         }
     }
