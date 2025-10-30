@@ -51,7 +51,9 @@ enum class NavigationDestination(
 fun TaskListScreen(
     viewModel: TaskViewModel,
     currentDestination: NavigationDestination,
-    onNavigationChange: (NavigationDestination) -> Unit
+    onNavigationChange: (NavigationDestination) -> Unit,
+    onThemeChange: ((Boolean, Boolean, de.beigel.list.ui.theme.CustomTheme?) -> Unit)? = null,
+    onShowOnboarding: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val todayTasks by viewModel.todayTasks.collectAsState()
@@ -238,12 +240,8 @@ fun TaskListScreen(
                     )
                     3 -> SettingsScreen(
                         onNavigateBack = { /* Not needed with swipe */ },
-                        onThemeChange = { useSystem, dark, customTheme ->
-                            // Theme change wird automatisch von SettingsScreen gehandelt
-                        },
-                        onShowOnboarding = {
-                            // Onboarding show logic if needed
-                        }
+                        onThemeChange = onThemeChange,
+                        onShowOnboarding = onShowOnboarding
                     )
 
                 }
