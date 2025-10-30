@@ -34,8 +34,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Today Tasks Widget Receiver -->
-            </intent-filter>
 
         <!-- Boot Receiver for rescheduling workers -->
         <receiver
