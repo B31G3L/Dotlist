@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
         val database = TaskDatabase.getDatabase(this)
         val repository = TaskRepository(database.taskDao())
         val settingsManager = SettingsManager(this)
-        loadTestData(repository)
+       // loadTestData(repository)
 
         // Handle widget intents
         handleWidgetIntent(intent)
