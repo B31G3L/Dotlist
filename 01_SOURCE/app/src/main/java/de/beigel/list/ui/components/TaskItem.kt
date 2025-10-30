@@ -37,6 +37,7 @@ fun ModernTaskItem(
     onToggleComplete: () -> Unit,
     onLongPress: () -> Unit = {},
     onMoreClick: () -> Unit = {},
+    onCardClick: () -> Unit = {},
     isUpdating: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -80,37 +81,6 @@ fun ModernTaskItem(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-            }
-            .pointerInput(isUpdating) {
-                if (!isUpdating) {
-                    detectTapGestures(
-                        onTap = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onToggleComplete()
-                        },
-                        onLongPress = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onLongPress()
-                        },
-                        onPress = {
-                            isPressed = true
-                            tryAwaitRelease()
-                            isPressed = false
-                        }
-                    )
-                }
-            }
-            .semantics {
-                role = Role.Button
-                contentDescription = if (task.isCompleted) {
-                    "Aufgabe ${task.title} ist erledigt"
-                } else {
-                    "Aufgabe ${task.title} ist noch offen"
-                }
-                onClick {
-                    onToggleComplete()
-                    true
-                }
             },
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = elevation),
         colors = CardDefaults.elevatedCardColors(
@@ -133,16 +103,29 @@ fun ModernTaskItem(
                 isUpdating = isUpdating
             )
 
-            // Modern Checkbox
-            ModernTaskCheckbox(
-                checked = task.isCompleted,
-                onCheckedChange = { if (!isUpdating) onToggleComplete() },
-                isUpdating = isUpdating
-            )
-
             // Task Content
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .pointerInput(isUpdating) {
+                        if (!isUpdating) {
+                            detectTapGestures(
+                                onTap = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onCardClick()
+                                },
+                                onLongPress = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onLongPress()
+                                },
+                                onPress = {
+                                    isPressed = true
+                                    tryAwaitRelease()
+                                    isPressed = false
+                                }
+                            )
+                        }
+                    },
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Task Title
@@ -184,10 +167,10 @@ fun ModernTaskItem(
                 )
             }
 
-            // More Button
-            ModernMoreButton(
-                onClick = onMoreClick,
-                enabled = !isUpdating,
+            // Modern Checkbox - rechts positioniert
+            ModernTaskCheckbox(
+                checked = task.isCompleted,
+                onCheckedChange = { if (!isUpdating) onToggleComplete() },
                 isUpdating = isUpdating
             )
         }
