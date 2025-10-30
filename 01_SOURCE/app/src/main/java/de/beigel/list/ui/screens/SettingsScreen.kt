@@ -72,6 +72,18 @@ fun SettingsScreen(
         onThemeChange?.invoke(newUseSystemTheme, newIsDarkMode, newCustomTheme)
     }
 
+    // Funktion zum Wechseln zum nächsten Theme
+    fun cycleToNextTheme() {
+        val allThemes = CustomTheme.values().filter { it != CustomTheme.UNKNOWN }
+        val currentIndex = allThemes.indexOf(customTheme)
+        val nextIndex = (currentIndex + 1) % allThemes.size
+        val nextTheme = allThemes[nextIndex]
+
+        customTheme = nextTheme
+        settingsManager.setCustomTheme(nextTheme)
+        updateTheme(useSystemTheme, isDarkMode, nextTheme)
+    }
+
     // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -163,9 +175,11 @@ fun SettingsScreen(
                 title = "Design & Themes",
                 icon = Icons.Default.Palette
             ) {
-                // Theme Status Anzeige
+                // Theme Status Anzeige - Clickable für schnellen Theme-Wechsel
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { cycleToNextTheme() },
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                     )
@@ -179,8 +193,8 @@ fun SettingsScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                Icons.Default.Info,
-                                contentDescription = null,
+                                Icons.Default.Palette,
+                                contentDescription = "Theme wechseln",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -200,13 +214,24 @@ fun SettingsScreen(
                             }
                         }
 
-                        // Theme Color Preview
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.primary)
-                        )
+                        // Theme Color Preview mit Pfeil-Icon
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
 
