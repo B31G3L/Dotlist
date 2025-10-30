@@ -15,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.*
 import de.beigel.list.data.TaskDatabase
 import de.beigel.list.onboarding.OnboardingManager
 import de.beigel.list.repository.TaskRepository
@@ -55,7 +54,7 @@ class MainActivity : ComponentActivity() {
             var customTheme by remember { mutableStateOf(settingsManager.getCustomTheme()) }
             var showOnboarding by remember { mutableStateOf(!onboardingManager.isOnboardingCompleted) }
 
-            // Theme Callback für Settings - KORRIGIERT mit 3 Parametern
+            // Theme Callback für Settings
             val onThemeChange: (Boolean, Boolean, CustomTheme?) -> Unit = { systemTheme, darkMode, newCustomTheme ->
                 useSystemTheme = systemTheme
                 isDarkMode = darkMode
@@ -119,6 +118,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
     private fun loadTestData(repository: TaskRepository) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -137,6 +137,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
     @Composable
     private fun MainAppContent(
         repository: TaskRepository,
@@ -145,10 +146,12 @@ class MainActivity : ComponentActivity() {
         onShowOnboarding: () -> Unit,
         intent: Intent?
     ) {
-        val navController = rememberNavController()
         val viewModel: TaskViewModel = viewModel {
             TaskViewModel(repository)
         }
+
+        // Navigation State
+        var currentDestination by remember { mutableStateOf(NavigationDestination.TODAY) }
 
         // Apply saved interaction mode
         LaunchedEffect(Unit) {
@@ -161,70 +164,16 @@ class MainActivity : ComponentActivity() {
             handleWidgetActions(intent, viewModel)
         }
 
-        // Navigation mit Animationen
-        NavHost(
-            navController = navController,
-            startDestination = "task_list",
-            enterTransition = {
-                slideInHorizontally(
-                    initialOffsetX = { it },
-                    animationSpec = tween(300, easing = FastOutSlowInEasing)
-                ) + fadeIn(animationSpec = tween(300))
-            },
-            exitTransition = {
-                slideOutHorizontally(
-                    targetOffsetX = { -it },
-                    animationSpec = tween(300, easing = FastOutSlowInEasing)
-                ) + fadeOut(animationSpec = tween(300))
-            },
-            popEnterTransition = {
-                slideInHorizontally(
-                    initialOffsetX = { -it },
-                    animationSpec = tween(300, easing = FastOutSlowInEasing)
-                ) + fadeIn(animationSpec = tween(300))
-            },
-            popExitTransition = {
-                slideOutHorizontally(
-                    targetOffsetX = { it },
-                    animationSpec = tween(300, easing = FastOutSlowInEasing)
-                ) + fadeOut(animationSpec = tween(300))
+        // Main Content mit Bottom Navigation
+        TaskListScreen(
+            viewModel = viewModel,
+            currentDestination = currentDestination,
+            onNavigationChange = { destination ->
+                currentDestination = destination
+                // Clear selection when changing destinations
+                viewModel.clearSelection()
             }
-        ) {
-            composable("task_list") {
-                TaskListScreen(
-                    viewModel = viewModel,
-                    onNavigateToHistory = {
-                        navController.navigate("history") {
-                            launchSingleTop = true
-                        }
-                    },
-                    onNavigateToSettings = {
-                        navController.navigate("settings") {
-                            launchSingleTop = true
-                        }
-                    }
-                )
-            }
-
-            composable("history") {
-                HistoryScreen(
-                    repository = repository,
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    }
-                )
-            }
-
-            composable("settings") {
-                SettingsScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    },
-                    onThemeChange = onThemeChange,
-                    onShowOnboarding = onShowOnboarding
-                )
-            }
-        }
+        )
     }
 
     override fun onNewIntent(intent: Intent) {

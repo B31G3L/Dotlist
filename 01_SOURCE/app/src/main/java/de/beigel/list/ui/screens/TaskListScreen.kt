@@ -1,6 +1,6 @@
 package de.beigel.list.ui.screens
-import de.beigel.list.ui.components.*
 
+import de.beigel.list.ui.components.*
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,12 +34,24 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+// Navigation Destination Enum
+enum class NavigationDestination(
+    val route: String,
+    val title: String,
+    val icon: ImageVector
+) {
+    ABOUT("about", "Über", Icons.Default.Info),
+    TODAY("today", "Heute", Icons.Default.Today),
+    BACKLOG("backlog", "Backlog", Icons.Default.Inventory),
+    SETTINGS("settings", "Einstellungen", Icons.Default.Settings)
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TaskListScreen(
     viewModel: TaskViewModel,
-    onNavigateToHistory: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    currentDestination: NavigationDestination,
+    onNavigationChange: (NavigationDestination) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val todayTasks by viewModel.todayTasks.collectAsState()
@@ -50,27 +63,35 @@ fun TaskListScreen(
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
 
-    // Pager State für Swipe-Funktionalität
+    // Pager State für Swipe-Funktionalität zwischen Today und Backlog
     val pagerState = rememberPagerState(
-        initialPage = uiState.currentView.ordinal,
+        initialPage = if (currentDestination == NavigationDestination.TODAY) 0 else 1,
         pageCount = { 2 }
     )
     val coroutineScope = rememberCoroutineScope()
 
-    // Sync PagerState with ViewModel
+    // Sync PagerState with Navigation
     LaunchedEffect(pagerState.currentPage) {
-        val newView = if (pagerState.currentPage == 0) ViewType.DAILY else ViewType.BACKLOG
-        if (uiState.currentView != newView) {
-            viewModel.setCurrentView(newView)
+        val newDestination = if (pagerState.currentPage == 0) {
+            NavigationDestination.TODAY
+        } else {
+            NavigationDestination.BACKLOG
+        }
+        if (currentDestination != newDestination &&
+            (currentDestination == NavigationDestination.TODAY || currentDestination == NavigationDestination.BACKLOG)) {
+            onNavigationChange(newDestination)
         }
     }
 
-    // Sync ViewModel with PagerState when view changes programmatically
-    LaunchedEffect(uiState.currentView) {
-        val targetPage = uiState.currentView.ordinal
-        if (pagerState.currentPage != targetPage) {
+    // Sync Navigation with PagerState
+    LaunchedEffect(currentDestination) {
+        if (currentDestination == NavigationDestination.TODAY && pagerState.currentPage != 0) {
             coroutineScope.launch {
-                pagerState.animateScrollToPage(targetPage)
+                pagerState.animateScrollToPage(0)
+            }
+        } else if (currentDestination == NavigationDestination.BACKLOG && pagerState.currentPage != 1) {
+            coroutineScope.launch {
+                pagerState.animateScrollToPage(1)
             }
         }
     }
@@ -118,131 +139,223 @@ fun TaskListScreen(
         is DialogState.ContextMenu -> { /* Handled by TaskItem itself */ }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
-                if (uiState.isSelectionMode) {
-                    SelectionTopBar(
-                        selectedCount = uiState.selectedTaskIds.size,
-                        totalCount = if (uiState.currentView == ViewType.DAILY) todayTasks.size else backlogTasks.size,
-                        onClearSelection = { viewModel.clearSelection() },
-                        onSelectAll = {
-                            val allTasks = if (uiState.currentView == ViewType.DAILY) todayTasks else backlogTasks
-                            allTasks.forEach { task ->
-                                if (task.id !in uiState.selectedTaskIds) {
-                                    viewModel.toggleTaskSelection(task.id)
-                                }
+    Scaffold(
+        topBar = {
+            if (uiState.isSelectionMode &&
+                (currentDestination == NavigationDestination.TODAY || currentDestination == NavigationDestination.BACKLOG)) {
+                SelectionTopBar(
+                    selectedCount = uiState.selectedTaskIds.size,
+                    totalCount = if (currentDestination == NavigationDestination.TODAY) todayTasks.size else backlogTasks.size,
+                    onClearSelection = { viewModel.clearSelection() },
+                    onSelectAll = {
+                        val allTasks = if (currentDestination == NavigationDestination.TODAY) todayTasks else backlogTasks
+                        allTasks.forEach { task ->
+                            if (task.id !in uiState.selectedTaskIds) {
+                                viewModel.toggleTaskSelection(task.id)
                             }
-                        }
-                    )
-                } else {
-                    MainTopBar(
-                        uiState = uiState,
-                        todayTasksCount = todayTasks.size,
-                        backlogTasksCount = backlogTasks.size,
-                        maxDailyTasks = settingsManager.maxDailyTasks,
-                        onNavigateToHistory = onNavigateToHistory,
-                        onNavigateToSettings = onNavigateToSettings,
-                        onToggleCompleted = { viewModel.setShowCompleted(!uiState.showCompletedTasks) },
-                        onFillFromBacklog = { viewModel.fillFromBacklog(settingsManager.maxDailyTasks) },
-                        onInteractionModeChange = { viewModel.setInteractionMode(it) }
-                    )
-                }
-            },
-            floatingActionButton = {
-                if (uiState.isSelectionMode) {
-                    SelectionFloatingActionMenu(
-                        selectedTasks = viewModel.getSelectedTasks(),
-                        onEditSelected = {
-                            val selectedTask = viewModel.getSelectedTasks().firstOrNull()
-                            selectedTask?.let {
-                                viewModel.setDialogState(DialogState.EditTask(it))
-                            }
-                        },
-                        onDeleteSelected = { viewModel.deleteSelectedTasks() },
-                        onMoveToDaily = { viewModel.moveSelectedTasksToDaily() },
-                        onMoveToBacklog = { viewModel.moveSelectedTasksToBacklog() },
-                        onClearSelection = { viewModel.clearSelection() }
-                    )
-                } else {
-                    FloatingActionButton(
-                        onClick = {
-                            viewModel.setDialogState(
-                                DialogState.AddTask(addToDaily = uiState.currentView == ViewType.DAILY)
-                            )
-                        },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Aufgabe hinzufügen")
-                    }
-                }
-            }
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
-                // Custom Tab Row with Page Indicator
-                SwipeableTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    pagerState = pagerState,
-                    todayTasksCount = todayTasks.size,
-                    backlogTasksCount = backlogTasks.size,
-                    maxDailyTasks = settingsManager.maxDailyTasks,
-                    onTabClick = { index ->
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(index)
                         }
                     }
                 )
-
-                // Selection Header (wenn im Selection Mode)
-                AnimatedVisibility(
-                    visible = uiState.isSelectionMode,
-                    enter = slideInVertically() + fadeIn(),
-                    exit = slideOutVertically() + fadeOut()
+            } else if (currentDestination == NavigationDestination.TODAY || currentDestination == NavigationDestination.BACKLOG) {
+                TasksTopBar(
+                    uiState = uiState,
+                    todayTasksCount = todayTasks.size,
+                    backlogTasksCount = backlogTasks.size,
+                    maxDailyTasks = settingsManager.maxDailyTasks,
+                    currentDestination = currentDestination,
+                    onToggleCompleted = { viewModel.setShowCompleted(!uiState.showCompletedTasks) },
+                    onFillFromBacklog = { viewModel.fillFromBacklog(settingsManager.maxDailyTasks) },
+                    onInteractionModeChange = { viewModel.setInteractionMode(it) }
+                )
+            }
+        },
+        bottomBar = {
+            BottomNavigationBar(
+                currentDestination = currentDestination,
+                onNavigationChange = onNavigationChange,
+                todayTasksCount = todayTasks.size,
+                backlogTasksCount = backlogTasks.size
+            )
+        },
+        floatingActionButton = {
+            if ((currentDestination == NavigationDestination.TODAY || currentDestination == NavigationDestination.BACKLOG) &&
+                !uiState.isSelectionMode) {
+                FloatingActionButton(
+                    onClick = {
+                        viewModel.setDialogState(
+                            DialogState.AddTask(addToDaily = currentDestination == NavigationDestination.TODAY)
+                        )
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
-                    SelectionHeader(
-                        selectedCount = uiState.selectedTaskIds.size,
-                        totalCount = if (uiState.currentView == ViewType.DAILY) todayTasks.size else backlogTasks.size,
-                        onSelectAll = {
-                            val allTasks = if (uiState.currentView == ViewType.DAILY) todayTasks else backlogTasks
-                            allTasks.forEach { task ->
-                                if (task.id !in uiState.selectedTaskIds) {
-                                    viewModel.toggleTaskSelection(task.id)
-                                }
-                            }
+                    Icon(Icons.Default.Add, contentDescription = "Aufgabe hinzufügen")
+                }
+            } else if (uiState.isSelectionMode) {
+                SelectionFloatingActionMenu(
+                    selectedTasks = viewModel.getSelectedTasks(),
+                    onEditSelected = {
+                        val selectedTask = viewModel.getSelectedTasks().firstOrNull()
+                        selectedTask?.let {
+                            viewModel.setDialogState(DialogState.EditTask(it))
+                        }
+                    },
+                    onDeleteSelected = { viewModel.deleteSelectedTasks() },
+                    onMoveToDaily = { viewModel.moveSelectedTasksToDaily() },
+                    onMoveToBacklog = { viewModel.moveSelectedTasksToBacklog() },
+                    onClearSelection = { viewModel.clearSelection() }
+                )
+            }
+        }
+    ) { paddingValues ->
+        when (currentDestination) {
+            NavigationDestination.ABOUT -> {
+                Box(modifier = Modifier.padding(paddingValues)) {
+                    //AboutScreen()
+                }
+            }
+            NavigationDestination.SETTINGS -> {
+                Box(modifier = Modifier.padding(paddingValues)) {
+                    SettingsScreen(
+                        onNavigateBack = { /* Not needed with bottom nav */ },
+                        onThemeChange = { useSystem, dark, customTheme ->
+                            // Theme change wird automatisch von SettingsScreen gehandelt
                         },
-                        onClearSelection = { viewModel.clearSelection() }
+                        onShowOnboarding = {
+                            // Onboarding show logic if needed
+                        }
                     )
                 }
+            }
+            NavigationDestination.TODAY, NavigationDestination.BACKLOG -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                ) {
+                    // Tab Row für Swipe zwischen Today und Backlog
+                    SwipeableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        pagerState = pagerState,
+                        todayTasksCount = todayTasks.size,
+                        backlogTasksCount = backlogTasks.size,
+                        maxDailyTasks = settingsManager.maxDailyTasks,
+                        onTabClick = { index ->
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
+                        }
+                    )
 
-                // Swipeable Content
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.weight(1f),
-                    userScrollEnabled = !uiState.isSelectionMode // Disable swipe in selection mode
-                ) { page ->
-                    when (page) {
-                        0 -> DailyTasksContent(
-                            tasks = filteredTodayTasks,
-                            totalTasks = todayTasks,
-                            maxTasks = settingsManager.maxDailyTasks,
-                            uiState = uiState,
-                            viewModel = viewModel,
-                            updatingTaskIds = updatingTaskIds
+                    // Selection Header (wenn im Selection Mode)
+                    AnimatedVisibility(
+                        visible = uiState.isSelectionMode,
+                        enter = slideInVertically() + fadeIn(),
+                        exit = slideOutVertically() + fadeOut()
+                    ) {
+                        SelectionHeader(
+                            selectedCount = uiState.selectedTaskIds.size,
+                            totalCount = if (currentDestination == NavigationDestination.TODAY) todayTasks.size else backlogTasks.size,
+                            onSelectAll = {
+                                val allTasks = if (currentDestination == NavigationDestination.TODAY) todayTasks else backlogTasks
+                                allTasks.forEach { task ->
+                                    if (task.id !in uiState.selectedTaskIds) {
+                                        viewModel.toggleTaskSelection(task.id)
+                                    }
+                                }
+                            },
+                            onClearSelection = { viewModel.clearSelection() }
                         )
-                        1 -> BacklogTasksContent(
-                            tasks = filteredBacklogTasks,
-                            uiState = uiState,
-                            viewModel = viewModel,
-                            updatingTaskIds = updatingTaskIds
-                        )
+                    }
+
+                    // Swipeable Content
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.weight(1f),
+                        userScrollEnabled = !uiState.isSelectionMode
+                    ) { page ->
+                        when (page) {
+                            0 -> DailyTasksContent(
+                                tasks = filteredTodayTasks,
+                                totalTasks = todayTasks,
+                                maxTasks = settingsManager.maxDailyTasks,
+                                uiState = uiState,
+                                viewModel = viewModel,
+                                updatingTaskIds = updatingTaskIds
+                            )
+                            1 -> BacklogTasksContent(
+                                tasks = filteredBacklogTasks,
+                                uiState = uiState,
+                                viewModel = viewModel,
+                                updatingTaskIds = updatingTaskIds
+                            )
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun BottomNavigationBar(
+    currentDestination: NavigationDestination,
+    onNavigationChange: (NavigationDestination) -> Unit,
+    todayTasksCount: Int,
+    backlogTasksCount: Int
+) {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
+    ) {
+        NavigationDestination.values().forEach { destination ->
+            NavigationBarItem(
+                icon = {
+                    BadgedBox(
+                        badge = {
+                            if (destination == NavigationDestination.TODAY && todayTasksCount > 0) {
+                                Badge {
+                                    Text(
+                                        todayTasksCount.toString(),
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            } else if (destination == NavigationDestination.BACKLOG && backlogTasksCount > 0) {
+                                Badge {
+                                    Text(
+                                        backlogTasksCount.toString(),
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            destination.icon,
+                            contentDescription = destination.title
+                        )
+                    }
+                },
+                label = {
+                    Text(
+                        destination.title,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                },
+                selected = currentDestination == destination,
+                onClick = {
+                    if (currentDestination != destination) {
+                        onNavigationChange(destination)
+                    }
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            )
         }
     }
 }
@@ -262,10 +375,6 @@ fun SwipeableTabRow(
             selectedTabIndex = selectedTabIndex,
             containerColor = MaterialTheme.colorScheme.surface,
             indicator = { tabPositions ->
-                // Custom animated indicator
-                val currentPage by rememberUpdatedState(pagerState.currentPage)
-                val targetPage by rememberUpdatedState(selectedTabIndex)
-
                 TabRowDefaults.PrimaryIndicator(
                     modifier = Modifier
                         .tabIndicatorOffset(tabPositions[selectedTabIndex])
@@ -315,7 +424,6 @@ fun SwipeableTabRow(
             )
         }
 
-        // Optional: Page Progress Indicator
         AnimatedVisibility(
             visible = pagerState.isScrollInProgress,
             enter = fadeIn(),
@@ -335,13 +443,12 @@ fun SwipeableTabRow(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainTopBar(
+fun TasksTopBar(
     uiState: TaskUiState,
     todayTasksCount: Int,
     backlogTasksCount: Int,
     maxDailyTasks: Int,
-    onNavigateToHistory: () -> Unit,
-    onNavigateToSettings: () -> Unit,
+    currentDestination: NavigationDestination,
     onToggleCompleted: () -> Unit,
     onFillFromBacklog: () -> Unit,
     onInteractionModeChange: (InteractionMode) -> Unit
@@ -350,28 +457,19 @@ fun MainTopBar(
 
     TopAppBar(
         title = {
-            Column {
-                Text(
-                    text = "Daily List",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = when (uiState.currentView) {
-                        ViewType.DAILY -> "$todayTasksCount/$maxDailyTasks heute"
-                        ViewType.BACKLOG -> "$backlogTasksCount im Backlog"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-            }
+            Text(
+                text = when (currentDestination) {
+                    NavigationDestination.TODAY -> "Heute"
+                    NavigationDestination.BACKLOG -> "Backlog"
+                    else -> "Daily List"
+                },
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
         },
         actions = {
-            // Single Menu Button
             Box {
-                IconButton(
-                    onClick = { showMenu = true }
-                ) {
+                IconButton(onClick = { showMenu = true }) {
                     Icon(
                         Icons.Default.MoreVert,
                         contentDescription = "Menü",
@@ -384,8 +482,7 @@ fun MainTopBar(
                     onDismissRequest = { showMenu = false },
                     modifier = Modifier.width(250.dp)
                 ) {
-                    // Fill from Backlog (nur bei Daily View und wenn Backlog nicht leer)
-                    if (uiState.currentView == ViewType.DAILY && backlogTasksCount > 0) {
+                    if (currentDestination == NavigationDestination.TODAY && backlogTasksCount > 0) {
                         DropdownMenuItem(
                             text = {
                                 Row(
@@ -409,7 +506,6 @@ fun MainTopBar(
                         HorizontalDivider()
                     }
 
-                    // Interaction Mode
                     DropdownMenuItem(
                         text = {
                             Row(
@@ -451,7 +547,6 @@ fun MainTopBar(
                         }
                     )
 
-                    // Show/Hide Completed
                     DropdownMenuItem(
                         text = {
                             Row(
@@ -471,52 +566,6 @@ fun MainTopBar(
                         },
                         onClick = {
                             onToggleCompleted()
-                            showMenu = false
-                        }
-                    )
-
-                    HorizontalDivider()
-
-                    // History
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.History,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text("Historie")
-                            }
-                        },
-                        onClick = {
-                            onNavigateToHistory()
-                            showMenu = false
-                        }
-                    )
-
-                    // Settings
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Settings,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text("Einstellungen")
-                            }
-                        },
-                        onClick = {
-                            onNavigateToSettings()
                             showMenu = false
                         }
                     )
@@ -566,6 +615,7 @@ fun SelectionTopBar(
     )
 }
 
+// DailyTasksContent und BacklogTasksContent bleiben unverändert wie vorher
 @Composable
 fun DailyTasksContent(
     tasks: List<TaskEntity>,
@@ -580,7 +630,6 @@ fun DailyTasksContent(
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        // Progress Card
         val completedCount = totalTasks.count { it.isCompleted }
         val totalCount = totalTasks.size
         val progress = if (totalCount > 0) completedCount.toFloat() / totalCount.toFloat() else 0f
@@ -633,7 +682,6 @@ fun DailyTasksContent(
             }
         }
 
-        // Task List or Empty State
         if (tasks.isNotEmpty()) {
             LazyColumn(
                 modifier = Modifier.weight(1f),
@@ -743,7 +791,7 @@ fun TaskItemByMode(
 
 @Composable
 fun EmptyStateCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     subtitle: String
 ) {
