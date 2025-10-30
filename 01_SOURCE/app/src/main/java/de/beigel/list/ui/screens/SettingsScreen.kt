@@ -326,7 +326,7 @@ fun SettingsScreen(
             }
         }
     }
-}
+
 
 // ========== Theme Selection Dialog ==========
 @Composable
