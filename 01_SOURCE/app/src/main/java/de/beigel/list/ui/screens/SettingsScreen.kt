@@ -53,8 +53,6 @@ fun SettingsScreen(
     var useSystemTheme by remember { mutableStateOf(settingsManager.useSystemTheme) }
     var isDarkMode by remember { mutableStateOf(settingsManager.isDarkMode) }
     var customTheme by remember { mutableStateOf(settingsManager.getCustomTheme()) }
-    var enableAnimations by remember { mutableStateOf(settingsManager.enableAnimations) }
-    var enableHapticFeedback by remember { mutableStateOf(settingsManager.enableHapticFeedback) }
 
     var showTimePicker by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -152,157 +150,129 @@ fun SettingsScreen(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 8.dp)
         )
-            // ========== Design & Themes ==========
-            SettingsGroup(
-                title = "Design & Themes",
-                icon = Icons.Default.Palette
-            ) {
-                // Theme Auswahl
-                SettingsClickable(
-                    title = "App-Theme auswählen",
-                    subtitle = "Wähle dein bevorzugtes Farbschema",
-                    onClick = { showThemeDialog = true }
-                )
+        // ========== Design & Themes ==========
+        SettingsGroup(
+            title = "Design & Themes",
+            icon = Icons.Default.Palette
+        ) {
+            // Theme Auswahl
+            SettingsClickable(
+                title = "App-Theme auswählen",
+                subtitle = "Wähle dein bevorzugtes Farbschema",
+                onClick = { showThemeDialog = true }
+            )
 
-                // System Theme Switch
-                SettingsSwitch(
-                    title = "System-Theme verwenden",
-                    subtitle = "Automatisch zwischen Hell und Dunkel wechseln",
-                    checked = useSystemTheme,
-                    onCheckedChange = { enabled ->
-                        updateTheme(enabled, isDarkMode, null)
-                    }
-                )
-
-                // Manual Dark Mode (nur wenn System-Theme deaktiviert)
-                AnimatedVisibility(
-                    visible = !useSystemTheme,
-                    enter = expandVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
-                    ) + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    Column {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        SettingsSwitch(
-                            title = "Dunkler Modus",
-                            subtitle = "Dunkles Design aktivieren",
-                            checked = isDarkMode,
-                            onCheckedChange = { enabled ->
-                                updateTheme(useSystemTheme, enabled, null)
-                            }
-                        )
-                    }
+            // System Theme Switch
+            SettingsSwitch(
+                title = "System-Theme verwenden",
+                subtitle = "Automatisch zwischen Hell und Dunkel wechseln",
+                checked = useSystemTheme,
+                onCheckedChange = { enabled ->
+                    updateTheme(enabled, isDarkMode, null)
                 }
-            }
+            )
 
-            // ========== Aufgabenverwaltung ==========
-            SettingsGroup(
-                title = "Aufgabenverwaltung",
-                icon = Icons.Default.Task
+            // Manual Dark Mode (nur wenn System-Theme deaktiviert)
+            AnimatedVisibility(
+                visible = !useSystemTheme,
+                enter = expandVertically(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                ) + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
             ) {
-                // Maximale tägliche Aufgaben
-                SettingsSlider(
-                    title = "Maximale tägliche Aufgaben",
-                    subtitle = "Anzahl der Aufgaben, die täglich angezeigt werden",
-                    value = maxDailyTasks,
-                    valueRange = 1f..20f,
-                    onValueChange = { value ->
-                        maxDailyTasks = value.toInt()
-                        settingsManager.maxDailyTasks = value.toInt()
-                    }
-                )
-
-                // Auto-Backlog
-                SettingsSwitch(
-                    title = "Automatisches Backlog",
-                    subtitle = "Tägliche Liste automatisch aus Backlog auffüllen",
-                    checked = autoBacklogEnabled,
-                    onCheckedChange = { enabled ->
-                        autoBacklogEnabled = enabled
-                        settingsManager.autoBacklogEnabled = enabled
-                    }
-                )
-            }
-
-            // ========== Interaktion ==========
-            SettingsGroup(
-                title = "Interaktion",
-                icon = Icons.Default.TouchApp
-            ) {
-                // Animationen
-                SettingsSwitch(
-                    title = "Animationen",
-                    subtitle = "Sanfte Übergänge und Animationen aktivieren",
-                    checked = enableAnimations,
-                    onCheckedChange = { enabled ->
-                        enableAnimations = enabled
-                        settingsManager.enableAnimations = enabled
-                    }
-                )
-
-                // Haptisches Feedback
-                SettingsSwitch(
-                    title = "Haptisches Feedback",
-                    subtitle = "Vibration bei Interaktionen",
-                    checked = enableHapticFeedback,
-                    onCheckedChange = { enabled ->
-                        enableHapticFeedback = enabled
-                        settingsManager.enableHapticFeedback = enabled
-                    }
-                )
-            }
-
-            // ========== Benachrichtigungen ==========
-            SettingsGroup(
-                title = "Benachrichtigungen",
-                icon = Icons.Default.Notifications
-            ) {
-                // Benachrichtigungen aktivieren
-                SettingsSwitch(
-                    title = "Tägliche Erinnerungen",
-                    subtitle = if (hasNotificationPermission) {
-                        "Erhalte tägliche Benachrichtigungen für offene Aufgaben"
-                    } else {
-                        "Berechtigung erforderlich"
-                    },
-                    checked = notificationsEnabled && hasNotificationPermission,
-                    onCheckedChange = { enabled ->
-                        if (enabled && !hasNotificationPermission) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                        } else {
-                            notificationsEnabled = enabled
-                            settingsManager.notificationsEnabled = enabled
-
-                            if (enabled) {
-                                NotificationWorker.scheduleDaily(context, notificationHour, notificationMinute)
-                            } else {
-                                NotificationWorker.cancelNotifications(context)
-                            }
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SettingsSwitch(
+                        title = "Dunkler Modus",
+                        subtitle = "Dunkles Design aktivieren",
+                        checked = isDarkMode,
+                        onCheckedChange = { enabled ->
+                            updateTheme(useSystemTheme, enabled, null)
                         }
-                    }
-                )
-
-                // Benachrichtigungszeit (nur wenn aktiviert)
-                AnimatedVisibility(
-                    visible = notificationsEnabled && hasNotificationPermission,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    SettingsClickable(
-                        title = "Benachrichtigungszeit",
-                        subtitle = String.format("%02d:%02d", notificationHour, notificationMinute),
-                        onClick = { showTimePicker = true }
                     )
                 }
             }
         }
+
+        // ========== Aufgabenverwaltung ==========
+        SettingsGroup(
+            title = "Aufgabenverwaltung",
+            icon = Icons.Default.Task
+        ) {
+            // Maximale tägliche Aufgaben
+            SettingsSlider(
+                title = "Maximale tägliche Aufgaben",
+                subtitle = "Anzahl der Aufgaben, die täglich angezeigt werden",
+                value = maxDailyTasks,
+                valueRange = 1f..20f,
+                onValueChange = { value ->
+                    maxDailyTasks = value.toInt()
+                    settingsManager.maxDailyTasks = value.toInt()
+                }
+            )
+
+            // Auto-Backlog
+            SettingsSwitch(
+                title = "Automatisches Backlog",
+                subtitle = "Tägliche Liste automatisch aus Backlog auffüllen",
+                checked = autoBacklogEnabled,
+                onCheckedChange = { enabled ->
+                    autoBacklogEnabled = enabled
+                    settingsManager.autoBacklogEnabled = enabled
+                }
+            )
+        }
+
+        // ========== Benachrichtigungen ==========
+        SettingsGroup(
+            title = "Benachrichtigungen",
+            icon = Icons.Default.Notifications
+        ) {
+            // Benachrichtigungen aktivieren
+            SettingsSwitch(
+                title = "Tägliche Erinnerungen",
+                subtitle = if (hasNotificationPermission) {
+                    "Erhalte tägliche Benachrichtigungen für offene Aufgaben"
+                } else {
+                    "Berechtigung erforderlich"
+                },
+                checked = notificationsEnabled && hasNotificationPermission,
+                onCheckedChange = { enabled ->
+                    if (enabled && !hasNotificationPermission) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    } else {
+                        notificationsEnabled = enabled
+                        settingsManager.notificationsEnabled = enabled
+
+                        if (enabled) {
+                            NotificationWorker.scheduleDaily(context, notificationHour, notificationMinute)
+                        } else {
+                            NotificationWorker.cancelNotifications(context)
+                        }
+                    }
+                }
+            )
+
+            // Benachrichtigungszeit (nur wenn aktiviert)
+            AnimatedVisibility(
+                visible = notificationsEnabled && hasNotificationPermission,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                SettingsClickable(
+                    title = "Benachrichtigungszeit",
+                    subtitle = String.format("%02d:%02d", notificationHour, notificationMinute),
+                    onClick = { showTimePicker = true }
+                )
+            }
+        }
     }
+}
 
 
 // ========== Theme Selection Dialog ==========
