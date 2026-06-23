@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Daily List"
+rootProject.name = "TodoShared"
 include(":app")

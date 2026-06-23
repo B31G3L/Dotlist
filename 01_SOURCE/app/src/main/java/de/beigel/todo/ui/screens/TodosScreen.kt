@@ -33,7 +33,7 @@ fun TodosScreen(
     viewModel: TodosViewModel,
     listName: String,
     listColor: String,
-    onNavigateBack: () -> Unit
+    onNavigateBack: (() -> Unit)?   // nullable
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -67,8 +67,10 @@ fun TodosScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                    if (onNavigateBack != null) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
