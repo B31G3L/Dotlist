@@ -215,7 +215,7 @@ fun MultiTodosScreen(
                             value         = inputText,
                             onValueChange = { inputText = it },
                             placeholder   = {
-                                Text(if (editingTodo != null) "Todo bearbeiten…" else "Neues Todo…")
+                                Text(if (editingTodo != null) "Aufgabe bearbeiten…" else "Neue Aufgabe…")
                             },
                             modifier      = Modifier
                                 .weight(1f)
@@ -271,7 +271,7 @@ fun MultiTodosScreen(
                         tint     = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                     )
                     Text(
-                        "Keine Todos",
+                        "Keine Aufgaben",
                         style      = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
