@@ -38,6 +38,5 @@ fun TodoSharedTheme(
 }
 
 val ListColors = listOf(
-    "#5B3A8C", "#C85A18", "#4A8A6F", "#6B1220",
-    "#2E7E7A", "#A07800", "#4A5878", "#984061"
+    "#D0BCFF", "#7FD1BE", "#FFB4AB", "#FFD8A8", "#5B8DEF", "#E06FA0"
 )
