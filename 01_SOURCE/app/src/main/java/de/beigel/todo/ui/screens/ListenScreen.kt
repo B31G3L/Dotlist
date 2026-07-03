@@ -2,6 +2,7 @@ package de.beigel.todo.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.beigel.todo.data.ListCounts
 import de.beigel.todo.data.TodoList
 import de.beigel.todo.utils.HapticFeedback
 import de.beigel.todo.viewmodel.ListsViewModel
@@ -83,26 +85,22 @@ fun ListenScreen(
                 ) {
                     // Header (full width)
                     item(span = { GridItemSpan(2) }) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            // Top action row
+                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 16.dp)) {
                             Row(
-                                modifier              = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                                modifier              = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment     = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Menu, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Column(modifier = Modifier.padding(horizontal = 22.dp)) {
                                 Text("Meine Listen", fontSize = 34.sp, fontWeight = FontWeight.Medium,
                                     letterSpacing = (-0.5).sp, color = MaterialTheme.colorScheme.onSurface)
-                                val shared = uiState.lists.count { it.memberIds.size > 1 }
-                                Text(
-                                    "${uiState.lists.size} Listen · $shared geteilt",
-                                    fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = 8.dp, bottom = 20.dp)
-                                )
+                                Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
+                            val shared = uiState.lists.count { it.memberIds.size > 1 }
+                            Text(
+                                "${uiState.lists.size} Listen · $shared geteilt",
+                                fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                            )
                         }
                     }
 
@@ -114,6 +112,7 @@ fun ListenScreen(
                             list     = list,
                             index    = idx,
                             isShared = isShared,
+                            counts   = uiState.listCounts[list.id] ?: ListCounts(),
                             onClick  = { haptic.click(); onOpenList(list) },
                             onShare  = { e -> haptic.tick(); onShare(list) }
                         )
@@ -159,11 +158,22 @@ fun ListenScreen(
     }
 }
 
+private val avatarColors: List<Color> = listOf(
+    Color(0xFF5B8DEF), Color(0xFF4EC9A8), Color(0xFFFFA552), Color(0xFFE06FA0), Color(0xFF9B7EDE),
+)
+
+private fun avatarColorFor(memberId: String): Color =
+    avatarColors[(memberId.hashCode() and 0x7fffffff) % avatarColors.size]
+
+private fun avatarLetterFor(memberId: String): String =
+    memberId.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.toString() ?: "?"
+
 @Composable
 private fun ListCard(
     list    : TodoList,
     index   : Int,
     isShared: Boolean,
+    counts  : ListCounts,
     onClick : () -> Unit,
     onShare : (Any) -> Unit,
 ) {
@@ -205,25 +215,38 @@ private fun ListCard(
             Spacer(Modifier.height(16.dp))
             Text(list.name, fontSize = 16.sp, fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${list.memberIds.size} ${if (list.memberIds.size == 1) "Mitglied" else "Mitglieder"}",
+            Text("${counts.done} von ${counts.total} erledigt",
                 fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 3.dp))
-            // Progress bar (decorative, real count not available here)
+            // Fortschrittsbalken (echte Erledigt-Quote)
             Spacer(Modifier.height(14.dp))
             Box(
                 modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp))
                     .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
-                Box(modifier = Modifier.fillMaxWidth(0.5f).fillMaxHeight()
+                Box(modifier = Modifier.fillMaxWidth(counts.fraction).fillMaxHeight()
                     .clip(RoundedCornerShape(3.dp)).background(color))
             }
             Spacer(Modifier.height(14.dp))
             if (isShared) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Group, null,
-                        tint     = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(5.dp))
+                    Row {
+                        list.memberIds.take(3).forEachIndexed { i, memberId ->
+                            Box(
+                                modifier = Modifier
+                                    .padding(start = if (i == 0) 0.dp else (-6).dp)
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(avatarColorFor(memberId))
+                                    .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(avatarLetterFor(memberId), fontSize = 8.sp, fontWeight = FontWeight.Bold,
+                                    color = Color.White)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.width(7.dp))
                     Text("${list.memberIds.size} Personen",
                         fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
