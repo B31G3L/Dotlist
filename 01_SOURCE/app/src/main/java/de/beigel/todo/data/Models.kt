@@ -48,3 +48,10 @@ data class TodoItem(
 ) {
     constructor() : this("", "", false, "", Timestamp.now(), null, null, 0L)
 }
+
+/**
+ * Erledigt-/Gesamtanzahl der Todos einer Liste (für die Listen-Übersicht).
+ */
+data class ListCounts(val done: Int = 0, val total: Int = 0) {
+    val fraction: Float get() = if (total == 0) 0f else done.toFloat() / total.toFloat()
+}

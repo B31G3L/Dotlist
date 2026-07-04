@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import de.beigel.todo.data.ListCounts
 import de.beigel.todo.data.SelectedListsPreferences
 import de.beigel.todo.data.TodoList
 import de.beigel.todo.repository.TodoRepository
@@ -11,7 +12,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class ListsUiState(
-    val lists           : List<TodoList> = emptyList(),
+    val lists           : List<TodoList>          = emptyList(),
+    val listCounts      : Map<String, ListCounts>  = emptyMap(),
     val isLoading       : Boolean        = true,
     val error           : String?        = null,
     val showCreateDialog: Boolean        = false,
@@ -40,7 +42,17 @@ class ListsViewModel(
 
             repository.observeLists()
                 .catch { e -> _uiState.update { it.copy(error = e.message, isLoading = false) } }
-                .collect { lists ->
+                .flatMapLatest { lists ->
+                    val countsFlow: Flow<Map<String, ListCounts>> = if (lists.isEmpty()) {
+                        flowOf(emptyMap())
+                    } else {
+                        combine(lists.map { list ->
+                            repository.observeTodoCounts(list.id).map { list.id to it }
+                        }) { pairs -> pairs.toMap() }
+                    }
+                    countsFlow.map { counts -> lists to counts }
+                }
+                .collect { (lists, counts) ->
                     _uiState.update { state ->
                         val validLastId = if (state.lastListId != null &&
                             lists.any { it.id == state.lastListId }) state.lastListId
@@ -59,6 +71,7 @@ class ListsViewModel(
 
                         state.copy(
                             lists           = lists,
+                            listCounts      = counts,
                             isLoading       = false,
                             lastListId      = validLastId,
                             selectedListIds = newSelected

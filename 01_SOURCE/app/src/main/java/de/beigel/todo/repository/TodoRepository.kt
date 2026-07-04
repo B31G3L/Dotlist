@@ -3,6 +3,7 @@ package de.beigel.todo.repository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import de.beigel.todo.data.ListCounts
 import de.beigel.todo.data.TodoItem
 import de.beigel.todo.data.TodoList
 import kotlinx.coroutines.channels.awaitClose
@@ -115,6 +116,26 @@ class TodoRepository(private val deviceId: String) {
     }
 
     // ─── Todos ───────────────────────────────────────────────────────────────
+
+    /**
+     * Anzahl erledigter/aller Todos einer Liste als Echtzeit-Flow (für die Listen-Übersicht).
+     */
+    fun observeTodoCounts(listId: String): Flow<ListCounts> = callbackFlow {
+        val registration: ListenerRegistration = listsRef
+            .document(listId)
+            .collection("todos")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val docs  = snapshot?.documents ?: emptyList()
+                val total = docs.size
+                val done  = docs.count { it.getBoolean("isDone") == true }
+                trySend(ListCounts(done, total))
+            }
+        awaitClose { registration.remove() }
+    }
 
     /**
      * Alle Todos einer Liste als Echtzeit-Flow.
