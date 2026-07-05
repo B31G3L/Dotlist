@@ -41,11 +41,18 @@ class TodosViewModel(
         }
     }
 
-    fun addTodo(title: String) {
+    fun addTodo(
+        title           : String,
+        description     : String = "",
+        priority        : de.beigel.list.data.Priority = de.beigel.list.data.Priority.MITTEL,
+        dueDate         : com.google.firebase.Timestamp? = null,
+        assignedTo      : String? = null,
+        reminderMinutes : Int? = null,
+    ) {
         if (title.isBlank()) return
         viewModelScope.launch {
             try {
-                repository.addTodo(listId, title)
+                repository.addTodo(listId, title, description, priority, dueDate, assignedTo, reminderMinutes)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Todo konnte nicht hinzugefügt werden") }
             }

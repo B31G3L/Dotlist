@@ -1,5 +1,4 @@
 package de.beigel.list.data
-
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.PropertyName
 
@@ -26,29 +25,56 @@ data class TodoList(
 }
 
 /**
+ * Priorität eines Todos.
+ */
+enum class Priority(val label: String) {
+    HOCH("Hoch"),
+    MITTEL("Mittel"),
+    NIEDRIG("Niedrig");
+
+    companion object {
+        fun fromString(value: String?): Priority =
+            entries.firstOrNull { it.name == value } ?: MITTEL
+    }
+}
+
+/**
  * Ein einzelnes Todo-Element innerhalb einer Liste.
  *
- * @param id            Firestore-Dokument-ID
- * @param title         Text des Todos
- * @param isDone        Ob das Todo erledigt ist
- * @param createdBy     Geräte-ID des Erstellers
- * @param createdAt     Erstellungszeitpunkt
- * @param doneBy        Geräte-ID, wer es erledigt hat (null = noch offen)
- * @param doneAt        Zeitpunkt der Erledigung
- * @param position      Sortierreihenfolge
+ * @param id                Firestore-Dokument-ID
+ * @param title             Text des Todos
+ * @param description       Optionale Beschreibung
+ * @param isDone            Ob das Todo erledigt ist
+ * @param priority          Priorität ("HOCH" / "MITTEL" / "NIEDRIG")
+ * @param dueDate           Fälligkeitsdatum inkl. Uhrzeit (optional)
+ * @param assignedTo        Geräte-ID der zugewiesenen Person (optional)
+ * @param reminderMinutes   Erinnerung X Minuten vor Fälligkeit (optional)
+ * @param createdBy         Geräte-ID des Erstellers
+ * @param createdAt         Erstellungszeitpunkt
+ * @param doneBy            Geräte-ID, wer es erledigt hat (null = noch offen)
+ * @param doneAt            Zeitpunkt der Erledigung
+ * @param position          Sortierreihenfolge
  */
 data class TodoItem(
     val id: String = "",
     val title: String = "",
+    val description: String = "",
     @get:PropertyName("isDone") @set:PropertyName("isDone")
     var isDone: Boolean = false,
+    val priority: String = Priority.MITTEL.name,
+    val dueDate: Timestamp? = null,
+    val assignedTo: String? = null,
+    val reminderMinutes: Int? = null,
     val createdBy: String = "",
     val createdAt: Timestamp = Timestamp.now(),
     val doneBy: String? = null,
     val doneAt: Timestamp? = null,
     val position: Long = 0L
 ) {
-    constructor() : this("", "", false, "", Timestamp.now(), null, null, 0L)
+    constructor() : this(
+        "", "", "", false, Priority.MITTEL.name, null, null, null,
+        "", Timestamp.now(), null, null, 0L
+    )
 }
 
 /**

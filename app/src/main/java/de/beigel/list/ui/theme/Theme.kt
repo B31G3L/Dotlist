@@ -40,3 +40,14 @@ fun TodoSharedTheme(
 val ListColors = listOf(
     "#D0BCFF", "#7FD1BE", "#FFB4AB", "#FFD8A8", "#5B8DEF", "#E06FA0"
 )
+
+/**
+ * Feste Farben je Priorität, unabhängig vom gewählten Akzent –
+ * so bleiben "Hoch" (koralle), "Mittel" (violett) und "Niedrig" (grün)
+ * immer wiedererkennbar, wie im Design-Mockup.
+ */
+fun priorityColor(priority: de.beigel.list.data.Priority): androidx.compose.ui.graphics.Color = when (priority) {
+    de.beigel.list.data.Priority.HOCH    -> androidx.compose.ui.graphics.Color(0xFFF2B8B5)
+    de.beigel.list.data.Priority.MITTEL  -> androidx.compose.ui.graphics.Color(0xFFCCC2DC)
+    de.beigel.list.data.Priority.NIEDRIG -> androidx.compose.ui.graphics.Color(0xFF9FD8B5)
+}

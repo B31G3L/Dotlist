@@ -12,14 +12,14 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -27,9 +27,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.beigel.list.data.Priority
 import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
 import de.beigel.list.repository.TodoRepository
+import de.beigel.list.ui.theme.priorityColor
 import de.beigel.list.utils.HapticFeedback
 import de.beigel.list.viewmodel.TodosViewModel
 
@@ -44,6 +46,7 @@ fun AufgabenScreen(
     repository : TodoRepository,
     haptic     : HapticFeedback,
     padding    : PaddingValues,
+    deviceId   : String,
     onGoListen : () -> Unit,
 ) {
     val activeLists = remember(lists, selectedIds) {
@@ -63,10 +66,16 @@ fun AufgabenScreen(
         state.todos.map { list to it }
     }
 
-    val firstVm = viewModels.firstOrNull()?.second
-
     var filter        by remember { mutableStateOf(AufgabenFilter.ALLE) }
     var showAddDialog by remember { mutableStateOf(false) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val errorEntry = viewModels.firstNotNullOfOrNull { (_, vm) ->
+        vm.uiState.collectAsStateWithLifecycle().value.error?.let { vm to it }
+    }
+    LaunchedEffect(errorEntry) {
+        errorEntry?.let { (vm, message) -> snackbarHostState.showSnackbar(message); vm.clearError() }
+    }
 
     val openPairs = remember(allPairs) { allPairs.filter { !it.second.isDone } }
     val donePairs = remember(allPairs) { allPairs.filter { it.second.isDone } }
@@ -92,40 +101,45 @@ fun AufgabenScreen(
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
-            // Top action row
+            // Titel-Zeile inkl. Suche & Benachrichtigungen
             item {
                 Row(
-                    modifier              = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                    modifier              = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment     = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Menu, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                        Icon(Icons.Default.Search, contentDescription = null,
+                    Text(
+                        text          = "Aufgaben",
+                        fontSize      = 32.sp,
+                        fontWeight    = FontWeight.Bold,
+                        letterSpacing = (-0.5).sp,
+                        color         = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Search, contentDescription = "Suche",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Icon(Icons.Default.MoreVert, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Box {
+                            Icon(Icons.Default.Notifications, contentDescription = "Benachrichtigungen",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.error)
+                            )
+                        }
                     }
                 }
             }
-            // Titel + Untertitel
+            // Untertitel
             item {
-                Column(modifier = Modifier.padding(horizontal = 22.dp)) {
-                    Text(
-                        text       = "Aufgaben",
-                        fontSize   = 34.sp,
-                        fontWeight = FontWeight.Medium,
-                        letterSpacing = (-0.5).sp,
-                        color      = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text      = "${openPairs.size} offen · ${donePairs.size} erledigt",
-                        fontSize  = 13.sp,
-                        color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier  = Modifier.padding(top = 8.dp)
-                    )
-                }
+                Text(
+                    text      = "${openPairs.size} offen · ${donePairs.size} erledigt",
+                    fontSize  = 13.sp,
+                    color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier  = Modifier.padding(horizontal = 22.dp)
+                )
             }
             // Filter-Chips
             item {
@@ -152,7 +166,7 @@ fun AufgabenScreen(
                                 fontSize   = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 color      = if (active) MaterialTheme.colorScheme.onPrimary
-                                             else MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -167,7 +181,7 @@ fun AufgabenScreen(
                     val vm = viewModels.find { it.first.id == list.id }?.second
                     AufgabenTaskRow(
                         todo      = todo,
-                        listColor = listColor(list.color),
+                        listName  = list.name,
                         onToggle  = { vm?.toggleTodo(todo); haptic.tick() }
                     )
                 }
@@ -181,7 +195,7 @@ fun AufgabenScreen(
                     val vm = viewModels.find { it.first.id == list.id }?.second
                     AufgabenTaskRow(
                         todo      = todo,
-                        listColor = listColor(list.color),
+                        listName  = list.name,
                         onToggle  = { vm?.toggleTodo(todo); haptic.tick() }
                     )
                 }
@@ -213,12 +227,25 @@ fun AufgabenScreen(
             icon             = { Icon(Icons.Default.Add, contentDescription = null) },
             text             = { Text("Aufgabe", fontWeight = FontWeight.Medium, fontSize = 15.sp) }
         )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier  = Modifier.align(Alignment.BottomCenter)
+        )
     }
 
-    if (showAddDialog && firstVm != null) {
-        AddAufgabeDialog(
-            onDismiss = { showAddDialog = false },
-            onAdd     = { title -> firstVm.addTodo(title); showAddDialog = false }
+    if (showAddDialog && activeLists.isNotEmpty()) {
+        NeueAufgabeScreen(
+            lists           = activeLists,
+            initialListId   = activeLists.first().id,
+            currentDeviceId = deviceId,
+            onDismiss       = { showAddDialog = false },
+            onSave          = { listId, title, description, priority, dueDate, assignedTo, reminderMinutes ->
+                viewModels.find { it.first.id == listId }?.second?.addTodo(
+                    title, description, priority, dueDate, assignedTo, reminderMinutes
+                )
+                showAddDialog = false
+            }
         )
     }
 }
@@ -226,7 +253,7 @@ fun AufgabenScreen(
 @Composable
 fun AufgabenTaskRow(
     todo     : TodoItem,
-    listColor: Color,
+    listName : String,
     onToggle : () -> Unit,
 ) {
     Row(
@@ -289,19 +316,41 @@ fun AufgabenTaskRow(
             Text(
                 text           = todo.title,
                 fontSize       = 15.sp,
+                fontWeight     = FontWeight.Medium,
                 color          = if (todo.isDone) MaterialTheme.colorScheme.onSurfaceVariant
-                                 else MaterialTheme.colorScheme.onSurface,
+                else MaterialTheme.colorScheme.onSurface,
                 textDecoration = if (todo.isDone) TextDecoration.LineThrough else TextDecoration.None,
                 lineHeight     = 20.sp
             )
+            val subtitle = buildString {
+                todo.dueDate?.let { append(formatRelativeDue(it)); append(" · ") }
+                append(listName)
+            }
+            Text(
+                text     = subtitle,
+                fontSize = 12.sp,
+                color    = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-        // Prioritätspunkt (Listfarbe)
+        // Prioritätspunkt
         Box(
             modifier = Modifier
                 .size(8.dp)
                 .clip(CircleShape)
-                .background(if (todo.isDone) Color.Transparent else listColor)
+                .background(if (todo.isDone) Color.Transparent else priorityColor(Priority.fromString(todo.priority)))
         )
+    }
+}
+
+/** Formatiert ein Fälligkeitsdatum locker relativ ("Heute", "Morgen", "Fr, 3. Juli"). */
+private fun formatRelativeDue(ts: com.google.firebase.Timestamp): String {
+    val due   = java.util.Calendar.getInstance().apply { time = ts.toDate() }
+    val today = java.util.Calendar.getInstance()
+    val diffDays = ((due.timeInMillis - today.timeInMillis) / (1000 * 60 * 60 * 24)).toInt()
+    return when (diffDays) {
+        0    -> "Heute"
+        1    -> "Morgen"
+        else -> java.text.SimpleDateFormat("E, d. MMM", java.util.Locale.GERMAN).format(due.time)
     }
 }
 
@@ -314,30 +363,6 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier) {
         letterSpacing = 0.9.sp,
         color         = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier      = modifier.padding(horizontal = 22.dp, vertical = 6.dp)
-    )
-}
-
-@Composable
-private fun AddAufgabeDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
-    var text by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title            = { Text("Neue Aufgabe") },
-        text             = {
-            OutlinedTextField(
-                value         = text,
-                onValueChange = { text = it },
-                label         = { Text("Aufgabentitel") },
-                singleLine    = true,
-                modifier      = Modifier.fillMaxWidth()
-            )
-        },
-        confirmButton = {
-            Button(onClick = { if (text.isNotBlank()) onAdd(text) }, enabled = text.isNotBlank()) {
-                Text("Hinzufügen")
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } }
     )
 }
 

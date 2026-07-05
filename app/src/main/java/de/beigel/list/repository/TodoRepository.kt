@@ -161,7 +161,15 @@ class TodoRepository(private val deviceId: String) {
     /**
      * Neues Todo hinzufügen.
      */
-    suspend fun addTodo(listId: String, title: String) {
+    suspend fun addTodo(
+        listId          : String,
+        title           : String,
+        description     : String = "",
+        priority        : de.beigel.list.data.Priority = de.beigel.list.data.Priority.MITTEL,
+        dueDate         : com.google.firebase.Timestamp? = null,
+        assignedTo      : String? = null,
+        reminderMinutes : Int? = null,
+    ) {
         // Position = aktuelle Anzahl Todos
         val count = listsRef
             .document(listId)
@@ -169,10 +177,15 @@ class TodoRepository(private val deviceId: String) {
             .get().await().size().toLong()
 
         val todo = TodoItem(
-            title = title.trim(),
-            isDone = false,
-            createdBy = deviceId,
-            position = count
+            title           = title.trim(),
+            description     = description.trim(),
+            isDone          = false,
+            priority        = priority.name,
+            dueDate         = dueDate,
+            assignedTo      = assignedTo,
+            reminderMinutes = reminderMinutes,
+            createdBy       = deviceId,
+            position        = count
         )
         listsRef.document(listId).collection("todos").add(todo).await()
     }

@@ -127,6 +127,7 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
                 repository = repository,
                 haptic     = haptic,
                 padding    = padding,
+                deviceId   = deviceId,
                 onGoListen = { haptic.click(); nav.goListen() }
             )
             is AppScreen.Listen -> ListenScreen(
