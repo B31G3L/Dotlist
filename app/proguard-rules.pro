@@ -1,6 +1,6 @@
 # Firebase Firestore
 -keep class com.google.firebase.** { *; }
--keep class de.beigel.todo.data.** { *; }
+-keep class de.beigel.list.data.** { *; }
 
 # Kotlin Coroutines
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}

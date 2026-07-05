@@ -1,13 +1,13 @@
-package de.beigel.todo.viewmodel
+package de.beigel.list.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import de.beigel.todo.data.ListCounts
-import de.beigel.todo.data.SelectedListsPreferences
-import de.beigel.todo.data.TodoList
-import de.beigel.todo.repository.TodoRepository
+import de.beigel.list.data.ListCounts
+import de.beigel.list.data.SelectedListsPreferences
+import de.beigel.list.data.TodoList
+import de.beigel.list.repository.TodoRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 

@@ -1,4 +1,4 @@
-package de.beigel.todo.ui.screens
+package de.beigel.list.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
@@ -21,12 +20,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import de.beigel.todo.data.TodoItem
-import de.beigel.todo.data.TodoList
-import de.beigel.todo.repository.TodoRepository
-import de.beigel.todo.utils.HapticFeedback
-import de.beigel.todo.viewmodel.TodosViewModel
-import java.text.DateFormatSymbols
+import de.beigel.list.data.TodoItem
+import de.beigel.list.data.TodoList
+import de.beigel.list.repository.TodoRepository
+import de.beigel.list.utils.HapticFeedback
+import de.beigel.list.viewmodel.TodosViewModel
 import java.util.Calendar
 import java.util.Locale
 

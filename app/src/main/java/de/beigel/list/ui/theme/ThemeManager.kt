@@ -1,4 +1,4 @@
-package de.beigel.todo.ui.theme
+package de.beigel.list.ui.theme
 
 import android.content.Context
 import androidx.datastore.core.DataStore

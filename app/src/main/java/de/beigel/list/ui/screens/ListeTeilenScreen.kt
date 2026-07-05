@@ -1,4 +1,4 @@
-package de.beigel.todo.ui.screens
+package de.beigel.list.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,8 +20,8 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.beigel.todo.data.TodoList
-import de.beigel.todo.utils.HapticFeedback
+import de.beigel.list.data.TodoList
+import de.beigel.list.utils.HapticFeedback
 
 @Composable
 fun ListeTeilenScreen(

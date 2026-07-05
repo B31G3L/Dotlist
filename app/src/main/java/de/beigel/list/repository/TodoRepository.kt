@@ -1,11 +1,11 @@
-package de.beigel.todo.repository
+package de.beigel.list.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
-import de.beigel.todo.data.ListCounts
-import de.beigel.todo.data.TodoItem
-import de.beigel.todo.data.TodoList
+import de.beigel.list.data.ListCounts
+import de.beigel.list.data.TodoItem
+import de.beigel.list.data.TodoList
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow

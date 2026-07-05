@@ -1,9 +1,8 @@
-package de.beigel.todo.ui.screens
+package de.beigel.list.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -25,10 +24,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import de.beigel.todo.data.ListCounts
-import de.beigel.todo.data.TodoList
-import de.beigel.todo.utils.HapticFeedback
-import de.beigel.todo.viewmodel.ListsViewModel
+import de.beigel.list.data.ListCounts
+import de.beigel.list.data.TodoList
+import de.beigel.list.utils.HapticFeedback
+import de.beigel.list.viewmodel.ListsViewModel
 
 private val listIconSet: List<ImageVector> = listOf(
     Icons.Default.Work,

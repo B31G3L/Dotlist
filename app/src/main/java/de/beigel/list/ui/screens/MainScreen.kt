@@ -1,4 +1,4 @@
-package de.beigel.todo.ui.screens
+package de.beigel.list.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
@@ -16,10 +16,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import de.beigel.todo.data.TodoList
-import de.beigel.todo.repository.TodoRepository
-import de.beigel.todo.utils.HapticFeedback
-import de.beigel.todo.viewmodel.ListsViewModel
+import de.beigel.list.data.TodoList
+import de.beigel.list.repository.TodoRepository
+import de.beigel.list.utils.HapticFeedback
+import de.beigel.list.viewmodel.ListsViewModel
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
 

@@ -1,6 +1,7 @@
-package de.beigel.todo.data
+package de.beigel.list.data
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.PropertyName
 
 /**
  * Eine geteilte Todo-Liste.
@@ -39,7 +40,8 @@ data class TodoList(
 data class TodoItem(
     val id: String = "",
     val title: String = "",
-    val isDone: Boolean = false,
+    @get:PropertyName("isDone") @set:PropertyName("isDone")
+    var isDone: Boolean = false,
     val createdBy: String = "",
     val createdAt: Timestamp = Timestamp.now(),
     val doneBy: String? = null,

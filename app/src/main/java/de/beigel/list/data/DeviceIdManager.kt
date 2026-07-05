@@ -1,4 +1,4 @@
-package de.beigel.todo.data
+package de.beigel.list.data
 
 import android.content.Context
 import android.content.SharedPreferences

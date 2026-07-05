@@ -1,4 +1,4 @@
-package de.beigel.todo.ui.theme
+package de.beigel.list.ui.theme
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme

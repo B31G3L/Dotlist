@@ -1,9 +1,9 @@
-package de.beigel.todo.data
+package de.beigel.list.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import de.beigel.todo.ui.theme.dataStore
+import de.beigel.list.ui.theme.dataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

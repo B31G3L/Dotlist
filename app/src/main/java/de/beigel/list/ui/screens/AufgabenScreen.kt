@@ -1,4 +1,4 @@
-package de.beigel.todo.ui.screens
+package de.beigel.list.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,7 +20,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -28,11 +27,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import de.beigel.todo.data.TodoItem
-import de.beigel.todo.data.TodoList
-import de.beigel.todo.repository.TodoRepository
-import de.beigel.todo.utils.HapticFeedback
-import de.beigel.todo.viewmodel.TodosViewModel
+import de.beigel.list.data.TodoItem
+import de.beigel.list.data.TodoList
+import de.beigel.list.repository.TodoRepository
+import de.beigel.list.utils.HapticFeedback
+import de.beigel.list.viewmodel.TodosViewModel
 
 private enum class AufgabenFilter { ALLE, OFFEN, ERLEDIGT }
 

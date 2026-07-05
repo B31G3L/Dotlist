@@ -1,11 +1,11 @@
-package de.beigel.todo.viewmodel
+package de.beigel.list.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import de.beigel.todo.data.TodoItem
-import de.beigel.todo.data.TodoList
-import de.beigel.todo.repository.TodoRepository
+import de.beigel.list.data.TodoItem
+import de.beigel.list.data.TodoList
+import de.beigel.list.repository.TodoRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 

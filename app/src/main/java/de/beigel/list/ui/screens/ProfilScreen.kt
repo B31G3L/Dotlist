@@ -1,4 +1,4 @@
-package de.beigel.todo.ui.screens
+package de.beigel.list.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,17 +14,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.beigel.todo.ui.theme.AccentColor
-import de.beigel.todo.ui.theme.AccentColorPreferences
-import de.beigel.todo.ui.theme.ThemeMode
-import de.beigel.todo.ui.theme.ThemePreferences
-import de.beigel.todo.utils.HapticFeedback
+import de.beigel.list.ui.theme.AccentColor
+import de.beigel.list.ui.theme.AccentColorPreferences
+import de.beigel.list.ui.theme.ThemeMode
+import de.beigel.list.ui.theme.ThemePreferences
+import de.beigel.list.utils.HapticFeedback
 import kotlinx.coroutines.launch
 
 @Composable

@@ -1,4 +1,4 @@
-package de.beigel.todo.utils
+package de.beigel.list.utils
 
 import android.content.Context
 import android.os.Build

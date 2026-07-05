@@ -1,4 +1,4 @@
-package de.beigel.todo
+package de.beigel.list
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -8,14 +8,14 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.view.WindowCompat
-import de.beigel.todo.data.DeviceIdManager
-import de.beigel.todo.repository.TodoRepository
-import de.beigel.todo.ui.screens.MainScreen
-import de.beigel.todo.ui.theme.AccentColor
-import de.beigel.todo.ui.theme.AccentColorPreferences
-import de.beigel.todo.ui.theme.ThemeMode
-import de.beigel.todo.ui.theme.ThemePreferences
-import de.beigel.todo.ui.theme.TodoSharedTheme
+import de.beigel.list.data.DeviceIdManager
+import de.beigel.list.repository.TodoRepository
+import de.beigel.list.ui.screens.MainScreen
+import de.beigel.list.ui.theme.AccentColor
+import de.beigel.list.ui.theme.AccentColorPreferences
+import de.beigel.list.ui.theme.ThemeMode
+import de.beigel.list.ui.theme.ThemePreferences
+import de.beigel.list.ui.theme.TodoSharedTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

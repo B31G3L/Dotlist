@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "de.beigel.todo"
+    namespace = "de.beigel.list"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "de.beigel.todo"
+        applicationId = "de.beigel.list"
         minSdk = 29
         targetSdk = 36
         versionCode = 1

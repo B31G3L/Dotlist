@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalLayoutApi::class)
 
-package de.beigel.todo.ui.screens
+package de.beigel.list.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.beigel.todo.ui.theme.ListColors
+import de.beigel.list.ui.theme.ListColors
 
 private val iconOptions: List<ImageVector> = listOf(
     Icons.Default.Work, Icons.Default.Home, Icons.Default.ShoppingCart, Icons.Default.Favorite,

@@ -1,4 +1,4 @@
-package de.beigel.todo.ui.screens
+package de.beigel.list.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,11 +27,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import de.beigel.todo.data.TodoItem
-import de.beigel.todo.data.TodoList
-import de.beigel.todo.repository.TodoRepository
-import de.beigel.todo.utils.HapticFeedback
-import de.beigel.todo.viewmodel.TodosViewModel
+import de.beigel.list.data.TodoItem
+import de.beigel.list.data.TodoList
+import de.beigel.list.repository.TodoRepository
+import de.beigel.list.utils.HapticFeedback
+import de.beigel.list.viewmodel.TodosViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
