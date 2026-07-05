@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "277661193940",
+    "project_id": "todolist-906c8",
+    "storage_bucket": "todolist-906c8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:277661193940:android:702855d44993b974ee8d41",
+        "android_client_info": {
+          "package_name": "de.beigel.todo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDB-vgLuiDBtm6uvkVBH4hK0CIrR-OKtjs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
