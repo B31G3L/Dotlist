@@ -2,6 +2,7 @@ package de.beigel.list.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -43,12 +44,16 @@ fun ProfilScreen(
     val scope       = rememberCoroutineScope()
     val themeMode   by ThemePreferences.getThemeMode(context).collectAsState(initial = ThemeMode.SYSTEM)
     val accentColor by AccentColorPreferences.getAccentColor(context).collectAsState(initial = AccentColor.VIOLET)
+    val systemDark  = isSystemInDarkTheme()
+    val isDark = when (themeMode) {
+        ThemeMode.SYSTEM -> systemDark
+        ThemeMode.LIGHT  -> false
+        ThemeMode.DARK   -> true
+    }
 
     var deviceName     by remember { mutableStateOf(DeviceIdManager.getDeviceName(context)) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameText     by remember { mutableStateOf(deviceName) }
-
-    val isDark = themeMode == ThemeMode.DARK || themeMode == ThemeMode.SYSTEM
 
     // Pro Liste ein TodosViewModel, nur um offen/erledigt über alle Listen zu summieren
     // Pro Liste ein TodosViewModel, nur um offen/erledigt über alle Listen zu summieren
@@ -137,13 +142,13 @@ fun ProfilScreen(
             SettingsToggleRow(
                 icon     = Icons.Default.DarkMode,
                 title    = "Dunkles Design",
-                checked  = themeMode == ThemeMode.DARK,
+                checked  = isDark,
                 onToggle = {
                     haptic.tick()
                     scope.launch {
                         ThemePreferences.setThemeMode(
                             context,
-                            if (themeMode == ThemeMode.DARK) ThemeMode.SYSTEM else ThemeMode.DARK
+                            if (isDark) ThemeMode.LIGHT else ThemeMode.DARK
                         )
                     }
                 }

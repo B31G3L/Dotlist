@@ -5,11 +5,21 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
-import de.beigel.list.data.DeviceIdManager
+import de.beigel.list.auth.AuthManager
 import de.beigel.list.repository.TodoRepository
 import de.beigel.list.ui.screens.MainScreen
 import de.beigel.list.ui.theme.AccentColor
@@ -23,9 +33,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        val deviceId   = DeviceIdManager.getDeviceId(this)
-        val repository = TodoRepository(deviceId)
 
         setContent {
             val themeMode   by ThemePreferences.getThemeMode(this).collectAsState(initial = ThemeMode.SYSTEM)
@@ -45,8 +52,23 @@ class MainActivity : ComponentActivity() {
                 controller.isAppearanceLightNavigationBars = !isDark
             }
 
+            // Firebase Auth ist asynchron (Netzwerk-Aufruf beim allerersten Start),
+            // daher kurz warten bevor die App mit einer echten UID startet.
+            var uid by remember { mutableStateOf<String?>(null) }
+            LaunchedEffect(Unit) {
+                uid = AuthManager.ensureSignedIn()
+            }
+
             TodoSharedTheme(darkTheme = isDark, accentColor = accentColor) {
-                MainScreen(repository = repository, deviceId = deviceId)
+                val currentUid = uid
+                if (currentUid == null) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else {
+                    val repository = remember(currentUid) { TodoRepository(currentUid) }
+                    MainScreen(repository = repository, deviceId = currentUid)
+                }
             }
         }
     }

@@ -313,7 +313,7 @@ private fun ListCard(
                         list.memberIds.take(3).forEachIndexed { i, memberId ->
                             Box(
                                 modifier = Modifier
-                                    .padding(start = if (i == 0) 0.dp else (-6).dp)
+                                    .offset(x = if (i == 0) 0.dp else (-6).dp * i)
                                     .size(18.dp)
                                     .clip(CircleShape)
                                     .background(avatarColorFor(memberId))

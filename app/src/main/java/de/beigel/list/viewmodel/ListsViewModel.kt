@@ -49,7 +49,9 @@ class ListsViewModel(
                         flowOf(emptyMap())
                     } else {
                         combine(lists.map { list ->
-                            repository.observeTodoCounts(list.id).map { list.id to it }
+                            repository.observeTodoCounts(list.id)
+                                .catch { emit(ListCounts()) }
+                                .map { list.id to it }
                         }) { pairs -> pairs.toMap() }
                     }
                     countsFlow.map { counts -> lists to counts }
