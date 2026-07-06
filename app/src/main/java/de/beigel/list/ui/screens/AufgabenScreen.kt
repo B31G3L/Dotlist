@@ -50,6 +50,7 @@ fun AufgabenScreen(
     onGoListen : () -> Unit,
     onSearch   : () -> Unit,
     onNotifications: () -> Unit,
+    onOpenTask : (TodoList, TodoItem) -> Unit = { _, _ -> },
 ) {
     val activeLists = remember(lists, selectedIds) {
         lists.filter { it.id in selectedIds }
@@ -185,7 +186,8 @@ fun AufgabenScreen(
                     AufgabenTaskRow(
                         todo      = todo,
                         listName  = list.name,
-                        onToggle  = { vm?.toggleTodo(todo); haptic.tick() }
+                        onToggle  = { vm?.toggleTodo(todo); haptic.tick() },
+                        onClick   = { haptic.tick(); onOpenTask(list, todo) }
                     )
                 }
             }
@@ -199,7 +201,8 @@ fun AufgabenScreen(
                     AufgabenTaskRow(
                         todo      = todo,
                         listName  = list.name,
-                        onToggle  = { vm?.toggleTodo(todo); haptic.tick() }
+                        onToggle  = { vm?.toggleTodo(todo); haptic.tick() },
+                        onClick   = { haptic.tick(); onOpenTask(list, todo) }
                     )
                 }
             }
@@ -258,11 +261,12 @@ fun AufgabenTaskRow(
     todo     : TodoItem,
     listName : String,
     onToggle : () -> Unit,
+    onClick  : () -> Unit = {},
 ) {
     Row(
         modifier          = Modifier
             .fillMaxWidth()
-            .clickable { onToggle() }
+            .clickable { onClick() }
             .padding(horizontal = 12.dp)
             .clip(RoundedCornerShape(16.dp))
             .padding(horizontal = 10.dp, vertical = 13.dp),
@@ -275,6 +279,7 @@ fun AufgabenTaskRow(
                 .size(24.dp)
                 .clip(CircleShape)
                 .background(if (todo.isDone) MaterialTheme.colorScheme.primary else Color.Transparent)
+                .clickable { onToggle() }
                 .then(
                     if (!todo.isDone) Modifier.clip(CircleShape) else Modifier
                 ),

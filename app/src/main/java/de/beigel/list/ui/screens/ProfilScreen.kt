@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.beigel.list.data.DeviceIdManager
 import de.beigel.list.data.TodoList
 import de.beigel.list.repository.TodoRepository
 import de.beigel.list.ui.theme.AccentColor
@@ -42,6 +43,10 @@ fun ProfilScreen(
     val scope       = rememberCoroutineScope()
     val themeMode   by ThemePreferences.getThemeMode(context).collectAsState(initial = ThemeMode.SYSTEM)
     val accentColor by AccentColorPreferences.getAccentColor(context).collectAsState(initial = AccentColor.VIOLET)
+
+    var deviceName     by remember { mutableStateOf(DeviceIdManager.getDeviceName(context)) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renameText     by remember { mutableStateOf(deviceName) }
 
     val isDark = themeMode == ThemeMode.DARK || themeMode == ThemeMode.SYSTEM
 
@@ -75,7 +80,9 @@ fun ProfilScreen(
 
         // Avatar + Name
         Column(
-            modifier            = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 22.dp),
+            modifier            = Modifier.fillMaxWidth()
+                .padding(horizontal = 22.dp, vertical = 22.dp)
+                .clickable { renameText = deviceName; showRenameDialog = true },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
@@ -84,21 +91,21 @@ fun ProfilScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text       = "A",
+                    text       = deviceName.take(1).uppercase().ifEmpty { "?" },
                     fontSize   = 32.sp,
                     fontWeight = FontWeight.Medium,
                     color      = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
             Text(
-                text       = "Mein Konto",
+                text       = deviceName,
                 fontSize   = 20.sp,
                 fontWeight = FontWeight.Medium,
                 color      = MaterialTheme.colorScheme.onSurface,
                 modifier   = Modifier.padding(top = 14.dp)
             )
             Text(
-                text     = "Gerät verknüpft",
+                text     = "Tippen zum Ändern",
                 fontSize = 13.sp,
                 color    = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 3.dp)
@@ -180,6 +187,34 @@ fun ProfilScreen(
         )
 
         Spacer(Modifier.height(32.dp))
+    }
+
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title   = { Text("Dein Name") },
+            text    = {
+                TextField(
+                    value         = renameText,
+                    onValueChange = { renameText = it },
+                    singleLine    = true,
+                    placeholder   = { Text("z.B. Alex") },
+                    modifier      = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = renameText.isNotBlank(),
+                    onClick = {
+                        haptic.click()
+                        DeviceIdManager.setDeviceName(context, renameText.trim())
+                        deviceName = renameText.trim()
+                        showRenameDialog = false
+                    }
+                ) { Text("Speichern") }
+            },
+            dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text("Abbrechen") } }
+        )
     }
 }
 

@@ -91,6 +91,39 @@ class TodosViewModel(
         }
     }
 
+    fun updateTodo(
+        todoId          : String,
+        title           : String,
+        description     : String,
+        priority        : de.beigel.list.data.Priority,
+        dueDate         : com.google.firebase.Timestamp?,
+        assignedTo      : String?,
+        reminderMinutes : Int?,
+        onDone          : () -> Unit = {},
+    ) {
+        if (title.isBlank()) return
+        viewModelScope.launch {
+            try {
+                repository.updateTodo(listId, todoId, title, description, priority, dueDate, assignedTo, reminderMinutes)
+                onDone()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Fehler beim Speichern") }
+            }
+        }
+    }
+
+    fun moveTodo(todo: TodoItem, toListId: String, onDone: () -> Unit = {}) {
+        if (toListId == listId) { onDone(); return }
+        viewModelScope.launch {
+            try {
+                repository.moveTodo(listId, toListId, todo)
+                onDone()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Aufgabe konnte nicht verschoben werden") }
+            }
+        }
+    }
+
     fun startEditing(todo: TodoItem) = _uiState.update { it.copy(editingTodo = todo) }
     fun stopEditing() = _uiState.update { it.copy(editingTodo = null) }
     fun clearError() = _uiState.update { it.copy(error = null) }

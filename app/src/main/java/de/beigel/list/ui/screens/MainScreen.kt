@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
 import de.beigel.list.repository.TodoRepository
 import de.beigel.list.utils.HapticFeedback
@@ -33,6 +34,7 @@ sealed class AppScreen {
     data class ListeTeilen(val list: TodoList) : AppScreen()
     object Suche             : AppScreen()
     object Benachrichtigungen : AppScreen()
+    data class AufgabeDetail(val list: TodoList, val todo: TodoItem, val from: AppScreen) : AppScreen()
 }
 
 private val AppScreen.isTopLevel
@@ -69,12 +71,13 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
     // Back-Handler für Sub-Screens
     if (!screen.isTopLevel) {
         BackHandler {
-            screen = when (screen) {
+            screen = when (val s = screen) {
                 is AppScreen.ListenDetail  -> AppScreen.Listen
                 is AppScreen.ListeErstellen -> AppScreen.Listen
                 is AppScreen.ListeTeilen   -> if ((screen as? AppScreen.ListeTeilen) != null)
                     AppScreen.Listen else AppScreen.Listen
                 is AppScreen.Suche, is AppScreen.Benachrichtigungen -> previousTopLevel
+                is AppScreen.AufgabeDetail -> s.from
                 else                       -> AppScreen.Listen
             }
         }
@@ -96,12 +99,16 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
             if (screen.isTopLevel) previousTopLevel = screen
             screen = AppScreen.Benachrichtigungen
         }
+        fun goAufgabeDetail(list: TodoList, todo: TodoItem) {
+            screen = AppScreen.AufgabeDetail(list, todo, from = screen)
+        }
         fun goBack()                  {
             screen = when (val s = screen) {
                 is AppScreen.ListenDetail   -> AppScreen.Listen
                 is AppScreen.ListeErstellen -> AppScreen.Listen
                 is AppScreen.ListeTeilen    -> AppScreen.ListenDetail(s.list)
                 is AppScreen.Suche, is AppScreen.Benachrichtigungen -> previousTopLevel
+                is AppScreen.AufgabeDetail  -> s.from
                 else                        -> AppScreen.Listen
             }
         }
@@ -143,7 +150,8 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
                 deviceId   = deviceId,
                 onGoListen = { haptic.click(); nav.goListen() },
                 onSearch   = { nav.goSuche() },
-                onNotifications = { nav.goBenachrichtigungen() }
+                onNotifications = { nav.goBenachrichtigungen() },
+                onOpenTask = { list, todo -> nav.goAufgabeDetail(list, todo) }
             )
             is AppScreen.Listen -> ListenScreen(
                 viewModel  = listsViewModel,
@@ -154,7 +162,8 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
                 onOpenList = { list -> haptic.click(); nav.goDetail(list) },
                 onShare    = { list -> nav.goTeilen(list) },
                 onErstellen= { nav.goErstellen() },
-                onSearch   = { nav.goSuche() }
+                onSearch   = { nav.goSuche() },
+                onOpenTask = { list, todo -> nav.goAufgabeDetail(list, todo) }
             )
             is AppScreen.Kalender -> KalenderScreen(
                 lists      = listsUiState.lists,
@@ -186,8 +195,10 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
                 list    = s.list,
                 repository = repository,
                 haptic  = haptic,
+                deviceId = deviceId,
                 onBack  = { nav.goListen() },
-                onShare = { nav.goTeilen(s.list) }
+                onShare = { nav.goTeilen(s.list) },
+                onOpenTask = { todo -> nav.goAufgabeDetail(s.list, todo) }
             )
             is AppScreen.ListeErstellen -> ListeErstellenScreen(
                 onBack   = { nav.goListen() },
@@ -197,9 +208,19 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
                 }
             )
             is AppScreen.ListeTeilen -> ListeTeilenScreen(
-                list   = s.list,
-                haptic = haptic,
-                onBack = { nav.goBack() }
+                list            = s.list,
+                currentDeviceId = deviceId,
+                haptic          = haptic,
+                onBack          = { nav.goBack() }
+            )
+            is AppScreen.AufgabeDetail -> AufgabeDetailScreen(
+                list            = s.list,
+                todo            = s.todo,
+                repository      = repository,
+                currentDeviceId = deviceId,
+                haptic          = haptic,
+                onBack          = { nav.goBack() },
+                allLists        = listsUiState.lists
             )
         }
     }

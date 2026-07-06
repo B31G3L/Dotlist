@@ -16,13 +16,21 @@ data class TodoList(
     val id: String = "",
     val name: String = "",
     val memberIds: List<String> = emptyList(),
+    val memberNames: Map<String, String> = emptyMap(),
     val createdBy: String = "",
     val createdAt: Timestamp = Timestamp.now(),
     val color: String = "#6750A4"
 ) {
     // Parameterloser Konstruktor für Firestore-Deserialisierung
-    constructor() : this("", "", emptyList(), "", Timestamp.now(), "#6750A4")
+    constructor() : this("", "", emptyList(), emptyMap(), "", Timestamp.now(), "#6750A4")
 }
+
+/**
+ * Anzeigename für ein Mitglied einer Liste. Fällt auf eine Kurzform der
+ * Geräte-ID zurück, falls (noch) kein Name hinterlegt ist (z.B. bei alten Listen).
+ */
+fun TodoList.displayNameFor(memberId: String): String =
+    memberNames[memberId] ?: "Mitglied ${memberId.take(4).uppercase()}"
 
 /**
  * Priorität eines Todos.

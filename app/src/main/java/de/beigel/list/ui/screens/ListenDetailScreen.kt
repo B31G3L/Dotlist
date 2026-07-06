@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
@@ -32,6 +34,7 @@ import de.beigel.list.data.TodoList
 import de.beigel.list.repository.TodoRepository
 import de.beigel.list.utils.HapticFeedback
 import de.beigel.list.viewmodel.TodosViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,8 +42,10 @@ fun ListenDetailScreen(
     list      : TodoList,
     repository: TodoRepository,
     haptic    : HapticFeedback,
+    deviceId  : String,
     onBack    : () -> Unit,
     onShare   : () -> Unit,
+    onOpenTask: (TodoItem) -> Unit = {},
 ) {
     val vm by remember { mutableStateOf(null as TodosViewModel?) }
     val todoVm: TodosViewModel = viewModel(
@@ -60,6 +65,14 @@ fun ListenDetailScreen(
     var showAdd   by remember { mutableStateOf(false) }
     var newText   by remember { mutableStateOf("") }
     val focusReq  = remember { FocusRequester() }
+    val scope     = rememberCoroutineScope()
+    val context   = LocalContext.current
+
+    var showOptionsSheet  by remember { mutableStateOf(false) }
+    var showRenameDialog  by remember { mutableStateOf(false) }
+    var renameText        by remember { mutableStateOf(list.name) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showLeaveConfirm  by remember { mutableStateOf(false) }
 
     val listIdx = 0  // We don't have global index here, use 0 as default icon
 
@@ -92,7 +105,7 @@ fun ListenDetailScreen(
                             Icon(Icons.Default.Group, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    IconButton(onClick = { haptic.tick() }) {
+                    IconButton(onClick = { haptic.tick(); showOptionsSheet = true }) {
                         Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -189,7 +202,8 @@ fun ListenDetailScreen(
                     todo      = todo,
                     listColor = listColor,
                     onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
-                    onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() }
+                    onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() },
+                    onClick   = { haptic.tick(); onOpenTask(todo) }
                 )
             }
             if (doneTodos.isNotEmpty()) {
@@ -199,7 +213,8 @@ fun ListenDetailScreen(
                         todo      = todo,
                         listColor = listColor,
                         onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
-                        onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() }
+                        onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() },
+                        onClick   = { haptic.tick(); onOpenTask(todo) }
                     )
                 }
             }
@@ -207,8 +222,8 @@ fun ListenDetailScreen(
 
         // Extended FAB
         ExtendedFloatingActionButton(
-            onClick        = { newText = ""; focusReq.requestFocus(); haptic.click() },
-            modifier       = Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = 24.dp),
+            onClick        = { haptic.click(); showAdd = true },
+            modifier       = Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = 40.dp),
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor   = MaterialTheme.colorScheme.onPrimary,
             shape          = RoundedCornerShape(18.dp),
@@ -220,6 +235,157 @@ fun ListenDetailScreen(
             hostState = snackbarHostState,
             modifier  = Modifier.align(Alignment.BottomCenter)
         )
+    }
+
+    if (showAdd) {
+        NeueAufgabeScreen(
+            lists           = listOf(list),
+            initialListId   = list.id,
+            currentDeviceId = deviceId,
+            onDismiss       = { showAdd = false },
+            onSave          = { _, title, description, priority, dueDate, assignedTo, reminderMinutes ->
+                todoVm.addTodo(title, description, priority, dueDate, assignedTo, reminderMinutes)
+                showAdd = false
+            }
+        )
+    }
+
+    // ── Options-Sheet (Bearbeiten / Duplizieren / Teilen / Löschen / Verlassen) ──
+    val isOwner = list.createdBy == deviceId
+
+    if (showOptionsSheet) {
+        ModalBottomSheet(onDismissRequest = { showOptionsSheet = false }) {
+            Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                if (isOwner) {
+                    OptionRow(
+                        icon  = Icons.Default.Edit,
+                        label = "Bearbeiten",
+                        onClick = {
+                            showOptionsSheet = false
+                            renameText = list.name
+                            showRenameDialog = true
+                        }
+                    )
+                }
+                OptionRow(
+                    icon  = Icons.Default.ContentCopy,
+                    label = "Duplizieren",
+                    onClick = {
+                        showOptionsSheet = false
+                        haptic.click()
+                        scope.launch {
+                            repository.duplicateList(list, de.beigel.list.data.DeviceIdManager.getDeviceName(context))
+                        }
+                    }
+                )
+                if (isShared) {
+                    OptionRow(
+                        icon  = Icons.Default.Share,
+                        label = "Teilen",
+                        onClick = { showOptionsSheet = false; onShare() }
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                if (isOwner) {
+                    OptionRow(
+                        icon     = Icons.Default.Delete,
+                        label    = "Löschen",
+                        tint     = MaterialTheme.colorScheme.error,
+                        onClick  = { showOptionsSheet = false; showDeleteConfirm = true }
+                    )
+                } else {
+                    OptionRow(
+                        icon     = Icons.AutoMirrored.Filled.Logout,
+                        label    = "Liste verlassen",
+                        tint     = MaterialTheme.colorScheme.error,
+                        onClick  = { showOptionsSheet = false; showLeaveConfirm = true }
+                    )
+                }
+            }
+        }
+    }
+
+    // ── Liste verlassen bestätigen (nur für Nicht-Ersteller) ─────────────
+    if (showLeaveConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLeaveConfirm = false },
+            title   = { Text("Liste verlassen?") },
+            text    = { Text("Du verlierst den Zugriff auf „${list.name}“. Andere Mitglieder behalten die Liste.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    haptic.heavy()
+                    scope.launch { repository.leaveList(list.id) }
+                    showLeaveConfirm = false
+                    onBack()
+                }) { Text("Verlassen", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { showLeaveConfirm = false }) { Text("Abbrechen") } }
+        )
+    }
+
+    // ── Liste umbenennen ──────────────────────────────────────────────────
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title   = { Text("Liste umbenennen") },
+            text    = {
+                TextField(
+                    value         = renameText,
+                    onValueChange = { renameText = it },
+                    singleLine    = true,
+                    modifier      = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = renameText.isNotBlank(),
+                    onClick = {
+                        haptic.click()
+                        scope.launch { repository.renameList(list.id, renameText) }
+                        showRenameDialog = false
+                    }
+                ) { Text("Speichern") }
+            },
+            dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text("Abbrechen") } }
+        )
+    }
+
+    // ── Liste löschen bestätigen ──────────────────────────────────────────
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title   = { Text("Liste löschen?") },
+            text    = { Text("„${list.name}“ und alle enthaltenen Aufgaben werden endgültig gelöscht.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    haptic.heavy()
+                    scope.launch { repository.deleteList(list.id) }
+                    showDeleteConfirm = false
+                    onBack()
+                }) { Text("Löschen", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Abbrechen") } }
+        )
+    }
+}
+
+@Composable
+private fun OptionRow(
+    icon    : androidx.compose.ui.graphics.vector.ImageVector,
+    label   : String,
+    tint    : Color? = null,
+    onClick : () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 24.dp, vertical = 14.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Icon(icon, null, tint = tint ?: MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, fontSize = 16.sp, color = tint ?: MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -252,13 +418,14 @@ private fun DetailTaskRow(
     listColor: Color,
     onToggle : () -> Unit,
     onDelete : () -> Unit,
+    onClick  : () -> Unit = {},
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     Row(
         modifier          = Modifier
             .fillMaxWidth()
-            .clickable { onToggle() }
+            .clickable { onClick() }
             .padding(horizontal = 12.dp)
             .padding(horizontal = 10.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -267,7 +434,8 @@ private fun DetailTaskRow(
         // Checkbox
         Box(
             modifier         = Modifier.size(24.dp).clip(CircleShape)
-                .background(if (todo.isDone) MaterialTheme.colorScheme.primary else Color.Transparent),
+                .background(if (todo.isDone) MaterialTheme.colorScheme.primary else Color.Transparent)
+                .clickable { onToggle() },
             contentAlignment = Alignment.Center
         ) {
             if (todo.isDone) {

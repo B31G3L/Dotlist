@@ -50,12 +50,13 @@ class TodoRepository(private val deviceId: String) {
     /**
      * Neue Liste erstellen. Gibt die neue Listen-ID zurück.
      */
-    suspend fun createList(name: String, color: String): String {
+    suspend fun createList(name: String, color: String, creatorName: String): String {
         val list = TodoList(
-            name = name,
-            memberIds = listOf(deviceId),
-            createdBy = deviceId,
-            color = color
+            name        = name,
+            memberIds   = listOf(deviceId),
+            memberNames = mapOf(deviceId to creatorName),
+            createdBy   = deviceId,
+            color       = color
         )
         val doc = listsRef.add(list).await()
         return doc.id
@@ -81,6 +82,33 @@ class TodoRepository(private val deviceId: String) {
     }
 
     /**
+     * Liste duplizieren (neue Liste mit "Kopie"-Zusatz, alle Todos werden mitkopiert).
+     * Die Kopie gehört nur dem aktuellen Gerät (keine geteilten Mitglieder).
+     */
+    suspend fun duplicateList(list: TodoList, creatorName: String): String {
+        val newList = TodoList(
+            name        = "${list.name} Kopie",
+            memberIds   = listOf(deviceId),
+            memberNames = mapOf(deviceId to creatorName),
+            createdBy   = deviceId,
+            color       = list.color
+        )
+        val newDoc = listsRef.add(newList).await()
+
+        val todos = listsRef.document(list.id).collection("todos").get().await()
+        if (!todos.isEmpty) {
+            val batch = db.batch()
+            todos.documents.forEach { doc ->
+                val todo = doc.toObject(TodoItem::class.java) ?: return@forEach
+                val newTodoRef = listsRef.document(newDoc.id).collection("todos").document()
+                batch.set(newTodoRef, todo)
+            }
+            batch.commit().await()
+        }
+        return newDoc.id
+    }
+
+    /**
      * Liste anhand der ID ansehen, ohne beizutreten (für den Einladungs-Screen).
      */
     suspend fun previewList(listId: String): TodoList? {
@@ -91,20 +119,22 @@ class TodoRepository(private val deviceId: String) {
 
     /**
      * Dem Gerät über einen Einladungslink einer Liste beitreten.
+     * Der eigene Anzeigename wird dabei mit in die Liste übernommen.
      * Gibt die Liste zurück wenn erfolgreich, sonst null.
      */
-    suspend fun joinList(listId: String): TodoList? {
+    suspend fun joinList(listId: String, displayName: String): TodoList? {
         val docRef = listsRef.document(listId)
         val doc = docRef.get().await()
         if (!doc.exists()) return null
 
         val list = doc.toObject(TodoList::class.java)?.copy(id = doc.id) ?: return null
 
-        // deviceId zu memberIds hinzufügen falls nicht bereits dabei
+        // deviceId zu memberIds hinzufügen falls nicht bereits dabei, Name immer aktualisieren
+        val updates = mutableMapOf<String, Any>("memberNames.$deviceId" to displayName)
         if (deviceId !in list.memberIds) {
-            val updated = list.memberIds + deviceId
-            docRef.update("memberIds", updated).await()
+            updates["memberIds"] = list.memberIds + deviceId
         }
+        docRef.update(updates).await()
         return list
     }
 
@@ -235,5 +265,41 @@ class TodoRepository(private val deviceId: String) {
     suspend fun editTodo(listId: String, todoId: String, newTitle: String) {
         listsRef.document(listId).collection("todos")
             .document(todoId).update("title", newTitle.trim()).await()
+    }
+
+    /**
+     * Todo vollständig aktualisieren (aus der Detailansicht).
+     */
+    suspend fun updateTodo(
+        listId          : String,
+        todoId          : String,
+        title           : String,
+        description     : String,
+        priority        : de.beigel.list.data.Priority,
+        dueDate         : com.google.firebase.Timestamp?,
+        assignedTo      : String?,
+        reminderMinutes : Int?,
+    ) {
+        val updates = mapOf(
+            "title"           to title.trim(),
+            "description"     to description.trim(),
+            "priority"        to priority.name,
+            "dueDate"         to dueDate,
+            "assignedTo"      to assignedTo,
+            "reminderMinutes" to reminderMinutes,
+        )
+        listsRef.document(listId).collection("todos")
+            .document(todoId).update(updates).await()
+    }
+
+    /**
+     * Todo in eine andere Liste verschieben (gleiche Dokument-ID, neue Position am Ende).
+     */
+    suspend fun moveTodo(fromListId: String, toListId: String, todo: TodoItem) {
+        if (fromListId == toListId) return
+        val newPosition = listsRef.document(toListId).collection("todos").get().await().size().toLong()
+        val movedTodo = todo.copy(position = newPosition)
+        listsRef.document(toListId).collection("todos").document(todo.id).set(movedTodo).await()
+        listsRef.document(fromListId).collection("todos").document(todo.id).delete().await()
     }
 }

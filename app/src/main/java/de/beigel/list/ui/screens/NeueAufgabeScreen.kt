@@ -32,6 +32,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.google.firebase.Timestamp
 import de.beigel.list.data.Priority
 import de.beigel.list.data.TodoList
+import de.beigel.list.data.displayNameFor
 import de.beigel.list.ui.theme.priorityColor
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -221,7 +222,7 @@ fun NeueAufgabeScreen(
                             DetailRow(
                                 icon    = Icons.Default.Person,
                                 label   = "Zuweisen an",
-                                value   = assigneeLabel(assignedTo, currentDeviceId),
+                                value   = assigneeLabel(assignedTo, currentDeviceId, selectedList),
                                 onClick = { if (members.isNotEmpty()) showAssignMenu = true }
                             )
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
@@ -266,7 +267,7 @@ fun NeueAufgabeScreen(
                     )
                     members.forEach { memberId ->
                         ChoiceRow(
-                            label   = if (memberId == currentDeviceId) "Ich" else "Mitglied ${memberId.take(4).uppercase()}",
+                            label   = if (memberId == currentDeviceId) "Ich" else selectedList?.displayNameFor(memberId) ?: memberId.take(4).uppercase(),
                             onClick = { assignedTo = memberId; showAssignMenu = false }
                         )
                     }
@@ -432,10 +433,10 @@ private fun ChoiceRow(label: String, dotColor: Color? = null, onClick: () -> Uni
     }
 }
 
-private fun assigneeLabel(assignedTo: String?, currentDeviceId: String): String = when {
+private fun assigneeLabel(assignedTo: String?, currentDeviceId: String, list: TodoList?): String = when {
     assignedTo == null              -> "Niemand"
     assignedTo == currentDeviceId   -> "Ich"
-    else                             -> "Mitglied ${assignedTo.take(4).uppercase()}"
+    else                             -> list?.displayNameFor(assignedTo) ?: assignedTo.take(4).uppercase()
 }
 
 private fun formatDueDate(cal: Calendar): String {

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import de.beigel.list.data.DeviceIdManager
 import de.beigel.list.data.ListCounts
 import de.beigel.list.data.SelectedListsPreferences
 import de.beigel.list.data.TodoList
@@ -106,7 +107,8 @@ class ListsViewModel(
         if (name.isBlank()) return
         viewModelScope.launch {
             try {
-                val newId   = repository.createList(name.trim(), color)
+                val creatorName = DeviceIdManager.getDeviceName(context)
+                val newId   = repository.createList(name.trim(), color, creatorName)
                 val updated = _uiState.value.selectedListIds + newId
                 SelectedListsPreferences.setSelectedIds(context, updated)
                 _uiState.update { it.copy(lastListId = newId, selectedListIds = updated) }
@@ -159,7 +161,8 @@ class ListsViewModel(
     fun confirmJoin(listId: String) {
         viewModelScope.launch {
             try {
-                val list = repository.joinList(listId)
+                val displayName = DeviceIdManager.getDeviceName(context)
+                val list = repository.joinList(listId, displayName)
                 if (list != null) {
                     val updated = _uiState.value.selectedListIds + list.id
                     SelectedListsPreferences.setSelectedIds(context, updated)
@@ -184,7 +187,8 @@ class ListsViewModel(
         if (listId.isBlank()) return
         viewModelScope.launch {
             try {
-                val list = repository.joinList(listId.trim())
+                val displayName = DeviceIdManager.getDeviceName(context)
+                val list = repository.joinList(listId.trim(), displayName)
                 if (list != null) {
                     val updated = _uiState.value.selectedListIds + list.id
                     SelectedListsPreferences.setSelectedIds(context, updated)

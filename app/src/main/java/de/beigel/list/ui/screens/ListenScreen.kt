@@ -60,6 +60,7 @@ fun ListenScreen(
     onShare    : (TodoList) -> Unit,
     onErstellen: () -> Unit,
     onSearch   : () -> Unit,
+    onOpenTask : (TodoList, TodoItem) -> Unit = { _, _ -> },
 ) {
     val uiState           by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -157,7 +158,8 @@ fun ListenScreen(
                             AufgabenTaskRow(
                                 todo      = todo,
                                 listName  = list.name,
-                                onToggle  = { vm?.toggleTodo(todo); haptic.tick() }
+                                onToggle  = { vm?.toggleTodo(todo); haptic.tick() },
+                                onClick   = { haptic.tick(); onOpenTask(list, todo) }
                             )
                         }
                     }
