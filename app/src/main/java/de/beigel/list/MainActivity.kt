@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.view.WindowCompat
@@ -35,6 +36,13 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.SYSTEM -> systemDark
                 ThemeMode.LIGHT  -> false
                 ThemeMode.DARK   -> true
+            }
+
+            SideEffect {
+                val controller = WindowCompat.getInsetsController(window, window.decorView)
+                // Im Dark Theme helle (weiße) Symbole/Text in der Statusleiste, im Light Theme dunkle
+                controller.isAppearanceLightStatusBars = !isDark
+                controller.isAppearanceLightNavigationBars = !isDark
             }
 
             TodoSharedTheme(darkTheme = isDark, accentColor = accentColor) {

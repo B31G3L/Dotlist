@@ -68,7 +68,7 @@ fun ListenDetailScreen(
         uiState.error?.let { snackbarHostState.showSnackbar(it); todoVm.clearError() }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         LazyColumn(
             modifier       = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 96.dp)

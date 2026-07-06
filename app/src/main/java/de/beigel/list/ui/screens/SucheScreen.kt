@@ -68,7 +68,7 @@ fun SucheScreen(
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         // Suchfeld-Zeile
         Row(
             modifier          = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),

@@ -92,7 +92,6 @@ fun ListenScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .padding(innerPad)
         ) {
             if (uiState.isLoading) {
@@ -100,14 +99,14 @@ fun ListenScreen(
             } else {
                 LazyVerticalGrid(
                     columns             = GridCells.Fixed(2),
-                    contentPadding      = PaddingValues(bottom = 96.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding      = PaddingValues(start = 22.dp, end = 22.dp, bottom = 96.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier            = Modifier.fillMaxSize()
                 ) {
                     // Header (full width)
                     item(span = { GridItemSpan(2) }) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 16.dp)) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 16.dp)) {
                             Row(
                                 modifier              = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -135,9 +134,11 @@ fun ListenScreen(
                             list     = list,
                             index    = idx,
                             isShared = isShared,
+                            isSelected = list.id in uiState.selectedListIds,
                             counts   = uiState.listCounts[list.id] ?: ListCounts(),
                             onClick  = { haptic.click(); onOpenList(list) },
-                            onShare  = { e -> haptic.tick(); onShare(list) }
+                            onShare  = { e -> haptic.tick(); onShare(list) },
+                            onToggleSelect = { haptic.tick(); viewModel.toggleListSelection(list.id) }
                         )
                     }
 
@@ -231,12 +232,14 @@ private fun avatarLetterFor(memberId: String): String =
 
 @Composable
 private fun ListCard(
-    list    : TodoList,
-    index   : Int,
-    isShared: Boolean,
-    counts  : ListCounts,
-    onClick : () -> Unit,
-    onShare : (Any) -> Unit,
+    list        : TodoList,
+    index       : Int,
+    isShared    : Boolean,
+    isSelected  : Boolean,
+    counts      : ListCounts,
+    onClick     : () -> Unit,
+    onShare     : (Any) -> Unit,
+    onToggleSelect: () -> Unit,
 ) {
     val color = listColor(list.color)
     val bgAlpha = color.copy(alpha = 0.16f)
@@ -245,7 +248,7 @@ private fun ListCard(
         onClick = onClick,
         shape   = RoundedCornerShape(22.dp),
         colors  = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().height(190.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -261,16 +264,29 @@ private fun ListCard(
                     Icon(listIconFor(index), null, tint = color, modifier = Modifier.size(24.dp))
                 }
                 // Share indicator
-                IconButton(
-                    onClick  = { onShare(Unit) },
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        if (isShared) Icons.Default.Group else Icons.Default.Person,
-                        null,
-                        tint     = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.size(18.dp)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick  = onToggleSelect,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                            contentDescription = if (isSelected) "In Aufgaben-Übersicht anzeigen (aktiv)" else "In Aufgaben-Übersicht anzeigen (inaktiv)",
+                            tint     = if (isSelected) color else MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick  = { onShare(Unit) },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            if (isShared) Icons.Default.Group else Icons.Default.Person,
+                            null,
+                            tint     = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -331,7 +347,7 @@ private fun NewListCard(onClick: () -> Unit) {
         shape   = RoundedCornerShape(22.dp),
         border  = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outlineVariant),
         color   = Color.Transparent,
-        modifier = Modifier.fillMaxWidth().height(160.dp)
+        modifier = Modifier.fillMaxWidth().height(190.dp)
     ) {
         Column(
             modifier            = Modifier.fillMaxSize(),
