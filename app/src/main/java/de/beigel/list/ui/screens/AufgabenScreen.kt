@@ -48,6 +48,8 @@ fun AufgabenScreen(
     padding    : PaddingValues,
     deviceId   : String,
     onGoListen : () -> Unit,
+    onSearch   : () -> Unit,
+    onNotifications: () -> Unit,
 ) {
     val activeLists = remember(lists, selectedIds) {
         lists.filter { it.id in selectedIds }
@@ -117,8 +119,9 @@ fun AufgabenScreen(
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Search, contentDescription = "Suche",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Box {
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.clickable { haptic.tick(); onSearch() })
+                        Box(modifier = Modifier.clickable { haptic.tick(); onNotifications() }) {
                             Icon(Icons.Default.Notifications, contentDescription = "Benachrichtigungen",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             Box(

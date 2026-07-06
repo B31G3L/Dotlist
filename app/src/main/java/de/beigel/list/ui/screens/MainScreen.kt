@@ -31,6 +31,8 @@ sealed class AppScreen {
     data class ListenDetail(val list: TodoList) : AppScreen()
     object ListeErstellen : AppScreen()
     data class ListeTeilen(val list: TodoList) : AppScreen()
+    object Suche             : AppScreen()
+    object Benachrichtigungen : AppScreen()
 }
 
 private val AppScreen.isTopLevel
@@ -57,6 +59,7 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
     val haptic  = remember { HapticFeedback(context) }
 
     var screen by remember { mutableStateOf<AppScreen>(AppScreen.Aufgaben) }
+    var previousTopLevel by remember { mutableStateOf<AppScreen>(AppScreen.Aufgaben) }
 
     val listsViewModel: ListsViewModel = viewModel(
         factory = ListsViewModel.Factory(repository, context)
@@ -71,6 +74,7 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
                 is AppScreen.ListeErstellen -> AppScreen.Listen
                 is AppScreen.ListeTeilen   -> if ((screen as? AppScreen.ListeTeilen) != null)
                     AppScreen.Listen else AppScreen.Listen
+                is AppScreen.Suche, is AppScreen.Benachrichtigungen -> previousTopLevel
                 else                       -> AppScreen.Listen
             }
         }
@@ -84,11 +88,20 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
         fun goDetail(list: TodoList)  { screen = AppScreen.ListenDetail(list) }
         fun goErstellen()             { screen = AppScreen.ListeErstellen }
         fun goTeilen(list: TodoList)  { screen = AppScreen.ListeTeilen(list) }
+        fun goSuche() {
+            if (screen.isTopLevel) previousTopLevel = screen
+            screen = AppScreen.Suche
+        }
+        fun goBenachrichtigungen() {
+            if (screen.isTopLevel) previousTopLevel = screen
+            screen = AppScreen.Benachrichtigungen
+        }
         fun goBack()                  {
             screen = when (val s = screen) {
                 is AppScreen.ListenDetail   -> AppScreen.Listen
                 is AppScreen.ListeErstellen -> AppScreen.Listen
                 is AppScreen.ListeTeilen    -> AppScreen.ListenDetail(s.list)
+                is AppScreen.Suche, is AppScreen.Benachrichtigungen -> previousTopLevel
                 else                        -> AppScreen.Listen
             }
         }
@@ -128,16 +141,20 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
                 haptic     = haptic,
                 padding    = padding,
                 deviceId   = deviceId,
-                onGoListen = { haptic.click(); nav.goListen() }
+                onGoListen = { haptic.click(); nav.goListen() },
+                onSearch   = { nav.goSuche() },
+                onNotifications = { nav.goBenachrichtigungen() }
             )
             is AppScreen.Listen -> ListenScreen(
                 viewModel  = listsViewModel,
+                repository = repository,
                 deviceId   = deviceId,
                 haptic     = haptic,
                 padding    = padding,
                 onOpenList = { list -> haptic.click(); nav.goDetail(list) },
                 onShare    = { list -> nav.goTeilen(list) },
-                onErstellen= { nav.goErstellen() }
+                onErstellen= { nav.goErstellen() },
+                onSearch   = { nav.goSuche() }
             )
             is AppScreen.Kalender -> KalenderScreen(
                 lists      = listsUiState.lists,
@@ -147,9 +164,23 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
                 padding    = padding
             )
             is AppScreen.Profil -> ProfilScreen(
-                listsCount = listsUiState.lists.size,
+                lists      = listsUiState.lists,
+                repository = repository,
                 haptic     = haptic,
                 padding    = padding
+            )
+            is AppScreen.Suche -> SucheScreen(
+                lists      = listsUiState.lists,
+                repository = repository,
+                haptic     = haptic,
+                onBack     = { nav.goBack() }
+            )
+            is AppScreen.Benachrichtigungen -> BenachrichtigungenScreen(
+                lists      = listsUiState.lists,
+                repository = repository,
+                deviceId   = deviceId,
+                haptic     = haptic,
+                onBack     = { nav.goBack() }
             )
             is AppScreen.ListenDetail -> ListenDetailScreen(
                 list    = s.list,

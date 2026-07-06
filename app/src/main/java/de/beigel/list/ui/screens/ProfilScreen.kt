@@ -19,18 +19,24 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import de.beigel.list.data.TodoList
+import de.beigel.list.repository.TodoRepository
 import de.beigel.list.ui.theme.AccentColor
 import de.beigel.list.ui.theme.AccentColorPreferences
 import de.beigel.list.ui.theme.ThemeMode
 import de.beigel.list.ui.theme.ThemePreferences
 import de.beigel.list.utils.HapticFeedback
+import de.beigel.list.viewmodel.TodosViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun ProfilScreen(
-    listsCount: Int,
-    haptic    : HapticFeedback,
-    padding   : PaddingValues,
+    lists      : List<TodoList>,
+    repository : TodoRepository,
+    haptic     : HapticFeedback,
+    padding    : PaddingValues,
 ) {
     val context     = LocalContext.current
     val scope       = rememberCoroutineScope()
@@ -38,6 +44,18 @@ fun ProfilScreen(
     val accentColor by AccentColorPreferences.getAccentColor(context).collectAsState(initial = AccentColor.VIOLET)
 
     val isDark = themeMode == ThemeMode.DARK || themeMode == ThemeMode.SYSTEM
+
+    // Pro Liste ein TodosViewModel, nur um offen/erledigt über alle Listen zu summieren
+    // Pro Liste ein TodosViewModel, nur um offen/erledigt über alle Listen zu summieren
+    val todosViewModels: List<TodosViewModel> = lists.map { list ->
+        viewModel<TodosViewModel>(
+            key     = "profil_${list.id}",
+            factory = TodosViewModel.Factory(repository, list.id)
+        )
+    }
+    val allTodos = todosViewModels.flatMap { it.uiState.collectAsStateWithLifecycle().value.todos }
+    val openCount = allTodos.count { !it.isDone }
+    val doneCount = allTodos.count { it.isDone }
 
     Column(
         modifier = Modifier
@@ -92,9 +110,9 @@ fun ProfilScreen(
             modifier              = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            StatCard("–", "Offen",    Modifier.weight(1f))
-            StatCard("–", "Erledigt", Modifier.weight(1f))
-            StatCard("$listsCount", "Listen", Modifier.weight(1f))
+            StatCard("$openCount", "Offen",    Modifier.weight(1f))
+            StatCard("$doneCount", "Erledigt", Modifier.weight(1f))
+            StatCard("${lists.size}", "Listen", Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(22.dp))

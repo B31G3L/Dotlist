@@ -63,6 +63,11 @@ fun ListenDetailScreen(
 
     val listIdx = 0  // We don't have global index here, use 0 as default icon
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { snackbarHostState.showSnackbar(it); todoVm.clearError() }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier       = Modifier.fillMaxSize(),
@@ -209,6 +214,11 @@ fun ListenDetailScreen(
             shape          = RoundedCornerShape(18.dp),
             icon           = { Icon(Icons.Default.Add, null) },
             text           = { Text("Aufgabe", fontWeight = FontWeight.Medium, fontSize = 15.sp) }
+        )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier  = Modifier.align(Alignment.BottomCenter)
         )
     }
 }

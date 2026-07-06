@@ -19,6 +19,7 @@ data class ListsUiState(
     val showCreateDialog: Boolean        = false,
     val showJoinDialog  : Boolean        = false,
     val joinSuccess     : TodoList?      = null,
+    val invitePreview   : TodoList?      = null,
     val lastListId      : String?        = null,
     val selectedListIds : Set<String>    = emptySet()
 )
@@ -138,6 +139,46 @@ class ListsViewModel(
             }
         }
     }
+
+    fun previewInvite(listId: String) {
+        if (listId.isBlank()) return
+        viewModelScope.launch {
+            try {
+                val list = repository.previewList(listId.trim())
+                if (list != null) {
+                    _uiState.update { it.copy(invitePreview = list, showJoinDialog = false) }
+                } else {
+                    _uiState.update { it.copy(error = "Liste nicht gefunden") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Fehler beim Laden der Einladung") }
+            }
+        }
+    }
+
+    fun confirmJoin(listId: String) {
+        viewModelScope.launch {
+            try {
+                val list = repository.joinList(listId)
+                if (list != null) {
+                    val updated = _uiState.value.selectedListIds + list.id
+                    SelectedListsPreferences.setSelectedIds(context, updated)
+                    _uiState.update { it.copy(
+                        joinSuccess     = list,
+                        invitePreview   = null,
+                        lastListId      = list.id,
+                        selectedListIds = updated
+                    )}
+                } else {
+                    _uiState.update { it.copy(error = "Liste nicht gefunden", invitePreview = null) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Fehler beim Beitreten", invitePreview = null) }
+            }
+        }
+    }
+
+    fun clearInvitePreview() = _uiState.update { it.copy(invitePreview = null) }
 
     fun joinList(listId: String) {
         if (listId.isBlank()) return

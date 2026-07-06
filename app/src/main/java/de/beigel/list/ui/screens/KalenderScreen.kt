@@ -20,9 +20,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.beigel.list.data.Priority
 import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
 import de.beigel.list.repository.TodoRepository
+import de.beigel.list.ui.theme.priorityColor
 import de.beigel.list.utils.HapticFeedback
 import de.beigel.list.viewmodel.TodosViewModel
 import java.util.Calendar
@@ -64,8 +66,19 @@ fun KalenderScreen(
 
     val weekdays = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
 
-    // Open todos for selected day (using all open todos since no date on model)
-    val openTodos = allTodos.filter { !it.second.isDone }
+    // Offene Aufgaben mit Fälligkeitsdatum, gruppiert nach Tag-im-Monat (nur aktueller Monat/Jahr)
+    val todosByDay: Map<Int, List<Pair<TodoList, TodoItem>>> = remember(allTodos, year, month) {
+        allTodos
+            .filter { (_, todo) -> !todo.isDone && todo.dueDate != null }
+            .filter { (_, todo) ->
+                val c = Calendar.getInstance().apply { time = todo.dueDate!!.toDate() }
+                c.get(Calendar.YEAR) == year && c.get(Calendar.MONTH) == month
+            }
+            .groupBy { (_, todo) ->
+                Calendar.getInstance().apply { time = todo.dueDate!!.toDate() }.get(Calendar.DAY_OF_MONTH)
+            }
+    }
+    val selectedDayTodos = todosByDay[selectedDay] ?: emptyList()
 
     val selectedDayLabel = remember(year, month, selectedDay) {
         val c = Calendar.getInstance().apply { set(year, month, selectedDay) }
@@ -138,9 +151,13 @@ fun KalenderScreen(
                     ) {
                         if (day != null) {
                             val isToday    = day == today.get(Calendar.DAY_OF_MONTH) &&
-                                             month == today.get(Calendar.MONTH) &&
-                                             year == today.get(Calendar.YEAR)
+                                    month == today.get(Calendar.MONTH) &&
+                                    year == today.get(Calendar.YEAR)
                             val isSelected = day == selectedDay
+                            val dayTasks   = todosByDay[day]
+                            val dotColor   = dayTasks?.firstOrNull()?.let { (_, todo) ->
+                                priorityColor(Priority.fromString(todo.priority))
+                            }
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier            = Modifier.clickable { selectedDay = day; haptic.tick() }
@@ -165,12 +182,10 @@ fun KalenderScreen(
                                         }
                                     )
                                 }
-                                // Dot wenn Aufgaben (immer für heutigen Tag)
+                                // Punkt nur, wenn an dem Tag tatsächlich Aufgaben fällig sind
                                 Box(
-                                    modifier = Modifier.size(5.dp).clip(CircleShape).background(
-                                        if (isToday) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                                        else Color.Transparent
-                                    )
+                                    modifier = Modifier.size(5.dp).clip(CircleShape)
+                                        .background(dotColor ?: Color.Transparent)
                                 )
                             }
                         }
@@ -182,23 +197,23 @@ fun KalenderScreen(
         item {
             SectionLabel(selectedDayLabel, modifier = Modifier.padding(top = 8.dp))
         }
-        // Aufgaben für den Tag
-        if (openTodos.isEmpty()) {
+        // Aufgaben für den ausgewählten Tag
+        if (selectedDayTodos.isEmpty()) {
             item {
                 Box(
                     modifier         = Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 22.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Keine offenen Aufgaben",
+                    Text("Keine Aufgaben an diesem Tag",
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
             }
         } else {
-            items(openTodos, key = { "${it.first.id}_${it.second.id}" }) { (list, todo) ->
+            items(selectedDayTodos, key = { "${it.first.id}_${it.second.id}" }) { (list, todo) ->
                 val vm = allVms.find { it.first.id == list.id }?.second
                 AufgabenTaskRow(
                     todo      = todo,
-                    listColor = listColor(list.color),
+                    listName  = list.name,
                     onToggle  = { vm?.toggleTodo(todo); haptic.tick() }
                 )
             }

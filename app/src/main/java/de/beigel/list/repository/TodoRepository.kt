@@ -81,6 +81,15 @@ class TodoRepository(private val deviceId: String) {
     }
 
     /**
+     * Liste anhand der ID ansehen, ohne beizutreten (für den Einladungs-Screen).
+     */
+    suspend fun previewList(listId: String): TodoList? {
+        val doc = listsRef.document(listId).get().await()
+        if (!doc.exists()) return null
+        return doc.toObject(TodoList::class.java)?.copy(id = doc.id)
+    }
+
+    /**
      * Dem Gerät über einen Einladungslink einer Liste beitreten.
      * Gibt die Liste zurück wenn erfolgreich, sonst null.
      */

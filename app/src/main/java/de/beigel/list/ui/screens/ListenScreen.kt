@@ -3,6 +3,7 @@ package de.beigel.list.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -23,11 +24,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import de.beigel.list.data.ListCounts
+import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
+import de.beigel.list.repository.TodoRepository
 import de.beigel.list.utils.HapticFeedback
 import de.beigel.list.viewmodel.ListsViewModel
+import de.beigel.list.viewmodel.TodosViewModel
 
 private val listIconSet: List<ImageVector> = listOf(
     Icons.Default.Work,
@@ -45,15 +52,31 @@ fun listIconFor(index: Int): ImageVector = listIconSet[index % listIconSet.size]
 @Composable
 fun ListenScreen(
     viewModel  : ListsViewModel,
+    repository : TodoRepository,
     deviceId   : String,
     haptic     : HapticFeedback,
     padding    : PaddingValues,
     onOpenList : (TodoList) -> Unit,
     onShare    : (TodoList) -> Unit,
     onErstellen: () -> Unit,
+    onSearch   : () -> Unit,
 ) {
     val uiState           by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Pro Liste ein TodosViewModel, nur um die heute fälligen Aufgaben zu ermitteln
+    val todosViewModels: List<Pair<TodoList, TodosViewModel>> = uiState.lists.map { list ->
+        list to viewModel(
+            key     = "listen_today_${list.id}",
+            factory = TodosViewModel.Factory(repository, list.id)
+        )
+    }
+    val todayPairs: List<Pair<TodoList, TodoItem>> = todosViewModels
+        .flatMap { (list, vm) ->
+            vm.uiState.collectAsStateWithLifecycle().value.todos
+                .filter { !it.isDone && it.dueDate != null && isToday(it.dueDate!!) }
+                .map { list to it }
+        }
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let { snackbarHostState.showSnackbar(it); viewModel.clearError() }
@@ -92,7 +115,8 @@ fun ListenScreen(
                             ) {
                                 Text("Meine Listen", fontSize = 34.sp, fontWeight = FontWeight.Medium,
                                     letterSpacing = (-0.5).sp, color = MaterialTheme.colorScheme.onSurface)
-                                Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.clickable { haptic.tick(); onSearch() })
                             }
                             val shared = uiState.lists.count { it.memberIds.size > 1 }
                             Text(
@@ -120,6 +144,21 @@ fun ListenScreen(
                     // New list card
                     item {
                         NewListCard(onClick = { haptic.click(); onErstellen() })
+                    }
+
+                    // Heute fällig
+                    if (todayPairs.isNotEmpty()) {
+                        item(span = { GridItemSpan(2) }) {
+                            SectionLabel("Heute fällig", modifier = Modifier.padding(top = 8.dp))
+                        }
+                        items(todayPairs, span = { GridItemSpan(2) }, key = { "today_${it.first.id}_${it.second.id}" }) { (list, todo) ->
+                            val vm = todosViewModels.find { it.first.id == list.id }?.second
+                            AufgabenTaskRow(
+                                todo      = todo,
+                                listName  = list.name,
+                                onToggle  = { vm?.toggleTodo(todo); haptic.tick() }
+                            )
+                        }
                     }
 
                     // Beitreten per Code
@@ -152,9 +191,32 @@ fun ListenScreen(
     if (uiState.showJoinDialog) {
         JoinListDialog(
             onDismiss = { haptic.tick(); viewModel.hideJoinDialog() },
-            onJoin    = { viewModel.joinList(it) }
+            onJoin    = { viewModel.previewInvite(it) }
         )
     }
+
+    uiState.invitePreview?.let { previewList ->
+        Dialog(
+            onDismissRequest = { viewModel.clearInvitePreview() },
+            properties       = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                EinladungScreen(
+                    list      = previewList,
+                    haptic    = haptic,
+                    onAccept  = { viewModel.confirmJoin(previewList.id) },
+                    onDecline = { viewModel.clearInvitePreview() }
+                )
+            }
+        }
+    }
+}
+
+private fun isToday(ts: com.google.firebase.Timestamp): Boolean {
+    val due   = java.util.Calendar.getInstance().apply { time = ts.toDate() }
+    val today = java.util.Calendar.getInstance()
+    return due.get(java.util.Calendar.YEAR) == today.get(java.util.Calendar.YEAR) &&
+            due.get(java.util.Calendar.DAY_OF_YEAR) == today.get(java.util.Calendar.DAY_OF_YEAR)
 }
 
 private val avatarColors: List<Color> = listOf(
