@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Dotlist</string>
+    <string name="google_web_client_id">513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com</string>
+
 </resources>
