@@ -8,7 +8,8 @@ import com.google.firebase.firestore.PropertyName
  * @param id            Firestore-Dokument-ID
  * @param name          Anzeigename der Liste
  * @param memberIds     Liste aller Geräte-IDs die Zugriff haben
- * @param createdBy     Geräte-ID des Erstellers
+ * @param adminIds      Geräte-IDs mit Admin-Rechten (Besitzer zählt nicht extra dazu)
+ * @param createdBy     Geräte-ID des Erstellers/Besitzers
  * @param createdAt     Erstellungszeitpunkt
  * @param color         Farbe der Liste (Hex-String, z.B. "#FF5733")
  */
@@ -17,13 +18,33 @@ data class TodoList(
     val name: String = "",
     val memberIds: List<String> = emptyList(),
     val memberNames: Map<String, String> = emptyMap(),
+    val adminIds: List<String> = emptyList(),
     val createdBy: String = "",
     val createdAt: Timestamp = Timestamp.now(),
     val color: String = "#6750A4"
 ) {
     // Parameterloser Konstruktor für Firestore-Deserialisierung
-    constructor() : this("", "", emptyList(), emptyMap(), "", Timestamp.now(), "#6750A4")
+    constructor() : this("", "", emptyList(), emptyMap(), emptyList(), "", Timestamp.now(), "#6750A4")
 }
+
+/**
+ * Rolle eines Mitglieds innerhalb einer Liste.
+ */
+enum class MemberRole(val label: String) {
+    BESITZER("Besitzer"),
+    ADMIN("Admin"),
+    MITGLIED("Bearbeiter")
+}
+
+fun TodoList.roleOf(memberId: String): MemberRole = when {
+    memberId == createdBy   -> MemberRole.BESITZER
+    memberId in adminIds    -> MemberRole.ADMIN
+    else                     -> MemberRole.MITGLIED
+}
+
+/** Besitzer und Admins dürfen den Einladungscode sehen und Mitglieder verwalten. */
+fun TodoList.canManageMembers(memberId: String): Boolean =
+    memberId == createdBy || memberId in adminIds
 
 /**
  * Anzeigename für ein Mitglied einer Liste. Fällt auf eine Kurzform der

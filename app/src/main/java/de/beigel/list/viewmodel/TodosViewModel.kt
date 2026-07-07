@@ -3,6 +3,8 @@ package de.beigel.list.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import de.beigel.list.data.Comment
+import de.beigel.list.data.Subtask
 import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
 import de.beigel.list.repository.TodoRepository
@@ -48,21 +50,29 @@ class TodosViewModel(
         dueDate         : com.google.firebase.Timestamp? = null,
         assignedTo      : String? = null,
         reminderMinutes : Int? = null,
+        actorName       : String = "",
     ) {
         if (title.isBlank()) return
         viewModelScope.launch {
             try {
                 repository.addTodo(listId, title, description, priority, dueDate, assignedTo, reminderMinutes)
+                if (assignedTo != null) {
+                    repository.notifyAssigned(assignedTo, actorName, title, listId, "")
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Todo konnte nicht hinzugefügt werden") }
             }
         }
     }
 
-    fun toggleTodo(todo: TodoItem) {
+    fun toggleTodo(todo: TodoItem, actorName: String = "") {
         viewModelScope.launch {
             try {
+                val willBeDone = !todo.isDone
                 repository.toggleTodo(listId, todo)
+                if (willBeDone && todo.assignedTo != null) {
+                    repository.notifyDone(todo.assignedTo, actorName, todo.title, listId, todo.id)
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Fehler beim Aktualisieren") }
             }
@@ -92,19 +102,24 @@ class TodosViewModel(
     }
 
     fun updateTodo(
-        todoId          : String,
-        title           : String,
-        description     : String,
-        priority        : de.beigel.list.data.Priority,
-        dueDate         : com.google.firebase.Timestamp?,
-        assignedTo      : String?,
-        reminderMinutes : Int?,
-        onDone          : () -> Unit = {},
+        todoId             : String,
+        title              : String,
+        description        : String,
+        priority           : de.beigel.list.data.Priority,
+        dueDate            : com.google.firebase.Timestamp?,
+        assignedTo         : String?,
+        reminderMinutes    : Int?,
+        previousAssignedTo : String? = null,
+        actorName          : String = "",
+        onDone             : () -> Unit = {},
     ) {
         if (title.isBlank()) return
         viewModelScope.launch {
             try {
                 repository.updateTodo(listId, todoId, title, description, priority, dueDate, assignedTo, reminderMinutes)
+                if (assignedTo != null && assignedTo != previousAssignedTo) {
+                    repository.notifyAssigned(assignedTo, actorName, title, listId, todoId)
+                }
                 onDone()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Fehler beim Speichern") }
@@ -120,6 +135,58 @@ class TodosViewModel(
                 onDone()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Aufgabe konnte nicht verschoben werden") }
+            }
+        }
+    }
+
+    fun addSubtask(todo: TodoItem, title: String) {
+        if (title.isBlank()) return
+        val newSubtask = Subtask(id = java.util.UUID.randomUUID().toString(), title = title.trim())
+        viewModelScope.launch {
+            try {
+                repository.updateSubtasks(listId, todo.id, todo.subtasks + newSubtask)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Unteraufgabe konnte nicht gespeichert werden") }
+            }
+        }
+    }
+
+    fun toggleSubtask(todo: TodoItem, subtaskId: String) {
+        val updated = todo.subtasks.map { if (it.id == subtaskId) it.copy(isDone = !it.isDone) else it }
+        viewModelScope.launch {
+            try {
+                repository.updateSubtasks(listId, todo.id, updated)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Unteraufgabe konnte nicht aktualisiert werden") }
+            }
+        }
+    }
+
+    fun deleteSubtask(todo: TodoItem, subtaskId: String) {
+        viewModelScope.launch {
+            try {
+                repository.updateSubtasks(listId, todo.id, todo.subtasks.filterNot { it.id == subtaskId })
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Unteraufgabe konnte nicht gelöscht werden") }
+            }
+        }
+    }
+
+    fun addComment(todo: TodoItem, text: String, authorId: String, actorName: String = "") {
+        if (text.isBlank()) return
+        val comment = Comment(
+            id        = java.util.UUID.randomUUID().toString(),
+            authorId  = authorId,
+            text      = text.trim(),
+            createdAt = com.google.firebase.Timestamp.now()
+        )
+        viewModelScope.launch {
+            try {
+                repository.addComment(listId, todo.id, comment)
+                // Zuständige Person benachrichtigen (falls es nicht der Kommentierende selbst ist)
+                repository.notifyComment(todo.assignedTo, actorName, todo.title, listId, todo.id)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Kommentar konnte nicht gespeichert werden") }
             }
         }
     }

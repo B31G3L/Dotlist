@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.beigel.list.data.DeviceIdManager
+import de.beigel.list.data.NotificationPreferences
 import de.beigel.list.data.TodoList
 import de.beigel.list.repository.TodoRepository
 import de.beigel.list.ui.theme.AccentColor
@@ -43,6 +44,7 @@ fun ProfilScreen(
     val context     = LocalContext.current
     val scope       = rememberCoroutineScope()
     val themeMode   by ThemePreferences.getThemeMode(context).collectAsState(initial = ThemeMode.SYSTEM)
+    val pushEnabled by NotificationPreferences.getPushEnabled(context).collectAsState(initial = true)
     val accentColor by AccentColorPreferences.getAccentColor(context).collectAsState(initial = AccentColor.VIOLET)
     val systemDark  = isSystemInDarkTheme()
     val isDark = when (themeMode) {
@@ -134,8 +136,11 @@ fun ProfilScreen(
             SettingsToggleRow(
                 icon    = Icons.Default.Notifications,
                 title   = "Benachrichtigungen",
-                checked = true,
-                onToggle = { haptic.tick() }
+                checked = pushEnabled,
+                onToggle = {
+                    haptic.tick()
+                    scope.launch { NotificationPreferences.setPushEnabled(context, !pushEnabled) }
+                }
             )
             HorizontalDivider(modifier = Modifier.padding(start = 52.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,7 +52,11 @@ fun AufgabenScreen(
     onSearch   : () -> Unit,
     onNotifications: () -> Unit,
     onOpenTask : (TodoList, TodoItem) -> Unit = { _, _ -> },
+    unreadNotifications: Int = 0,
 ) {
+    val context = LocalContext.current
+    val actorName = remember { de.beigel.list.data.DeviceIdManager.getDeviceName(context) }
+
     val activeLists = remember(lists, selectedIds) {
         lists.filter { it.id in selectedIds }
     }
@@ -125,13 +130,15 @@ fun AufgabenScreen(
                         Box(modifier = Modifier.clickable { haptic.tick(); onNotifications() }) {
                             Icon(Icons.Default.Notifications, contentDescription = "Benachrichtigungen",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.error)
-                            )
+                            if (unreadNotifications > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.error)
+                                )
+                            }
                         }
                     }
                 }
@@ -186,7 +193,7 @@ fun AufgabenScreen(
                     AufgabenTaskRow(
                         todo      = todo,
                         listName  = list.name,
-                        onToggle  = { vm?.toggleTodo(todo); haptic.tick() },
+                        onToggle  = { vm?.toggleTodo(todo, actorName); haptic.tick() },
                         onClick   = { haptic.tick(); onOpenTask(list, todo) }
                     )
                 }
@@ -201,7 +208,7 @@ fun AufgabenScreen(
                     AufgabenTaskRow(
                         todo      = todo,
                         listName  = list.name,
-                        onToggle  = { vm?.toggleTodo(todo); haptic.tick() },
+                        onToggle  = { vm?.toggleTodo(todo, actorName); haptic.tick() },
                         onClick   = { haptic.tick(); onOpenTask(list, todo) }
                     )
                 }
@@ -248,7 +255,7 @@ fun AufgabenScreen(
             onDismiss       = { showAddDialog = false },
             onSave          = { listId, title, description, priority, dueDate, assignedTo, reminderMinutes ->
                 viewModels.find { it.first.id == listId }?.second?.addTodo(
-                    title, description, priority, dueDate, assignedTo, reminderMinutes
+                    title, description, priority, dueDate, assignedTo, reminderMinutes, actorName = actorName
                 )
                 showAddDialog = false
             }

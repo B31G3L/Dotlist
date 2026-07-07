@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,6 +63,8 @@ fun ListenScreen(
     onSearch   : () -> Unit,
     onOpenTask : (TodoList, TodoItem) -> Unit = { _, _ -> },
 ) {
+    val context           = LocalContext.current
+    val actorName         = remember { de.beigel.list.data.DeviceIdManager.getDeviceName(context) }
     val uiState           by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -158,7 +161,7 @@ fun ListenScreen(
                             AufgabenTaskRow(
                                 todo      = todo,
                                 listName  = list.name,
-                                onToggle  = { vm?.toggleTodo(todo); haptic.tick() },
+                                onToggle  = { vm?.toggleTodo(todo, actorName); haptic.tick() },
                                 onClick   = { haptic.tick(); onOpenTask(list, todo) }
                             )
                         }

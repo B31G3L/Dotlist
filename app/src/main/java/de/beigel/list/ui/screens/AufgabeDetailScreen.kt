@@ -11,7 +11,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowRight
@@ -26,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
@@ -71,6 +75,8 @@ fun AufgabeDetailScreen(
         factory = TodosViewModel.Factory(repository, list.id)
     )
     val uiState by todoVm.uiState.collectAsStateWithLifecycle()
+    val context   = LocalContext.current
+    val actorName = remember { de.beigel.list.data.DeviceIdManager.getDeviceName(context) }
 
     // Immer die aktuelle Version aus dem Live-Stream nehmen, Fallback auf den übergebenen Stand
     val liveTodo = uiState.todos.find { it.id == todo.id } ?: todo
@@ -85,6 +91,10 @@ fun AufgabeDetailScreen(
     var assignedTo      by remember(liveTodo.id) { mutableStateOf(liveTodo.assignedTo) }
     var reminderMinutes by remember(liveTodo.id) { mutableStateOf(liveTodo.reminderMinutes) }
 
+    var showNewSubtaskField by remember { mutableStateOf(false) }
+    var newSubtaskText      by remember { mutableStateOf("") }
+    var newCommentText      by remember { mutableStateOf("") }
+
     var showMenu          by remember { mutableStateOf(false) }
     var showListMenu       by remember { mutableStateOf(false) }
     var showDatePicker    by remember { mutableStateOf(false) }
@@ -98,13 +108,15 @@ fun AufgabeDetailScreen(
     fun save() {
         val ts = dueDateCal?.let { Timestamp(it.time) }
         todoVm.updateTodo(
-            todoId          = liveTodo.id,
-            title           = title,
-            description     = description,
-            priority        = priority,
-            dueDate         = ts,
-            assignedTo      = assignedTo,
-            reminderMinutes = reminderMinutes,
+            todoId             = liveTodo.id,
+            title              = title,
+            description        = description,
+            priority           = priority,
+            dueDate            = ts,
+            assignedTo         = assignedTo,
+            reminderMinutes    = reminderMinutes,
+            previousAssignedTo = liveTodo.assignedTo,
+            actorName          = actorName,
         )
     }
 
@@ -148,7 +160,7 @@ fun AufgabeDetailScreen(
                         .background(if (liveTodo.isDone) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .clickable {
                             haptic.tick()
-                            todoVm.toggleTodo(liveTodo)
+                            todoVm.toggleTodo(liveTodo, actorName)
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -274,6 +286,151 @@ fun AufgabeDetailScreen(
                         value   = DetailReminderOptions.firstOrNull { it.second == reminderMinutes }?.first ?: "Keine",
                         onClick = { showReminderMenu = true }
                     )
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
+
+            // ── Unteraufgaben ─────────────────────────────────────────
+            val doneSubtasks = liveTodo.subtasks.count { it.isDone }
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                Text(
+                    "UNTERAUFGABEN", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (liveTodo.subtasks.isNotEmpty()) {
+                    Text(
+                        "$doneSubtasks/${liveTodo.subtasks.size}", fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            liveTodo.subtasks.forEach { subtask ->
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .clickable { todoVm.toggleSubtask(liveTodo, subtask.id) }
+                        .padding(vertical = 9.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.size(22.dp).clip(CircleShape)
+                            .background(if (subtask.isDone) MaterialTheme.colorScheme.primary else Color.Transparent),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (subtask.isDone) {
+                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(15.dp))
+                        } else {
+                            Surface(
+                                modifier = Modifier.size(22.dp), shape = CircleShape, color = Color.Transparent,
+                                border   = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.outline)
+                            ) {}
+                        }
+                    }
+                    Text(
+                        subtask.title, fontSize = 15.sp, modifier = Modifier.weight(1f),
+                        color          = if (subtask.isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                        textDecoration = if (subtask.isDone) TextDecoration.LineThrough else TextDecoration.None
+                    )
+                    IconButton(onClick = { haptic.heavy(); todoVm.deleteSubtask(liveTodo, subtask.id) }, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+            if (showNewSubtaskField) {
+                TextField(
+                    value           = newSubtaskText,
+                    onValueChange   = { newSubtaskText = it },
+                    placeholder     = { Text("Unteraufgabe …") },
+                    singleLine      = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = {
+                        todoVm.addSubtask(liveTodo, newSubtaskText)
+                        newSubtaskText = ""
+                        showNewSubtaskField = false
+                    }),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor   = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor   = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .clickable { showNewSubtaskField = true }
+                        .padding(vertical = 9.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    Text("Unteraufgabe hinzufügen", fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
+
+            // ── Kommentare ────────────────────────────────────────────
+            Text(
+                "KOMMENTARE", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(10.dp))
+            liveTodo.comments.sortedBy { it.createdAt }.forEach { comment ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val authorName = if (comment.authorId == currentDeviceId) "Ich" else list.displayNameFor(comment.authorId)
+                    Box(
+                        modifier = Modifier.size(32.dp).clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(authorName.take(1).uppercase(), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(authorName, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                            Text(formatRelativeTime(comment.createdAt), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(comment.text, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(top = 2.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value         = newCommentText,
+                    onValueChange = { newCommentText = it },
+                    placeholder   = { Text("Kommentar schreiben …") },
+                    singleLine    = true,
+                    shape         = RoundedCornerShape(24.dp),
+                    modifier      = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = {
+                        if (newCommentText.isNotBlank()) {
+                            haptic.tick()
+                            todoVm.addComment(liveTodo, newCommentText, currentDeviceId, actorName)
+                            newCommentText = ""
+                        }
+                    },
+                    modifier = Modifier.size(44.dp).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Send, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -472,4 +629,14 @@ private fun assigneeLabelFor(assignedTo: String?, currentDeviceId: String, list:
 private fun formatDueDate(cal: Calendar): String {
     val fmt = SimpleDateFormat("EEE, d. MMM · HH:mm", Locale.GERMAN)
     return fmt.format(cal.time)
+}
+
+private fun formatRelativeTime(ts: Timestamp): String {
+    val diffMinutes = (System.currentTimeMillis() - ts.toDate().time) / 60000
+    return when {
+        diffMinutes < 1   -> "gerade eben"
+        diffMinutes < 60  -> "vor $diffMinutes Min"
+        diffMinutes < 1440 -> "vor ${diffMinutes / 60} Std"
+        else               -> "vor ${diffMinutes / 1440} Tag${if (diffMinutes / 1440 > 1) "en" else ""}"
+    }
 }

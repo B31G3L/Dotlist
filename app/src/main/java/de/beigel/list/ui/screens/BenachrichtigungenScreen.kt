@@ -7,12 +7,13 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Comment
+import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -24,68 +25,25 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import de.beigel.list.data.TodoItem
+import com.google.firebase.Timestamp
+import de.beigel.list.data.AppNotification
 import de.beigel.list.data.TodoList
-import de.beigel.list.repository.TodoRepository
-import de.beigel.list.ui.theme.priorityColor
-import de.beigel.list.data.Priority
 import de.beigel.list.utils.HapticFeedback
-import de.beigel.list.viewmodel.TodosViewModel
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Locale
-
-private data class NotificationEntry(
-    val icon    : ImageVector,
-    val iconTint: Color,
-    val text    : String,
-    val meta    : String,
-)
 
 @Composable
 fun BenachrichtigungenScreen(
-    lists      : List<TodoList>,
-    repository : TodoRepository,
-    deviceId   : String,
-    haptic     : HapticFeedback,
-    onBack     : () -> Unit,
+    notifications     : List<AppNotification>,
+    lists              : List<TodoList>,
+    deviceId           : String,
+    haptic             : HapticFeedback,
+    onBack             : () -> Unit,
+    onMarkAllRead      : () -> Unit,
+    onOpenNotification : (AppNotification) -> Unit,
 ) {
-    val vms: List<Pair<TodoList, TodosViewModel>> = lists.map { list ->
-        list to viewModel(key = "notif_${list.id}", factory = TodosViewModel.Factory(repository, list.id))
-    }
-    val allTodos: List<Pair<TodoList, TodoItem>> = vms.flatMap { (list, vm) ->
-        vm.uiState.collectAsStateWithLifecycle().value.todos.map { list to it }
-    }
-
-    // Dir zugewiesene, offene Aufgaben
-    val assignedToMe = remember(allTodos, deviceId) {
-        allTodos.filter { (_, todo) -> !todo.isDone && todo.assignedTo == deviceId }
-    }
-    // Aufgaben, die heute oder überfällig sind (unabhängig von Zuweisung)
-    val dueSoon = remember(allTodos) {
-        allTodos.filter { (_, todo) ->
-            !todo.isDone && todo.dueDate != null && isTodayOrOverdue(todo.dueDate!!)
-        }
-    }
-
-    val assignedEntries = assignedToMe.map { (list, todo) ->
-        NotificationEntry(
-            icon     = Icons.Default.PersonAdd,
-            iconTint = priorityColor(Priority.fromString(todo.priority)),
-            text     = "Dir zugewiesen: „${todo.title}“",
-            meta     = list.name
-        )
-    }
-    val dueEntries = dueSoon.map { (list, todo) ->
-        NotificationEntry(
-            icon     = Icons.Default.Schedule,
-            iconTint = MaterialTheme.colorScheme.error,
-            text     = "Fällig: „${todo.title}“",
-            meta     = "${formatDue(todo.dueDate!!)} · ${list.name}"
-        )
-    }
+    val heute  = remember(notifications) { notifications.filter { isToday(it.createdAt) } }
+    val frueher = remember(notifications) { notifications.filter { !isToday(it.createdAt) } }
+    val hasUnread = notifications.any { !it.isRead }
 
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         // App-Bar
@@ -98,9 +56,14 @@ fun BenachrichtigungenScreen(
             }
             Text("Benachrichtigungen", fontSize = 20.sp, fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+            if (hasUnread) {
+                TextButton(onClick = { haptic.tick(); onMarkAllRead() }) {
+                    Text("Alle lesen", fontSize = 13.sp)
+                }
+            }
         }
 
-        if (assignedEntries.isEmpty() && dueEntries.isEmpty()) {
+        if (notifications.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.NotificationsNone, null,
@@ -111,13 +74,17 @@ fun BenachrichtigungenScreen(
             }
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
-                if (dueEntries.isNotEmpty()) {
-                    item { SectionLabel("Fällig") }
-                    items(dueEntries) { NotificationRow(it) }
+                if (heute.isNotEmpty()) {
+                    item { SectionLabel("Heute") }
+                    items(heute, key = { it.id }) { n ->
+                        NotificationRow(n) { haptic.tick(); onOpenNotification(n) }
+                    }
                 }
-                if (assignedEntries.isNotEmpty()) {
-                    item { SectionLabel("Dir zugewiesen", modifier = Modifier.padding(top = 8.dp)) }
-                    items(assignedEntries) { NotificationRow(it) }
+                if (frueher.isNotEmpty()) {
+                    item { SectionLabel("Früher", modifier = Modifier.padding(top = 8.dp)) }
+                    items(frueher, key = { it.id }) { n ->
+                        NotificationRow(n) { haptic.tick(); onOpenNotification(n) }
+                    }
                 }
             }
         }
@@ -125,40 +92,74 @@ fun BenachrichtigungenScreen(
 }
 
 @Composable
-private fun NotificationRow(entry: NotificationEntry) {
+private fun NotificationRow(notification: AppNotification, onClick: () -> Unit) {
+    val (icon, tint) = iconFor(notification.type)
     Row(
-        modifier          = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .background(if (!notification.isRead) MaterialTheme.colorScheme.primary.copy(alpha = 0.06f) else Color.Transparent)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Box(
             modifier         = Modifier.size(40.dp).clip(CircleShape)
-                .background(entry.iconTint.copy(alpha = 0.18f)),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(entry.icon, null, tint = entry.iconTint, modifier = Modifier.size(18.dp))
+            Text(
+                notification.actorName.take(1).uppercase().ifEmpty { "?" },
+                fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White
+            )
         }
-        Column {
-            Text(entry.text, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-            Text(entry.meta, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(messageFor(notification), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(relativeTime(notification.createdAt), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp))
+        }
+        Box(
+            modifier         = Modifier.size(28.dp).clip(CircleShape)
+                .background(tint.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(14.dp))
+        }
+        if (!notification.isRead) {
+            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
         }
     }
 }
 
-private fun isTodayOrOverdue(ts: com.google.firebase.Timestamp): Boolean {
-    val due   = Calendar.getInstance().apply { time = ts.toDate() }
-    val today = Calendar.getInstance()
-    return due.get(Calendar.YEAR) < today.get(Calendar.YEAR) ||
-            (due.get(Calendar.YEAR) == today.get(Calendar.YEAR) && due.get(Calendar.DAY_OF_YEAR) <= today.get(Calendar.DAY_OF_YEAR))
+private fun iconFor(type: String): Pair<ImageVector, Color> = when (type) {
+    "ZUGEWIESEN" -> Icons.Default.PersonAdd to Color(0xFF5B8DEF)
+    "ERLEDIGT"   -> Icons.Default.Check     to Color(0xFF2FB6A0)
+    "KOMMENTAR"  -> Icons.Default.Comment   to Color(0xFFE8A04E)
+    "EINLADUNG"  -> Icons.Default.Mail      to Color(0xFF9B6FE0)
+    else          -> Icons.Default.PersonAdd to Color(0xFF5B8DEF)
 }
 
-private fun formatDue(ts: com.google.firebase.Timestamp): String {
-    val due   = Calendar.getInstance().apply { time = ts.toDate() }
+private fun messageFor(n: AppNotification): String = when (n.type) {
+    "ZUGEWIESEN" -> "${n.actorName} hat dir „${n.todoTitle}“ zugewiesen"
+    "ERLEDIGT"   -> "${n.actorName} hat „${n.todoTitle}“ erledigt"
+    "KOMMENTAR"  -> "${n.actorName} hat zu „${n.todoTitle}“ kommentiert"
+    "EINLADUNG"  -> "${n.actorName} lädt dich zur Liste „${n.todoTitle}“ ein"
+    else          -> "${n.actorName} hat „${n.todoTitle}“ bearbeitet"
+}
+
+private fun isToday(ts: Timestamp): Boolean {
+    val date  = Calendar.getInstance().apply { time = ts.toDate() }
     val today = Calendar.getInstance()
-    return if (due.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR) &&
-        due.get(Calendar.YEAR) == today.get(Calendar.YEAR)) {
-        "Heute"
-    } else {
-        SimpleDateFormat("d. MMM", Locale.GERMAN).format(due.time)
+    return date.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR) &&
+            date.get(Calendar.YEAR) == today.get(Calendar.YEAR)
+}
+
+private fun relativeTime(ts: Timestamp): String {
+    val diffMinutes = (System.currentTimeMillis() - ts.toDate().time) / 60000
+    return when {
+        diffMinutes < 1    -> "gerade eben"
+        diffMinutes < 60   -> "vor $diffMinutes Min"
+        diffMinutes < 1440 -> "vor ${diffMinutes / 60} Std"
+        else                -> "vor ${diffMinutes / 1440} Tag${if (diffMinutes / 1440 > 1) "en" else ""}"
     }
 }

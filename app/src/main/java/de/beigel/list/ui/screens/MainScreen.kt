@@ -210,6 +210,7 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
             is AppScreen.ListeTeilen -> ListeTeilenScreen(
                 list            = s.list,
                 currentDeviceId = deviceId,
+                repository      = repository,
                 haptic          = haptic,
                 onBack          = { nav.goBack() }
             )

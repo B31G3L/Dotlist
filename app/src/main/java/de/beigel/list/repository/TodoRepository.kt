@@ -150,8 +150,53 @@ class TodoRepository(private val deviceId: String) {
             // Letzte Person – Liste löschen
             deleteList(listId)
         } else {
-            docRef.update("memberIds", updated).await()
+            docRef.update(
+                mapOf(
+                    "memberIds" to updated,
+                    "adminIds"  to list.adminIds.filter { it != deviceId },
+                    "memberNames.$deviceId" to com.google.firebase.firestore.FieldValue.delete()
+                )
+            ).await()
         }
+    }
+
+    suspend fun promoteToAdmin(listId: String, memberId: String) {
+        listsRef.document(listId).update(
+            "adminIds", com.google.firebase.firestore.FieldValue.arrayUnion(memberId)
+        ).await()
+    }
+
+    suspend fun demoteAdmin(listId: String, memberId: String) {
+        listsRef.document(listId).update(
+            "adminIds", com.google.firebase.firestore.FieldValue.arrayRemove(memberId)
+        ).await()
+    }
+
+    suspend fun removeMember(listId: String, memberId: String) {
+        val docRef = listsRef.document(listId)
+        val doc = docRef.get().await()
+        val list = doc.toObject(TodoList::class.java) ?: return
+        docRef.update(
+            mapOf(
+                "memberIds" to list.memberIds.filter { it != memberId },
+                "adminIds"  to list.adminIds.filter { it != memberId },
+                "memberNames.$memberId" to com.google.firebase.firestore.FieldValue.delete()
+            )
+        ).await()
+    }
+
+    suspend fun transferOwnership(listId: String, newOwnerId: String) {
+        val docRef = listsRef.document(listId)
+        val doc = docRef.get().await()
+        val list = doc.toObject(TodoList::class.java) ?: return
+        if (newOwnerId !in list.memberIds) return
+        val newAdminIds = (list.adminIds + deviceId - newOwnerId).distinct()
+        docRef.update(
+            mapOf(
+                "createdBy" to newOwnerId,
+                "adminIds"  to newAdminIds
+            )
+        ).await()
     }
 
     // ─── Todos ───────────────────────────────────────────────────────────────

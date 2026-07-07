@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +39,8 @@ fun KalenderScreen(
     haptic     : HapticFeedback,
     padding    : PaddingValues,
 ) {
+    val context = LocalContext.current
+    val actorName = remember { de.beigel.list.data.DeviceIdManager.getDeviceName(context) }
     val activeLists = remember(lists, selectedIds) { lists.filter { it.id in selectedIds } }
 
     val allVms: List<Pair<TodoList, TodosViewModel>> = activeLists.map { list ->
@@ -214,7 +217,7 @@ fun KalenderScreen(
                 AufgabenTaskRow(
                     todo      = todo,
                     listName  = list.name,
-                    onToggle  = { vm?.toggleTodo(todo); haptic.tick() }
+                    onToggle  = { vm?.toggleTodo(todo, actorName); haptic.tick() }
                 )
             }
         }

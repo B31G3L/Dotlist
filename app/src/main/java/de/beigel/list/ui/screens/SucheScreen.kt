@@ -148,7 +148,7 @@ fun SucheScreen(
                     AufgabenTaskRow(
                         todo      = todo,
                         listName  = list.name,
-                        onToggle  = { vm?.toggleTodo(todo); haptic.tick() }
+                        onToggle  = { vm?.toggleTodo(todo, de.beigel.list.data.DeviceIdManager.getDeviceName(context)); haptic.tick() }
                     )
                 }
             }
