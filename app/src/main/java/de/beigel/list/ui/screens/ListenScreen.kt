@@ -250,7 +250,7 @@ private fun ListCard(
         onClick = onClick,
         shape   = RoundedCornerShape(22.dp),
         colors  = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-        modifier = Modifier.fillMaxWidth().height(190.dp)
+        modifier = Modifier.fillMaxWidth().height(210.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -349,7 +349,7 @@ private fun NewListCard(onClick: () -> Unit) {
         shape   = RoundedCornerShape(22.dp),
         border  = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outlineVariant),
         color   = Color.Transparent,
-        modifier = Modifier.fillMaxWidth().height(190.dp)
+        modifier = Modifier.fillMaxWidth().height(210.dp)
     ) {
         Column(
             modifier            = Modifier.fillMaxSize(),
