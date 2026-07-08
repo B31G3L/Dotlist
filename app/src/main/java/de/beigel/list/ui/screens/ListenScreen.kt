@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -191,7 +192,10 @@ fun ListenScreen(
     uiState.invitePreview?.let { previewList ->
         Dialog(
             onDismissRequest = { viewModel.clearInvitePreview() },
-            properties       = DialogProperties(usePlatformDefaultWidth = false)
+            properties       = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows  = false
+            )
         ) {
             Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 EinladungScreen(
@@ -310,8 +314,16 @@ private fun ListCard(
                                     .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(avatarLetterFor(memberId), fontSize = 8.sp, fontWeight = FontWeight.Bold,
-                                    color = Color.White)
+                                Text(
+                                    text       = avatarLetterFor(memberId),
+                                    fontSize   = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color      = Color.White,
+                                    lineHeight = 8.sp,
+                                    style      = LocalTextStyle.current.copy(
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                    )
+                                )
                             }
                         }
                     }

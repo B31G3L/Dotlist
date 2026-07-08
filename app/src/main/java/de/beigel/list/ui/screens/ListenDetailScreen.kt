@@ -22,6 +22,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
@@ -416,7 +417,16 @@ private fun MemberAvatarStack(memberIds: List<String>, listColor: Color) {
                     .background(avatarColors[i % avatarColors.size]),
                 contentAlignment = Alignment.Center
             ) {
-                Text(initial, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    text       = initial,
+                    fontSize   = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color      = Color.White,
+                    lineHeight = 11.sp,
+                    style      = LocalTextStyle.current.copy(
+                        platformStyle = PlatformTextStyle(includeFontPadding = false)
+                    )
+                )
             }
         }
     }

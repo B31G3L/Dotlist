@@ -2,8 +2,10 @@ package de.beigel.list.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Campaign
@@ -29,7 +31,7 @@ fun EinladungScreen(
 ) {
     val color = listColor(list.color)
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         // App-Bar
         Row(
             modifier          = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
@@ -43,7 +45,9 @@ fun EinladungScreen(
         }
 
         Column(
-            modifier            = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 32.dp),
+            modifier            = Modifier.weight(1f).fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
