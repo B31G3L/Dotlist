@@ -1,6 +1,7 @@
 package de.beigel.list.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,23 +21,35 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.beigel.list.data.MemberRole
 import de.beigel.list.data.TodoList
+import de.beigel.list.data.canManageMembers
 import de.beigel.list.data.displayNameFor
+import de.beigel.list.data.roleOf
+import de.beigel.list.repository.TodoRepository
 import de.beigel.list.utils.HapticFeedback
+import kotlinx.coroutines.launch
 
 @Composable
 fun ListeTeilenScreen(
     list            : TodoList,
     currentDeviceId : String,
+    repository      : TodoRepository,
     haptic          : HapticFeedback,
     onBack          : () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
+    val scope     = rememberCoroutineScope()
     var copied    by remember { mutableStateOf(false) }
 
-    val listColor = listColor(list.color)
-    val listIdx   = 0
-    val isOwner   = list.createdBy == currentDeviceId
+    val listColor  = listColor(list.color)
+    val listIdx    = 0
+    val myRole     = list.roleOf(currentDeviceId)
+    val canManage  = list.canManageMembers(currentDeviceId)
+
+    var expandedMemberId    by remember { mutableStateOf<String?>(null) }
+    var removeConfirmMember by remember { mutableStateOf<String?>(null) }
+    var transferTargetMember by remember { mutableStateOf<String?>(null) }
 
     val avatarColors = listOf(
         Color(0xFF4F378B), Color(0xFF5B8DEF), Color(0xFF2FB6A0),
@@ -84,8 +97,8 @@ fun ListeTeilenScreen(
                 }
             }
         }
-        // Einladungscode – nur für den Besitzer sichtbar
-        if (isOwner) {
+        // Einladungscode – nur für Besitzer und Admins sichtbar
+        if (canManage) {
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -135,7 +148,7 @@ fun ListeTeilenScreen(
                     Icon(Icons.Default.Lock, null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                     Text(
-                        "Nur der Besitzer kann den Einladungscode sehen und weitergeben",
+                        "Nur Besitzer und Admins können den Einladungscode sehen und weitergeben",
                         fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -143,35 +156,130 @@ fun ListeTeilenScreen(
         }
         // Mitglieder-Section
         item { SectionLabel("Mitglieder", modifier = Modifier.padding(top = 12.dp)) }
-        items(list.memberIds.take(5).toList()) { memberId ->
-            val idx     = list.memberIds.indexOf(memberId)
-            val name    = list.displayNameFor(memberId)
-            val initial = name.take(1).uppercase().ifEmpty { "?" }
-            val role    = if (memberId == list.createdBy) "Besitzer" else "Bearbeiten"
-            Row(
-                modifier          = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 11.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Box(
-                    modifier         = Modifier.size(42.dp).clip(CircleShape)
-                        .background(avatarColors[idx % avatarColors.size]),
-                    contentAlignment = Alignment.Center
+        items(list.memberIds.toList(), key = { it }) { memberId ->
+            val idx        = list.memberIds.indexOf(memberId)
+            val name       = list.displayNameFor(memberId)
+            val initial    = name.take(1).uppercase().ifEmpty { "?" }
+            val targetRole = list.roleOf(memberId)
+            val isSelf     = memberId == currentDeviceId
+            val canActOnThis = canManage && !isSelf && targetRole != MemberRole.BESITZER
+
+            Box {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .let { if (canActOnThis) it.clickable { expandedMemberId = memberId } else it }
+                        .padding(horizontal = 12.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(initial, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Box(
+                        modifier         = Modifier.size(42.dp).clip(CircleShape)
+                            .background(avatarColors[idx % avatarColors.size]),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(initial, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(if (isSelf) "Ich" else name,
+                            fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Text(memberId.take(14), fontSize = 12.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(targetRole.label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (canActOnThis) {
+                            Icon(Icons.Default.ExpandMore, null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                        }
+                    }
                 }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(if (memberId == currentDeviceId) "Ich" else name,
-                        fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
-                    Text(memberId.take(14), fontSize = 12.5.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(role, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Icon(Icons.Default.ExpandMore, null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+
+                DropdownMenu(
+                    expanded         = expandedMemberId == memberId,
+                    onDismissRequest = { expandedMemberId = null }
+                ) {
+                    if (targetRole == MemberRole.MITGLIED) {
+                        DropdownMenuItem(
+                            text = { Text("Zum Admin machen") },
+                            leadingIcon = { Icon(Icons.Default.AdminPanelSettings, null) },
+                            onClick = {
+                                expandedMemberId = null
+                                haptic.tick()
+                                scope.launch { repository.promoteToAdmin(list.id, memberId) }
+                            }
+                        )
+                    } else if (targetRole == MemberRole.ADMIN) {
+                        DropdownMenuItem(
+                            text = { Text("Admin entfernen") },
+                            leadingIcon = { Icon(Icons.Default.RemoveModerator, null) },
+                            onClick = {
+                                expandedMemberId = null
+                                haptic.tick()
+                                scope.launch { repository.demoteAdmin(list.id, memberId) }
+                            }
+                        )
+                    }
+                    if (myRole == MemberRole.BESITZER) {
+                        DropdownMenuItem(
+                            text = { Text("Besitz übertragen") },
+                            leadingIcon = { Icon(Icons.Default.WorkspacePremium, null) },
+                            onClick = {
+                                expandedMemberId = null
+                                transferTargetMember = memberId
+                            }
+                        )
+                    }
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text("Aus Liste entfernen", color = MaterialTheme.colorScheme.error) },
+                        leadingIcon = { Icon(Icons.Default.PersonRemove, null, tint = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            expandedMemberId = null
+                            removeConfirmMember = memberId
+                        }
+                    )
                 }
             }
         }
+    }
+
+    // ── Mitglied entfernen bestätigen ────────────────────────────────────
+    removeConfirmMember?.let { memberId ->
+        AlertDialog(
+            onDismissRequest = { removeConfirmMember = null },
+            title   = { Text("Mitglied entfernen?") },
+            text    = { Text("„${list.displayNameFor(memberId)}“ verliert den Zugriff auf diese Liste.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    haptic.heavy()
+                    scope.launch { repository.removeMember(list.id, memberId) }
+                    removeConfirmMember = null
+                }) { Text("Entfernen", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { removeConfirmMember = null }) { Text("Abbrechen") } }
+        )
+    }
+
+    // ── Besitz übertragen bestätigen (mit Warnung) ───────────────────────
+    transferTargetMember?.let { memberId ->
+        AlertDialog(
+            onDismissRequest = { transferTargetMember = null },
+            title   = { Text("Besitz übertragen?") },
+            text    = {
+                Text(
+                    "„${list.displayNameFor(memberId)}“ wird neuer Besitzer dieser Liste. " +
+                            "Du selbst bist danach nur noch Admin und kannst die Liste nicht mehr löschen."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    haptic.heavy()
+                    scope.launch { repository.transferOwnership(list.id, memberId) }
+                    transferTargetMember = null
+                }) { Text("Übertragen") }
+            },
+            dismissButton = { TextButton(onClick = { transferTargetMember = null }) { Text("Abbrechen") } }
+        )
     }
 }

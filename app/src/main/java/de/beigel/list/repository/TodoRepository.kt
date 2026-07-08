@@ -3,7 +3,11 @@ package de.beigel.list.repository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import de.beigel.list.data.AppNotification
+import de.beigel.list.data.Comment
 import de.beigel.list.data.ListCounts
+import de.beigel.list.data.NotificationType
+import de.beigel.list.data.Subtask
 import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
 import kotlinx.coroutines.channels.awaitClose
@@ -346,5 +350,87 @@ class TodoRepository(private val deviceId: String) {
         val movedTodo = todo.copy(position = newPosition)
         listsRef.document(toListId).collection("todos").document(todo.id).set(movedTodo).await()
         listsRef.document(fromListId).collection("todos").document(todo.id).delete().await()
+    }
+
+    /**
+     * Komplette Unteraufgaben-Liste eines Todos ersetzen.
+     */
+    suspend fun updateSubtasks(listId: String, todoId: String, subtasks: List<Subtask>) {
+        listsRef.document(listId).collection("todos")
+            .document(todoId).update("subtasks", subtasks).await()
+    }
+
+    /**
+     * Kommentar zu einem Todo hinzufügen.
+     */
+    suspend fun addComment(listId: String, todoId: String, comment: Comment) {
+        listsRef.document(listId).collection("todos")
+            .document(todoId).update("comments", com.google.firebase.firestore.FieldValue.arrayUnion(comment)).await()
+    }
+
+    // ─── Benachrichtigungen ──────────────────────────────────────────────────
+
+    private val notificationsRef = db.collection("notifications")
+
+    private suspend fun notify(
+        recipientId : String?,
+        actorName   : String,
+        type        : NotificationType,
+        todoTitle   : String,
+        listId      : String,
+        todoId      : String = "",
+    ) {
+        if (recipientId.isNullOrBlank() || recipientId == deviceId) return
+        val notification = AppNotification(
+            recipientId = recipientId,
+            actorId     = deviceId,
+            actorName   = actorName,
+            type        = type.name,
+            todoTitle   = todoTitle,
+            listId      = listId,
+            todoId      = todoId,
+        )
+        notificationsRef.add(notification).await()
+    }
+
+    suspend fun notifyAssigned(recipientId: String?, actorName: String, todoTitle: String, listId: String, todoId: String) =
+        notify(recipientId, actorName, NotificationType.ZUGEWIESEN, todoTitle, listId, todoId)
+
+    suspend fun notifyDone(recipientId: String?, actorName: String, todoTitle: String, listId: String, todoId: String) =
+        notify(recipientId, actorName, NotificationType.ERLEDIGT, todoTitle, listId, todoId)
+
+    suspend fun notifyComment(recipientId: String?, actorName: String, todoTitle: String, listId: String, todoId: String) =
+        notify(recipientId, actorName, NotificationType.KOMMENTAR, todoTitle, listId, todoId)
+
+    suspend fun notifyInvite(recipientId: String?, actorName: String, listName: String, listId: String) =
+        notify(recipientId, actorName, NotificationType.EINLADUNG, listName, listId)
+
+    /**
+     * Live-Stream aller Benachrichtigungen für das aktuelle Gerät, neueste zuerst.
+     */
+    fun observeNotifications(): Flow<List<AppNotification>> = callbackFlow {
+        val registration = notificationsRef
+            .whereEqualTo("recipientId", deviceId)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(50)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) { close(error); return@addSnapshotListener }
+                val items = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(AppNotification::class.java)?.copy(id = doc.id)
+                } ?: emptyList()
+                trySend(items)
+            }
+        awaitClose { registration.remove() }
+    }
+
+    suspend fun markNotificationRead(id: String) {
+        notificationsRef.document(id).update("isRead", true).await()
+    }
+
+    suspend fun markAllNotificationsRead(ids: List<String>) {
+        if (ids.isEmpty()) return
+        val batch = db.batch()
+        ids.forEach { batch.update(notificationsRef.document(it), "isRead", true) }
+        batch.commit().await()
     }
 }

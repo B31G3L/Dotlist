@@ -40,6 +40,9 @@ fun ProfilScreen(
     repository : TodoRepository,
     haptic     : HapticFeedback,
     padding    : PaddingValues,
+    onOpenGeteilteListen: () -> Unit,
+    onOpenKonto         : () -> Unit,
+    onOpenHilfe         : () -> Unit,
 ) {
     val context     = LocalContext.current
     val scope       = rememberCoroutineScope()
@@ -167,34 +170,23 @@ fun ProfilScreen(
             SettingsNavRow(
                 icon  = Icons.Default.Group,
                 title = "Geteilte Listen",
-                onClick = { haptic.tick() }
+                onClick = { haptic.tick(); onOpenGeteilteListen() }
             )
             HorizontalDivider(modifier = Modifier.padding(start = 52.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)
             SettingsNavRow(
                 icon  = Icons.Default.AccountCircle,
                 title = "Konto verwalten",
-                onClick = { haptic.tick() }
+                onClick = { haptic.tick(); onOpenKonto() }
             )
             HorizontalDivider(modifier = Modifier.padding(start = 52.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)
             SettingsNavRow(
                 icon  = Icons.Default.Help,
                 title = "Hilfe & Feedback",
-                onClick = { haptic.tick() }
+                onClick = { haptic.tick(); onOpenHilfe() }
             )
         }
-
-        Spacer(Modifier.height(20.dp))
-
-        // Abmelden
-        Text(
-            text     = "Abmelden",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color    = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(horizontal = 22.dp).clickable { haptic.heavy() }
-        )
 
         Spacer(Modifier.height(32.dp))
     }

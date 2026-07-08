@@ -68,6 +68,30 @@ enum class Priority(val label: String) {
 }
 
 /**
+ * Eine Unteraufgabe innerhalb eines Todos.
+ */
+data class Subtask(
+    val id: String = "",
+    val title: String = "",
+    @get:PropertyName("isDone") @set:PropertyName("isDone")
+    var isDone: Boolean = false
+) {
+    constructor() : this("", "", false)
+}
+
+/**
+ * Ein Kommentar zu einem Todo.
+ */
+data class Comment(
+    val id: String = "",
+    val authorId: String = "",
+    val text: String = "",
+    val createdAt: Timestamp = Timestamp.now()
+) {
+    constructor() : this("", "", "", Timestamp.now())
+}
+
+/**
  * Ein einzelnes Todo-Element innerhalb einer Liste.
  *
  * @param id                Firestore-Dokument-ID
@@ -83,6 +107,8 @@ enum class Priority(val label: String) {
  * @param doneBy            Geräte-ID, wer es erledigt hat (null = noch offen)
  * @param doneAt            Zeitpunkt der Erledigung
  * @param position          Sortierreihenfolge
+ * @param subtasks          Liste von Unteraufgaben
+ * @param comments          Liste von Kommentaren
  */
 data class TodoItem(
     val id: String = "",
@@ -98,11 +124,13 @@ data class TodoItem(
     val createdAt: Timestamp = Timestamp.now(),
     val doneBy: String? = null,
     val doneAt: Timestamp? = null,
-    val position: Long = 0L
+    val position: Long = 0L,
+    val subtasks: List<Subtask> = emptyList(),
+    val comments: List<Comment> = emptyList()
 ) {
     constructor() : this(
         "", "", "", false, Priority.MITTEL.name, null, null, null,
-        "", Timestamp.now(), null, null, 0L
+        "", Timestamp.now(), null, null, 0L, emptyList(), emptyList()
     )
 }
 
@@ -111,4 +139,30 @@ data class TodoItem(
  */
 data class ListCounts(val done: Int = 0, val total: Int = 0) {
     val fraction: Float get() = if (total == 0) 0f else done.toFloat() / total.toFloat()
+}
+
+/**
+ * Art einer Benachrichtigung.
+ */
+enum class NotificationType {
+    ZUGEWIESEN, ERLEDIGT, KOMMENTAR, EINLADUNG
+}
+
+/**
+ * Eine Benachrichtigung für ein Gerät (z.B. "Jana hat dir eine Aufgabe zugewiesen").
+ */
+data class AppNotification(
+    val id: String = "",
+    val recipientId: String = "",
+    val actorId: String = "",
+    val actorName: String = "",
+    val type: String = NotificationType.ZUGEWIESEN.name,
+    val todoTitle: String = "",
+    val listId: String = "",
+    val todoId: String = "",
+    @get:PropertyName("isRead") @set:PropertyName("isRead")
+    var isRead: Boolean = false,
+    val createdAt: Timestamp = Timestamp.now(),
+) {
+    constructor() : this("", "", "", "", NotificationType.ZUGEWIESEN.name, "", "", "", false, Timestamp.now())
 }
