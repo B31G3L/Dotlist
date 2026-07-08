@@ -393,7 +393,7 @@ private fun EmptyAufgabenHint(onGoListen: () -> Unit) {
                 modifier = Modifier.size(64.dp),
                 tint     = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
             Text("Keine Aufgaben", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Aktiviere zuerst eine Liste.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Erstelle zuerst eine Liste.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Button(onClick = onGoListen, shape = RoundedCornerShape(16.dp)) {
                 Icon(Icons.Default.List, null)
                 Spacer(Modifier.width(8.dp))

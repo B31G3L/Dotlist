@@ -20,13 +20,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import de.beigel.list.auth.AuthManager
+import de.beigel.list.data.DeviceIdManager
 import de.beigel.list.repository.TodoRepository
 import de.beigel.list.ui.screens.MainScreen
+import de.beigel.list.ui.screens.WillkommenScreen
 import de.beigel.list.ui.theme.AccentColor
 import de.beigel.list.ui.theme.AccentColorPreferences
 import de.beigel.list.ui.theme.ThemeMode
 import de.beigel.list.ui.theme.ThemePreferences
 import de.beigel.list.ui.theme.TodoSharedTheme
+import de.beigel.list.utils.HapticFeedback
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,8 +69,16 @@ class MainActivity : ComponentActivity() {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else {
-                    val repository = remember(currentUid) { TodoRepository(currentUid) }
-                    MainScreen(repository = repository, deviceId = currentUid)
+                    var nameSet by remember {
+                        mutableStateOf(DeviceIdManager.isNameSet(this@MainActivity))
+                    }
+                    if (!nameSet) {
+                        val haptic = remember { HapticFeedback(this@MainActivity) }
+                        WillkommenScreen(haptic = haptic, onDone = { nameSet = true })
+                    } else {
+                        val repository = remember(currentUid) { TodoRepository(currentUid) }
+                        MainScreen(repository = repository, deviceId = currentUid)
+                    }
                 }
             }
         }

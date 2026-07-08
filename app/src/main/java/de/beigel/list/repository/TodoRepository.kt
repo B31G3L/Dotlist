@@ -54,13 +54,14 @@ class TodoRepository(private val deviceId: String) {
     /**
      * Neue Liste erstellen. Gibt die neue Listen-ID zurück.
      */
-    suspend fun createList(name: String, color: String, creatorName: String): String {
+    suspend fun createList(name: String, color: String, creatorName: String, icon: String = ""): String {
         val list = TodoList(
             name        = name,
             memberIds   = listOf(deviceId),
             memberNames = mapOf(deviceId to creatorName),
             createdBy   = deviceId,
-            color       = color
+            color       = color,
+            icon        = icon
         )
         val doc = listsRef.add(list).await()
         return doc.id
@@ -95,7 +96,8 @@ class TodoRepository(private val deviceId: String) {
             memberIds   = listOf(deviceId),
             memberNames = mapOf(deviceId to creatorName),
             createdBy   = deviceId,
-            color       = list.color
+            color       = list.color,
+            icon        = list.icon
         )
         val newDoc = listsRef.add(newList).await()
 

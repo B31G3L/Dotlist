@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package de.beigel.list.viewmodel
 
 import android.content.Context
@@ -105,12 +107,12 @@ class ListsViewModel(
         _uiState.update { it.copy(lastListId = listId) }
     }
 
-    fun createList(name: String, color: String) {
+    fun createList(name: String, color: String, icon: String = "") {
         if (name.isBlank()) return
         viewModelScope.launch {
             try {
                 val creatorName = DeviceIdManager.getDeviceName(context)
-                val newId   = repository.createList(name.trim(), color, creatorName)
+                val newId   = repository.createList(name.trim(), color, creatorName, icon)
                 val updated = _uiState.value.selectedListIds + newId
                 SelectedListsPreferences.setSelectedIds(context, updated)
                 _uiState.update { it.copy(lastListId = newId, selectedListIds = updated) }

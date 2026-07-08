@@ -74,8 +74,6 @@ fun ListenDetailScreen(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showLeaveConfirm  by remember { mutableStateOf(false) }
 
-    val listIdx = 0  // We don't have global index here, use 0 as default icon
-
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(uiState.error) {
         uiState.error?.let { snackbarHostState.showSnackbar(it); todoVm.clearError() }
@@ -278,13 +276,11 @@ fun ListenDetailScreen(
                         }
                     }
                 )
-                if (isShared) {
-                    OptionRow(
-                        icon  = Icons.Default.Share,
-                        label = "Teilen",
-                        onClick = { showOptionsSheet = false; onShare() }
-                    )
-                }
+                OptionRow(
+                    icon  = Icons.Default.Share,
+                    label = "Teilen",
+                    onClick = { showOptionsSheet = false; onShare() }
+                )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 if (isOwner) {
                     OptionRow(
@@ -306,20 +302,34 @@ fun ListenDetailScreen(
     }
 
     // ── Liste verlassen bestätigen (nur für Nicht-Ersteller) ─────────────
+    var isLeaving by remember { mutableStateOf(false) }
     if (showLeaveConfirm) {
         AlertDialog(
-            onDismissRequest = { showLeaveConfirm = false },
+            onDismissRequest = { if (!isLeaving) showLeaveConfirm = false },
             title   = { Text("Liste verlassen?") },
             text    = { Text("Du verlierst den Zugriff auf „${list.name}“. Andere Mitglieder behalten die Liste.") },
             confirmButton = {
-                TextButton(onClick = {
-                    haptic.heavy()
-                    scope.launch { repository.leaveList(list.id) }
-                    showLeaveConfirm = false
-                    onBack()
-                }) { Text("Verlassen", color = MaterialTheme.colorScheme.error) }
+                TextButton(
+                    enabled = !isLeaving,
+                    onClick = {
+                        haptic.heavy()
+                        isLeaving = true
+                        scope.launch {
+                            try {
+                                repository.leaveList(list.id)
+                                showLeaveConfirm = false
+                                onBack()
+                            } catch (e: Exception) {
+                                isLeaving = false
+                                snackbarHostState.showSnackbar("Verlassen fehlgeschlagen: ${e.localizedMessage ?: "Unbekannter Fehler"}")
+                            }
+                        }
+                    }
+                ) { Text("Verlassen", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showLeaveConfirm = false }) { Text("Abbrechen") } }
+            dismissButton = {
+                TextButton(enabled = !isLeaving, onClick = { showLeaveConfirm = false }) { Text("Abbrechen") }
+            }
         )
     }
 

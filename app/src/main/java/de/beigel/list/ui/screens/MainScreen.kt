@@ -7,14 +7,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.ViewList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -60,7 +60,7 @@ private enum class NavTab(
     val unselectedIcon: ImageVector,
 ) {
     AUFGABEN("Aufgaben", AppScreen.Aufgaben, Icons.Filled.CheckCircle,   Icons.Outlined.CheckCircle),
-    LISTEN  ("Listen",   AppScreen.Listen,   Icons.Filled.ViewList,       Icons.Outlined.ViewList),
+    LISTEN  ("Listen",   AppScreen.Listen,   Icons.AutoMirrored.Filled.ViewList, Icons.AutoMirrored.Outlined.ViewList),
     KALENDER("Kalender", AppScreen.Kalender, Icons.Filled.CalendarMonth,  Icons.Outlined.CalendarMonth),
     PROFIL  ("Profil",   AppScreen.Profil,   Icons.Filled.Person,         Icons.Outlined.Person),
 }
@@ -309,8 +309,8 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
             )
             is AppScreen.ListeErstellen -> ListeErstellenScreen(
                 onBack   = { nav.goListen() },
-                onCreate = { name, color ->
-                    listsViewModel.createList(name, color)
+                onCreate = { name, color, icon ->
+                    listsViewModel.createList(name, color, icon)
                     nav.goListen()
                 }
             )

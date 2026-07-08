@@ -20,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,18 +36,6 @@ import de.beigel.list.utils.HapticFeedback
 import de.beigel.list.viewmodel.ListsViewModel
 import de.beigel.list.viewmodel.TodosViewModel
 
-private val listIconSet: List<ImageVector> = listOf(
-    Icons.Default.Work,
-    Icons.Default.Home,
-    Icons.Default.ShoppingCart,
-    Icons.Default.Favorite,
-    Icons.Default.School,
-    Icons.Default.Star,
-    Icons.Default.Flight,
-    Icons.Default.DateRange,
-)
-
-fun listIconFor(index: Int): ImageVector = listIconSet[index % listIconSet.size]
 
 @Composable
 fun ListenScreen(
@@ -266,7 +253,7 @@ private fun ListCard(
                     modifier         = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(bgAlpha),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(listIconFor(index), null, tint = color, modifier = Modifier.size(24.dp))
+                    Icon(de.beigel.list.ui.theme.iconFor(list, index), null, tint = color, modifier = Modifier.size(24.dp))
                 }
                 // Share indicator
                 Row(verticalAlignment = Alignment.CenterVertically) {

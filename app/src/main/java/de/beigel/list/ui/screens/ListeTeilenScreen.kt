@@ -43,7 +43,6 @@ fun ListeTeilenScreen(
     var copied    by remember { mutableStateOf(false) }
 
     val listColor  = listColor(list.color)
-    val listIdx    = 0
     val myRole     = list.roleOf(currentDeviceId)
     val canManage  = list.canManageMembers(currentDeviceId)
 
@@ -86,7 +85,7 @@ fun ListeTeilenScreen(
                         .background(listColor.copy(alpha = 0.16f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(listIconFor(listIdx), null, tint = listColor, modifier = Modifier.size(26.dp))
+                    Icon(de.beigel.list.ui.theme.iconFor(list, 0), null, tint = listColor, modifier = Modifier.size(26.dp))
                 }
                 Column {
                     Text(list.name, fontSize = 18.sp, fontWeight = FontWeight.Medium,

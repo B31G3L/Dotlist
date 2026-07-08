@@ -12,6 +12,7 @@ import com.google.firebase.firestore.PropertyName
  * @param createdBy     Geräte-ID des Erstellers/Besitzers
  * @param createdAt     Erstellungszeitpunkt
  * @param color         Farbe der Liste (Hex-String, z.B. "#FF5733")
+ * @param icon          Name des gewählten Icons (siehe ALL_LIST_ICONS), leer = alte Positions-Rotation
  */
 data class TodoList(
     val id: String = "",
@@ -21,10 +22,11 @@ data class TodoList(
     val adminIds: List<String> = emptyList(),
     val createdBy: String = "",
     val createdAt: Timestamp = Timestamp.now(),
-    val color: String = "#6750A4"
+    val color: String = "#6750A4",
+    val icon: String = ""
 ) {
     // Parameterloser Konstruktor für Firestore-Deserialisierung
-    constructor() : this("", "", emptyList(), emptyMap(), emptyList(), "", Timestamp.now(), "#6750A4")
+    constructor() : this("", "", emptyList(), emptyMap(), emptyList(), "", Timestamp.now(), "#6750A4", "")
 }
 
 /**

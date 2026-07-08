@@ -68,7 +68,7 @@ fun EinladungScreen(
             }
 
             Text(
-                text       = "Du wurdest eingeladen, der Liste",
+                text       = "Du wurdest zu folgender Liste eingeladen:",
                 fontSize   = 20.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign  = TextAlign.Center,

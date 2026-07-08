@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -64,7 +65,7 @@ fun GeteilteListenScreen(
             }
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
-                items(sharedLists, key = { it.id }) { list ->
+                itemsIndexed(sharedLists, key = { _, it -> it.id }) { index, list ->
                     val listColor = listColor(list.color)
                     Row(
                         modifier = Modifier
@@ -79,7 +80,7 @@ fun GeteilteListenScreen(
                                 .background(listColor.copy(alpha = 0.16f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(listIconFor(0), null, tint = listColor, modifier = Modifier.size(22.dp))
+                            Icon(de.beigel.list.ui.theme.iconFor(list, index), null, tint = listColor, modifier = Modifier.size(22.dp))
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(list.name, fontSize = 15.5.sp, color = MaterialTheme.colorScheme.onSurface)
