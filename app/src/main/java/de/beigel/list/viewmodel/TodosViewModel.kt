@@ -16,7 +16,8 @@ data class TodosUiState(
     val todos: List<TodoItem> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null,
-    val editingTodo: TodoItem? = null
+    val editingTodo: TodoItem? = null,
+    val recentlyDeleted: TodoItem? = null
 )
 
 class TodosViewModel(
@@ -80,13 +81,33 @@ class TodosViewModel(
     }
 
     fun deleteTodo(todoId: String) {
+        val deleted = _uiState.value.todos.firstOrNull { it.id == todoId } ?: return
         viewModelScope.launch {
             try {
                 repository.deleteTodo(listId, todoId)
+                _uiState.update { it.copy(recentlyDeleted = deleted) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Todo konnte nicht gelöscht werden") }
             }
         }
+    }
+
+    /** Stellt das zuletzt gelöschte Todo wieder her (Undo-Snackbar). */
+    fun undoDelete() {
+        val todo = _uiState.value.recentlyDeleted ?: return
+        _uiState.update { it.copy(recentlyDeleted = null) }
+        viewModelScope.launch {
+            try {
+                repository.restoreTodo(listId, todo)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Wiederherstellen fehlgeschlagen") }
+            }
+        }
+    }
+
+    /** Blendet den Undo-Hinweis aus, ohne das Todo wiederherzustellen. */
+    fun dismissRecentlyDeleted() {
+        _uiState.update { it.copy(recentlyDeleted = null) }
     }
 
     fun editTodo(todoId: String, newTitle: String) {

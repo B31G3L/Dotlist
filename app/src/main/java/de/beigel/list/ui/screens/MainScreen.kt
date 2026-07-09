@@ -78,20 +78,28 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
     // Pager für die vier Haupt-Tabs (Wisch-Navigation), synchron mit `screen`
     val pagerState = rememberPagerState(pageCount = { NavTab.entries.size })
 
+    // Verhindert, dass der programmatische Sprung (Bottom-Nav-Klick) über mehrere
+    // Zwischenseiten hinweg mit der Wisch-Synchronisation kollidiert (führte dazu,
+    // dass die Navigation z. B. zwischen Kalender und Profil hängen blieb).
+    var isProgrammaticScroll by remember { mutableStateOf(false) }
+
     // screen -> Pager: wenn sich der Tab von außen ändert (Bottom-Nav-Klick), Pager mitscrollen
     LaunchedEffect(screen) {
         val s = screen
         if (s.isTopLevel) {
             val idx = NavTab.entries.indexOfFirst { it.screen::class == s::class }
             if (idx >= 0 && pagerState.currentPage != idx) {
+                isProgrammaticScroll = true
                 pagerState.animateScrollToPage(idx)
+                isProgrammaticScroll = false
             }
         }
     }
 
     // Pager -> screen: wenn gewischt wird, `screen` synchron mitziehen
+    // (nicht während eines programmatischen Sprungs, sonst überschreiben sich beide Effekte gegenseitig)
     LaunchedEffect(pagerState.currentPage) {
-        if (screen.isTopLevel) {
+        if (!isProgrammaticScroll && screen.isTopLevel) {
             val target = NavTab.entries[pagerState.currentPage].screen
             if (screen::class != target::class) {
                 screen = target

@@ -80,6 +80,19 @@ fun ListenDetailScreen(
     LaunchedEffect(uiState.error) {
         uiState.error?.let { snackbarHostState.showSnackbar(it); todoVm.clearError() }
     }
+    LaunchedEffect(uiState.recentlyDeleted) {
+        val deleted = uiState.recentlyDeleted ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message    = "„${deleted.title}“ gelöscht",
+            actionLabel = "Rückgängig",
+            duration   = SnackbarDuration.Short
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            todoVm.undoDelete()
+        } else {
+            todoVm.dismissRecentlyDeleted()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         LazyColumn(
@@ -283,6 +296,20 @@ fun ListenDetailScreen(
                     label = "Teilen",
                     onClick = { showOptionsSheet = false; onShare() }
                 )
+                run {
+                    val isMuted = list.mutedBy.contains(deviceId)
+                    OptionRow(
+                        icon  = if (isMuted) Icons.Default.NotificationsOff else Icons.Default.Notifications,
+                        label = if (isMuted) "Stumm aufheben" else "Stummschalten",
+                        onClick = {
+                            showOptionsSheet = false
+                            haptic.click()
+                            scope.launch {
+                                try { repository.setListMuted(list.id, !isMuted) } catch (_: Exception) {}
+                            }
+                        }
+                    )
+                }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 if (isOwner) {
                     OptionRow(

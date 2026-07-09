@@ -311,6 +311,14 @@ class TodoRepository(private val deviceId: String) {
     }
 
     /**
+     * Ein zuvor gelöschtes Todo mit exakt derselben ID wiederherstellen (Undo).
+     */
+    suspend fun restoreTodo(listId: String, todo: de.beigel.list.data.TodoItem) {
+        listsRef.document(listId).collection("todos")
+            .document(todo.id).set(todo).await()
+    }
+
+    /**
      * Todo-Titel bearbeiten.
      */
     suspend fun editTodo(listId: String, todoId: String, newTitle: String) {
@@ -373,6 +381,42 @@ class TodoRepository(private val deviceId: String) {
     // ─── Benachrichtigungen ──────────────────────────────────────────────────
 
     private val notificationsRef = db.collection("notifications")
+    private val deviceTokensRef  = db.collection("deviceTokens")
+
+    // ─── Push-Benachrichtigungen (FCM) ─────────────────────────────────────────
+
+    /**
+     * Aktuellen FCM-Geräte-Token in Firestore hinterlegen, damit die Cloud
+     * Function weiß, an welches Gerät sie Pushes schicken soll.
+     */
+    suspend fun saveDeviceToken(token: String) {
+        deviceTokensRef.document(deviceId)
+            .set(mapOf("token" to token, "updatedAt" to com.google.firebase.Timestamp.now()), com.google.firebase.firestore.SetOptions.merge())
+            .await()
+    }
+
+    /**
+     * Globaler Push-Schalter (Profil-Einstellung) – wird zusätzlich zur
+     * lokalen Einstellung nach Firestore gespiegelt, da die Cloud Function
+     * nur von dort aus lesen kann.
+     */
+    suspend fun setPushEnabled(enabled: Boolean) {
+        deviceTokensRef.document(deviceId)
+            .set(mapOf("pushEnabled" to enabled), com.google.firebase.firestore.SetOptions.merge())
+            .await()
+    }
+
+    /**
+     * Push-Benachrichtigungen für eine bestimmte Liste stummschalten/wieder aktivieren.
+     */
+    suspend fun setListMuted(listId: String, muted: Boolean) {
+        val update = if (muted) {
+            com.google.firebase.firestore.FieldValue.arrayUnion(deviceId)
+        } else {
+            com.google.firebase.firestore.FieldValue.arrayRemove(deviceId)
+        }
+        listsRef.document(listId).update("mutedBy", update).await()
+    }
 
     private suspend fun notify(
         recipientId : String?,

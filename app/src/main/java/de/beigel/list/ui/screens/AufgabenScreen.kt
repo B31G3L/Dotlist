@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
@@ -37,6 +38,11 @@ import de.beigel.list.utils.HapticFeedback
 import de.beigel.list.viewmodel.TodosViewModel
 
 private enum class AufgabenFilter { ALLE, OFFEN, ERLEDIGT }
+private enum class SortOption(val label: String) {
+    STANDARD("Standard"),
+    FAELLIGKEIT("Fälligkeit"),
+    PRIORITAET("Priorität"),
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,7 +69,7 @@ fun AufgabenScreen(
 
     val viewModels: List<Pair<TodoList, TodosViewModel>> = activeLists.map { list ->
         list to viewModel(
-            key     = "aufg_${list.id}",
+            key     = "detail_${list.id}",
             factory = TodosViewModel.Factory(repository, list.id)
         )
     }
@@ -75,6 +81,10 @@ fun AufgabenScreen(
     }
 
     var filter        by remember { mutableStateOf(AufgabenFilter.ALLE) }
+    var sortOption     by remember { mutableStateOf(SortOption.STANDARD) }
+    var onlyMine       by remember { mutableStateOf(false) }
+    var onlyOverdue    by remember { mutableStateOf(false) }
+    var showSortMenu   by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -85,8 +95,37 @@ fun AufgabenScreen(
         errorEntry?.let { (vm, message) -> snackbarHostState.showSnackbar(message); vm.clearError() }
     }
 
-    val openPairs = remember(allPairs) { allPairs.filter { !it.second.isDone } }
-    val donePairs = remember(allPairs) { allPairs.filter { it.second.isDone } }
+    val deletedEntry = viewModels.firstNotNullOfOrNull { (_, vm) ->
+        vm.uiState.collectAsStateWithLifecycle().value.recentlyDeleted?.let { vm to it }
+    }
+    LaunchedEffect(deletedEntry) {
+        val (vm, deleted) = deletedEntry ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message     = "„${deleted.title}“ gelöscht",
+            actionLabel = "Rückgängig",
+            duration    = SnackbarDuration.Short
+        )
+        if (result == SnackbarResult.ActionPerformed) vm.undoDelete() else vm.dismissRecentlyDeleted()
+    }
+
+    val now = remember { java.util.Date() }
+    val filteredPairs = remember(allPairs, onlyMine, onlyOverdue, deviceId) {
+        allPairs
+            .let { p -> if (onlyMine) p.filter { it.second.assignedTo == deviceId } else p }
+            .let { p ->
+                if (onlyOverdue) p.filter { !it.second.isDone && it.second.dueDate != null && it.second.dueDate!!.toDate().before(now) }
+                else p
+            }
+    }
+
+    fun sorted(pairs: List<Pair<TodoList, TodoItem>>): List<Pair<TodoList, TodoItem>> = when (sortOption) {
+        SortOption.STANDARD    -> pairs
+        SortOption.FAELLIGKEIT -> pairs.sortedWith(compareBy(nullsLast()) { it.second.dueDate?.toDate() })
+        SortOption.PRIORITAET  -> pairs.sortedBy { Priority.fromString(it.second.priority).ordinal }
+    }
+
+    val openPairs = remember(filteredPairs, sortOption) { sorted(filteredPairs.filter { !it.second.isDone }) }
+    val donePairs = remember(filteredPairs, sortOption) { sorted(filteredPairs.filter { it.second.isDone }) }
 
     val shownOpen = when (filter) {
         AufgabenFilter.ALLE, AufgabenFilter.OFFEN -> openPairs
@@ -152,32 +191,80 @@ fun AufgabenScreen(
                     modifier  = Modifier.padding(horizontal = 22.dp)
                 )
             }
-            // Filter-Chips
+            // Filter-Chips + Sortierung
             item {
                 Row(
-                    modifier            = Modifier.padding(horizontal = 22.dp, vertical = 18.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier              = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 18.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically
                 ) {
-                    AufgabenFilter.entries.forEach { f ->
-                        val active = filter == f
-                        val label  = when (f) {
-                            AufgabenFilter.ALLE     -> "Alle"
-                            AufgabenFilter.OFFEN    -> "Offen"
-                            AufgabenFilter.ERLEDIGT -> "Erledigt"
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        AufgabenFilter.entries.forEach { f ->
+                            val active = filter == f
+                            val label  = when (f) {
+                                AufgabenFilter.ALLE     -> "Alle"
+                                AufgabenFilter.OFFEN    -> "Offen"
+                                AufgabenFilter.ERLEDIGT -> "Erledigt"
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(11.dp))
+                                    .background(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                    .clickable { filter = f }
+                                    .padding(horizontal = 16.dp, vertical = 7.dp)
+                            ) {
+                                Text(
+                                    text       = label,
+                                    fontSize   = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color      = if (active) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(11.dp))
-                                .background(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                                .clickable { filter = f }
-                                .padding(horizontal = 16.dp, vertical = 7.dp)
-                        ) {
-                            Text(
-                                text       = label,
-                                fontSize   = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                color      = if (active) MaterialTheme.colorScheme.onPrimary
-                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    Box {
+                        val sortActive = sortOption != SortOption.STANDARD || onlyMine || onlyOverdue
+                        IconButton(onClick = { showSortMenu = true }, modifier = Modifier.size(30.dp)) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = "Sortieren & Filtern",
+                                tint = if (sortActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                            Text("Sortieren nach", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                            SortOption.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option.label) },
+                                    leadingIcon = {
+                                        if (sortOption == option) {
+                                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+                                        } else {
+                                            Spacer(Modifier.size(24.dp))
+                                        }
+                                    },
+                                    onClick = { sortOption = option; showSortMenu = false }
+                                )
+                            }
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("Nur meine Aufgaben") },
+                                leadingIcon = {
+                                    if (onlyMine) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+                                    else Spacer(Modifier.size(24.dp))
+                                },
+                                onClick = { onlyMine = !onlyMine }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Nur überfällige") },
+                                leadingIcon = {
+                                    if (onlyOverdue) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+                                    else Spacer(Modifier.size(24.dp))
+                                },
+                                onClick = { onlyOverdue = !onlyOverdue }
                             )
                         }
                     }

@@ -15,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,24 +50,8 @@ fun ListenScreen(
     onSearch   : () -> Unit,
     onOpenTask : (TodoList, TodoItem) -> Unit = { _, _ -> },
 ) {
-    val context           = LocalContext.current
-    val actorName         = remember { de.beigel.list.data.DeviceIdManager.getDeviceName(context) }
     val uiState           by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    // Pro Liste ein TodosViewModel, nur um die heute fälligen Aufgaben zu ermitteln
-    val todosViewModels: List<Pair<TodoList, TodosViewModel>> = uiState.lists.map { list ->
-        list to viewModel(
-            key     = "listen_today_${list.id}",
-            factory = TodosViewModel.Factory(repository, list.id)
-        )
-    }
-    val todayPairs: List<Pair<TodoList, TodoItem>> = todosViewModels
-        .flatMap { (list, vm) ->
-            vm.uiState.collectAsStateWithLifecycle().value.todos
-                .filter { !it.isDone && it.dueDate != null && isToday(it.dueDate!!) }
-                .map { list to it }
-        }
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let { snackbarHostState.showSnackbar(it); viewModel.clearError() }
@@ -80,106 +63,87 @@ fun ListenScreen(
         }
     }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPad ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPad)
-        ) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else {
-                LazyVerticalGrid(
-                    columns             = GridCells.Fixed(2),
-                    contentPadding      = PaddingValues(start = 22.dp, end = 22.dp, bottom = 96.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier            = Modifier.fillMaxSize()
-                ) {
-                    // Header (full width)
-                    item(span = { GridItemSpan(2) }) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 16.dp)) {
-                            Row(
-                                modifier              = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment     = Alignment.CenterVertically
-                            ) {
-                                Text("Meine Listen", fontSize = 34.sp, fontWeight = FontWeight.Medium,
-                                    letterSpacing = (-0.5).sp, color = MaterialTheme.colorScheme.onSurface)
-                                Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+    ) {
+        if (uiState.isLoading) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        } else {
+            LazyVerticalGrid(
+                columns             = GridCells.Fixed(2),
+                contentPadding      = PaddingValues(start = 22.dp, end = 22.dp, bottom = 96.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier            = Modifier.fillMaxSize()
+            ) {
+                // Header (full width)
+                item(span = { GridItemSpan(2) }) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 16.dp)) {
+                        Row(
+                            modifier              = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment     = Alignment.CenterVertically
+                        ) {
+                            Text("Meine Listen", fontSize = 34.sp, fontWeight = FontWeight.Medium,
+                                letterSpacing = (-0.5).sp, color = MaterialTheme.colorScheme.onSurface)
+                            Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Link, contentDescription = "Mit Code beitreten",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.clickable { haptic.tick(); viewModel.showJoinDialog() })
+                                Icon(Icons.Default.Search, contentDescription = "Suche", tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.clickable { haptic.tick(); onSearch() })
                             }
-                            val shared = uiState.lists.count { it.memberIds.size > 1 }
-                            Text(
-                                "${uiState.lists.size} Listen · $shared geteilt",
-                                fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                            )
                         }
-                    }
-
-                    // List cards
-                    items(uiState.lists.toList(), key = { it.id }) { list ->
-                        val idx      = uiState.lists.indexOf(list)
-                        val isShared = list.memberIds.size > 1
-                        ListCard(
-                            list     = list,
-                            index    = idx,
-                            isShared = isShared,
-                            isSelected = list.id in uiState.selectedListIds,
-                            counts   = uiState.listCounts[list.id] ?: ListCounts(),
-                            onClick  = { haptic.click(); onOpenList(list) },
-                            onShare  = { e -> haptic.tick(); onShare(list) },
-                            onToggleSelect = { haptic.tick(); viewModel.toggleListSelection(list.id) }
+                        val shared = uiState.lists.count { it.memberIds.size > 1 }
+                        Text(
+                            "${uiState.lists.size} Listen · $shared geteilt",
+                            fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                         )
                     }
+                }
 
-                    // New list card
-                    item {
-                        NewListCard(onClick = { haptic.click(); onErstellen() })
-                    }
+                // New list card - immer als erste Kachel (oben links)
+                item {
+                    NewListCard(onClick = { haptic.click(); onErstellen() })
+                }
 
-                    // Heute fällig
-                    if (todayPairs.isNotEmpty()) {
-                        item(span = { GridItemSpan(2) }) {
-                            SectionLabel("Heute fällig", modifier = Modifier.padding(top = 8.dp))
-                        }
-                        items(todayPairs, span = { GridItemSpan(2) }, key = { "today_${it.first.id}_${it.second.id}" }) { (list, todo) ->
-                            val vm = todosViewModels.find { it.first.id == list.id }?.second
-                            AufgabenTaskRow(
-                                todo      = todo,
-                                listName  = list.name,
-                                onToggle  = { vm?.toggleTodo(todo, actorName); haptic.tick() },
-                                onClick   = { haptic.tick(); onOpenTask(list, todo) }
-                            )
-                        }
-                    }
+                // List cards
+                items(uiState.lists.toList(), key = { it.id }) { list ->
+                    val idx      = uiState.lists.indexOf(list)
+                    val isShared = list.memberIds.size > 1
+                    ListCard(
+                        list     = list,
+                        index    = idx,
+                        isShared = isShared,
+                        isSelected = list.id in uiState.selectedListIds,
+                        counts   = uiState.listCounts[list.id] ?: ListCounts(),
+                        onClick  = { haptic.click(); onOpenList(list) },
+                        onShare  = { e -> haptic.tick(); onShare(list) },
+                        onToggleSelect = { haptic.tick(); viewModel.toggleListSelection(list.id) }
+                    )
+                }
 
-                    // Beitreten per Code
-                    item(span = { GridItemSpan(2) }) {
-                        TextButton(
-                            onClick  = { haptic.tick(); viewModel.showJoinDialog() },
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            Icon(Icons.Default.Link, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Mit Code beitreten")
-                        }
+                // Beitreten per Code
+                item(span = { GridItemSpan(2) }) {
+                    TextButton(
+                        onClick  = { haptic.tick(); viewModel.showJoinDialog() },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Icon(Icons.Default.Link, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Mit Code beitreten")
                     }
                 }
             }
-
-            // Extended FAB
-            ExtendedFloatingActionButton(
-                onClick        = { haptic.click(); onErstellen() },
-                modifier       = Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = 18.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor   = MaterialTheme.colorScheme.onPrimary,
-                shape          = RoundedCornerShape(18.dp),
-                icon           = { Icon(Icons.Default.Add, null) },
-                text           = { Text("Liste", fontWeight = FontWeight.Medium, fontSize = 15.sp) }
-            )
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier  = Modifier.align(Alignment.BottomCenter)
+        )
     }
 
     if (uiState.showJoinDialog) {
@@ -209,13 +173,6 @@ fun ListenScreen(
     }
 }
 
-private fun isToday(ts: com.google.firebase.Timestamp): Boolean {
-    val due   = java.util.Calendar.getInstance().apply { time = ts.toDate() }
-    val today = java.util.Calendar.getInstance()
-    return due.get(java.util.Calendar.YEAR) == today.get(java.util.Calendar.YEAR) &&
-            due.get(java.util.Calendar.DAY_OF_YEAR) == today.get(java.util.Calendar.DAY_OF_YEAR)
-}
-
 private val avatarColors: List<Color> = listOf(
     Color(0xFF5B8DEF), Color(0xFF4EC9A8), Color(0xFFFFA552), Color(0xFFE06FA0), Color(0xFF9B7EDE),
 )
@@ -225,6 +182,34 @@ private fun avatarColorFor(memberId: String): Color =
 
 private fun avatarLetterFor(memberId: String): String =
     memberId.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.toString() ?: "?"
+
+@Composable
+private fun NewListCard(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape   = RoundedCornerShape(22.dp),
+        border  = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outlineVariant),
+        color   = Color.Transparent,
+        modifier = Modifier.fillMaxWidth().height(210.dp)
+    ) {
+        Column(
+            modifier            = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier         = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
+            }
+            Spacer(Modifier.height(10.dp))
+            Text("Neue Liste", fontSize = 14.sp, fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
 
 @Composable
 private fun ListCard(
@@ -340,34 +325,6 @@ private fun ListCard(
                     Text("Nur du", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun NewListCard(onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        shape   = RoundedCornerShape(22.dp),
-        border  = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outlineVariant),
-        color   = Color.Transparent,
-        modifier = Modifier.fillMaxWidth().height(210.dp)
-    ) {
-        Column(
-            modifier            = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier         = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
-            }
-            Spacer(Modifier.height(10.dp))
-            Text("Neue Liste", fontSize = 14.sp, fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

@@ -71,7 +71,7 @@ fun AufgabeDetailScreen(
     allLists        : List<TodoList> = listOf(list),
 ) {
     val todoVm: TodosViewModel = viewModel(
-        key     = "detail_task_${list.id}",
+        key     = "detail_${list.id}",
         factory = TodosViewModel.Factory(repository, list.id)
     )
     val uiState by todoVm.uiState.collectAsStateWithLifecycle()

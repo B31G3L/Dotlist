@@ -23,6 +23,8 @@ import de.beigel.list.auth.AuthManager
 import de.beigel.list.data.DeviceIdManager
 import de.beigel.list.repository.TodoRepository
 import de.beigel.list.ui.screens.MainScreen
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.tasks.await
 import de.beigel.list.ui.screens.WillkommenScreen
 import de.beigel.list.ui.theme.AccentColor
 import de.beigel.list.ui.theme.AccentColorPreferences
@@ -59,7 +61,17 @@ class MainActivity : ComponentActivity() {
             // daher kurz warten bevor die App mit einer echten UID startet.
             var uid by remember { mutableStateOf<String?>(null) }
             LaunchedEffect(Unit) {
-                uid = AuthManager.ensureSignedIn()
+                val id = AuthManager.ensureSignedIn()
+                uid = id
+                // FCM-Token besorgen und in Firestore hinterlegen, damit Cloud
+                // Functions Push-Nachrichten an dieses Gerät schicken können.
+                try {
+                    val token = com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
+                    TodoRepository(id).saveDeviceToken(token)
+                    TodoRepository(id).setPushEnabled(de.beigel.list.data.NotificationPreferences.getPushEnabled(this@MainActivity).first())
+                } catch (_: Exception) {
+                    // Kein Netzwerk o.ä. – wird beim nächsten Start erneut versucht
+                }
             }
 
             TodoSharedTheme(darkTheme = isDark, accentColor = accentColor) {

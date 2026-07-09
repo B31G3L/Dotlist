@@ -19,7 +19,7 @@ import de.beigel.list.data.AppNotification
  * Messaging + einen Server (Cloud Function), das ist hier nicht umgesetzt.
  */
 object LocalNotifier {
-    private const val CHANNEL_ID = "dotlist_notifications"
+    const val CHANNEL_ID = "dotlist_notifications"
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -57,6 +57,7 @@ object LocalNotifier {
         "ERLEDIGT"   -> "hat „${n.todoTitle}“ erledigt"
         "KOMMENTAR"  -> "hat zu „${n.todoTitle}“ kommentiert"
         "EINLADUNG"  -> "lädt dich zur Liste „${n.todoTitle}“ ein"
+        "ERINNERUNG" -> "„${n.todoTitle}“ ist bald fällig"
         else          -> "hat „${n.todoTitle}“ bearbeitet"
     }
 }

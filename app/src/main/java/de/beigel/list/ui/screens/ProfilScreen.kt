@@ -142,7 +142,11 @@ fun ProfilScreen(
                 checked = pushEnabled,
                 onToggle = {
                     haptic.tick()
-                    scope.launch { NotificationPreferences.setPushEnabled(context, !pushEnabled) }
+                    val newValue = !pushEnabled
+                    scope.launch {
+                        NotificationPreferences.setPushEnabled(context, newValue)
+                        try { repository.setPushEnabled(newValue) } catch (_: Exception) {}
+                    }
                 }
             )
             HorizontalDivider(modifier = Modifier.padding(start = 52.dp),

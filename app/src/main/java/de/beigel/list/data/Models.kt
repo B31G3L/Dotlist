@@ -13,6 +13,7 @@ import com.google.firebase.firestore.PropertyName
  * @param createdAt     Erstellungszeitpunkt
  * @param color         Farbe der Liste (Hex-String, z.B. "#FF5733")
  * @param icon          Name des gewählten Icons (siehe ALL_LIST_ICONS), leer = alte Positions-Rotation
+ * @param mutedBy       Geräte-IDs, die für diese Liste keine Push-Benachrichtigungen wollen
  */
 data class TodoList(
     val id: String = "",
@@ -23,10 +24,11 @@ data class TodoList(
     val createdBy: String = "",
     val createdAt: Timestamp = Timestamp.now(),
     val color: String = "#6750A4",
-    val icon: String = ""
+    val icon: String = "",
+    val mutedBy: List<String> = emptyList()
 ) {
     // Parameterloser Konstruktor für Firestore-Deserialisierung
-    constructor() : this("", "", emptyList(), emptyMap(), emptyList(), "", Timestamp.now(), "#6750A4", "")
+    constructor() : this("", "", emptyList(), emptyMap(), emptyList(), "", Timestamp.now(), "#6750A4", "", emptyList())
 }
 
 /**
@@ -122,6 +124,7 @@ data class TodoItem(
     val dueDate: Timestamp? = null,
     val assignedTo: String? = null,
     val reminderMinutes: Int? = null,
+    val reminderSent: Boolean = false,
     val createdBy: String = "",
     val createdAt: Timestamp = Timestamp.now(),
     val doneBy: String? = null,
@@ -131,7 +134,7 @@ data class TodoItem(
     val comments: List<Comment> = emptyList()
 ) {
     constructor() : this(
-        "", "", "", false, Priority.MITTEL.name, null, null, null,
+        "", "", "", false, Priority.MITTEL.name, null, null, null, false,
         "", Timestamp.now(), null, null, 0L, emptyList(), emptyList()
     )
 }
@@ -147,7 +150,7 @@ data class ListCounts(val done: Int = 0, val total: Int = 0) {
  * Art einer Benachrichtigung.
  */
 enum class NotificationType {
-    ZUGEWIESEN, ERLEDIGT, KOMMENTAR, EINLADUNG
+    ZUGEWIESEN, ERLEDIGT, KOMMENTAR, EINLADUNG, ERINNERUNG
 }
 
 /**
