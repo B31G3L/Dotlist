@@ -33,6 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
 import de.beigel.list.repository.TodoRepository
+import de.beigel.list.ui.theme.priorityColor
 import de.beigel.list.utils.HapticFeedback
 import de.beigel.list.viewmodel.TodosViewModel
 import kotlinx.coroutines.launch
@@ -478,7 +479,9 @@ private fun DetailTaskRow(
             )
         }
         // Prioritätspunkt
-        Box(Modifier.size(8.dp).clip(CircleShape).background(if (todo.isDone) Color.Transparent else listColor))
+        Box(Modifier.size(8.dp).clip(CircleShape).background(
+            if (todo.isDone) Color.Transparent else priorityColor(de.beigel.list.data.Priority.fromString(todo.priority))
+        ))
         // Mehr-Menü
         Box {
             IconButton(onClick = { showMenu = true }, modifier = Modifier.size(24.dp)) {

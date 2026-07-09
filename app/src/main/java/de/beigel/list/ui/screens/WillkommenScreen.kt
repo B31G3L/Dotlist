@@ -1,13 +1,13 @@
 package de.beigel.list.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChecklistRtl
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +17,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -66,6 +67,7 @@ fun WillkommenScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .imePadding()
     ) {
         Column(
@@ -78,16 +80,18 @@ fun WillkommenScreen(
 
             Box(
                 modifier = Modifier
-                    .size(88.dp)
+                    .size(96.dp)
                     .clip(RoundedCornerShape(28.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector        = Icons.Filled.ChecklistRtl,
+                Image(
+                    painter            = painterResource(id = de.beigel.list.R.mipmap.ic_launcher_background),
                     contentDescription = null,
-                    tint               = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier           = Modifier.size(44.dp)
+                    modifier           = Modifier.fillMaxSize().scale(1.5f)
+                )
+                Image(
+                    painter            = painterResource(id = de.beigel.list.R.mipmap.ic_launcher_foreground),
+                    contentDescription = null,
+                    modifier           = Modifier.fillMaxSize().scale(1.5f)
                 )
             }
 

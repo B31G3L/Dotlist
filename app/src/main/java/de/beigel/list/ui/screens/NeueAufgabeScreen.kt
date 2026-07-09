@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.List as ListIcon
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Segment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -70,6 +71,7 @@ fun NeueAufgabeScreen(
     var priority    by remember { mutableStateOf(Priority.MITTEL) }
     var selectedListId by remember { mutableStateOf(initialListId) }
     var dueDateCal  by remember { mutableStateOf<Calendar?>(null) }
+    var dueHasTime  by remember { mutableStateOf(false) }
     var assignedTo  by remember { mutableStateOf<String?>(null) }
     var reminderMinutes by remember { mutableStateOf<Int?>(null) }
 
@@ -215,9 +217,24 @@ fun NeueAufgabeScreen(
                             DetailRow(
                                 icon    = Icons.Default.DateRange,
                                 label   = "Fällig",
-                                value   = dueDateCal?.let { formatDueDate(it) } ?: "Kein Datum",
-                                onClick = { showDatePicker = true }
+                                value   = dueDateCal?.let { formatDueDateOnly(it) } ?: "Kein Datum",
+                                onClick = { showDatePicker = true },
+                                onClear = if (dueDateCal != null) {
+                                    { dueDateCal = null; dueHasTime = false }
+                                } else null
                             )
+                            if (dueDateCal != null) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                                DetailRow(
+                                    icon    = Icons.Default.Schedule,
+                                    label   = "Uhrzeit",
+                                    value   = if (dueHasTime) formatDueTimeOnly(dueDateCal!!) else "Keine",
+                                    onClick = { showTimePicker = true },
+                                    onClear = if (dueHasTime) {
+                                        { dueHasTime = false }
+                                    } else null
+                                )
+                            }
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                             DetailRow(
                                 icon    = Icons.Default.Person,
@@ -302,15 +319,17 @@ fun NeueAufgabeScreen(
                             if (millis != null) {
                                 val cal = Calendar.getInstance().apply { timeInMillis = millis }
                                 val existing = dueDateCal
-                                if (existing != null) {
+                                if (existing != null && dueHasTime) {
                                     cal.set(Calendar.HOUR_OF_DAY, existing.get(Calendar.HOUR_OF_DAY))
                                     cal.set(Calendar.MINUTE, existing.get(Calendar.MINUTE))
+                                } else {
+                                    cal.set(Calendar.HOUR_OF_DAY, 9)
+                                    cal.set(Calendar.MINUTE, 0)
                                 }
                                 dueDateCal = cal
                             }
                             showDatePicker = false
-                            showTimePicker = true
-                        }) { Text("Weiter") }
+                        }) { Text("Übernehmen") }
                     },
                     dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Abbrechen") } }
                 ) {
@@ -318,7 +337,7 @@ fun NeueAufgabeScreen(
                 }
             }
 
-            // ── Uhrzeit wählen ───────────────────────────────────────────
+            // ── Uhrzeit wählen (optional) ──────────────────────────────────
             if (showTimePicker) {
                 val base = dueDateCal ?: Calendar.getInstance()
                 val timeState = rememberTimePickerState(
@@ -335,6 +354,7 @@ fun NeueAufgabeScreen(
                                 set(Calendar.MINUTE, timeState.minute)
                             }
                             dueDateCal = cal
+                            dueHasTime = true
                             showTimePicker = false
                         }) { Text("Übernehmen") }
                     },
@@ -382,6 +402,7 @@ private fun DetailRow(
     value   : String,
     valueDot: Color? = null,
     onClick : () -> Unit,
+    onClear : (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier
@@ -398,11 +419,22 @@ private fun DetailRow(
             Spacer(Modifier.width(2.dp))
         }
         Text(value, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Icon(
-            androidx.compose.material.icons.Icons.Default.KeyboardArrowRight,
-            null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        if (onClear != null) {
+            IconButton(onClick = onClear, modifier = Modifier.size(22.dp)) {
+                Icon(
+                    androidx.compose.material.icons.Icons.Default.Close,
+                    contentDescription = "Entfernen",
+                    tint     = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        } else {
+            Icon(
+                androidx.compose.material.icons.Icons.Default.KeyboardArrowRight,
+                null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -439,7 +471,12 @@ private fun assigneeLabel(assignedTo: String?, currentDeviceId: String, list: To
     else                             -> list?.displayNameFor(assignedTo) ?: assignedTo.take(4).uppercase()
 }
 
-private fun formatDueDate(cal: Calendar): String {
-    val fmt = SimpleDateFormat("EEE, d. MMM · HH:mm", Locale.GERMAN)
+private fun formatDueDateOnly(cal: Calendar): String {
+    val fmt = SimpleDateFormat("EEE, d. MMM", Locale.GERMAN)
+    return fmt.format(cal.time)
+}
+
+private fun formatDueTimeOnly(cal: Calendar): String {
+    val fmt = SimpleDateFormat("HH:mm", Locale.GERMAN)
     return fmt.format(cal.time)
 }
