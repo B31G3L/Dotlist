@@ -1,6 +1,9 @@
 package de.beigel.list.data
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.PropertyName
+import de.beigel.list.R
 
 /**
  * Eine geteilte Todo-Liste.
@@ -40,6 +43,14 @@ enum class MemberRole(val label: String) {
     MITGLIED("Bearbeiter")
 }
 
+/** Lokalisiertes Label für die UI (ersetzt das interne, deutsche [MemberRole.label]). */
+@Composable
+fun MemberRole.displayLabel(): String = when (this) {
+    MemberRole.BESITZER -> stringResource(R.string.role_owner)
+    MemberRole.ADMIN    -> stringResource(R.string.role_admin)
+    MemberRole.MITGLIED -> stringResource(R.string.role_editor)
+}
+
 fun TodoList.roleOf(memberId: String): MemberRole = when {
     memberId == createdBy   -> MemberRole.BESITZER
     memberId in adminIds    -> MemberRole.ADMIN
@@ -69,6 +80,14 @@ enum class Priority(val label: String) {
         fun fromString(value: String?): Priority =
             entries.firstOrNull { it.name == value } ?: MITTEL
     }
+}
+
+/** Lokalisiertes Label für die UI (ersetzt das interne, deutsche [Priority.label]). */
+@Composable
+fun Priority.displayLabel(): String = when (this) {
+    Priority.HOCH    -> stringResource(R.string.priority_high)
+    Priority.MITTEL  -> stringResource(R.string.priority_medium)
+    Priority.NIEDRIG -> stringResource(R.string.priority_low)
 }
 
 /**

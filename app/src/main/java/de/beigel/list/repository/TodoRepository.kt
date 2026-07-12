@@ -90,9 +90,9 @@ class TodoRepository(private val deviceId: String) {
      * Liste duplizieren (neue Liste mit "Kopie"-Zusatz, alle Todos werden mitkopiert).
      * Die Kopie gehört nur dem aktuellen Gerät (keine geteilten Mitglieder).
      */
-    suspend fun duplicateList(list: TodoList, creatorName: String): String {
+    suspend fun duplicateList(list: TodoList, creatorName: String, copySuffix: String = "Copy"): String {
         val newList = TodoList(
-            name        = "${list.name} Kopie",
+            name        = "${list.name} $copySuffix",
             memberIds   = listOf(deviceId),
             memberNames = mapOf(deviceId to creatorName),
             createdBy   = deviceId,

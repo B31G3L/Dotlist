@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,9 +66,9 @@ fun KontoScreen(
                 haptic.click()
             }
         } catch (e: GetCredentialException) {
-            linkError = "Verknüpfung abgebrochen oder fehlgeschlagen"
+            linkError = context.getString(R.string.error_link_cancelled)
         } catch (e: Exception) {
-            linkError = "Verknüpfung fehlgeschlagen: ${e.message}"
+            linkError = context.getString(R.string.error_link_failed, e.message)
         } finally {
             isLinking = false
         }
@@ -82,7 +83,7 @@ fun KontoScreen(
             IconButton(onClick = { haptic.tick(); onBack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MaterialTheme.colorScheme.onSurface)
             }
-            Text("Konto verwalten", fontSize = 20.sp, fontWeight = FontWeight.Medium,
+            Text(stringResource(R.string.title_account), fontSize = 20.sp, fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface)
         }
 
@@ -116,12 +117,12 @@ fun KontoScreen(
                     }
                     Column {
                         Text(
-                            if (isLinked) "Mit Google verknüpft" else "Nur auf diesem Gerät gespeichert",
+                            if (isLinked) stringResource(R.string.status_linked) else stringResource(R.string.status_not_linked),
                             fontSize = 15.sp, fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            if (isLinked) googleEmail ?: "" else "Bei Geräteverlust sind deine Listen unwiederbringlich weg",
+                            if (isLinked) googleEmail ?: "" else stringResource(R.string.status_not_linked_hint),
                             fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 2.dp)
                         )
@@ -133,8 +134,7 @@ fun KontoScreen(
 
             if (!isLinked) {
                 Text(
-                    "Verknüpfe dein Google-Konto, damit du auch nach einem Gerätewechsel " +
-                            "oder einer Neuinstallation wieder Zugriff auf deine Listen bekommst.",
+                    stringResource(R.string.link_google_hint),
                     fontSize = 13.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -147,7 +147,7 @@ fun KontoScreen(
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(10.dp))
                     }
-                    Text("Mit Google verknüpfen")
+                    Text(stringResource(R.string.action_link_google))
                 }
                 linkError?.let { msg ->
                     Text(msg, fontSize = 13.sp, color = MaterialTheme.colorScheme.error,
@@ -161,11 +161,10 @@ fun KontoScreen(
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Logout, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Abmelden")
+                    Text(stringResource(R.string.action_sign_out))
                 }
                 Text(
-                    "Nach dem Abmelden kannst du dich mit demselben Google-Konto wieder anmelden " +
-                            "und behältst Zugriff auf deine Listen.",
+                    stringResource(R.string.sign_out_hint),
                     fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 10.dp)
                 )
@@ -176,17 +175,17 @@ fun KontoScreen(
     if (showSignOutConfirm) {
         AlertDialog(
             onDismissRequest = { showSignOutConfirm = false },
-            title   = { Text("Abmelden?") },
-            text    = { Text("Du wirst abgemeldet und die App startet neu. Mit demselben Google-Konto kommst du wieder rein.") },
+            title   = { Text(stringResource(R.string.dialog_sign_out_title)) },
+            text    = { Text(stringResource(R.string.dialog_sign_out_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     haptic.heavy()
                     AuthManager.signOut()
                     showSignOutConfirm = false
                     onSignedOut()
-                }) { Text("Abmelden", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.action_sign_out), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showSignOutConfirm = false }) { Text("Abbrechen") } }
+            dismissButton = { TextButton(onClick = { showSignOutConfirm = false }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 }

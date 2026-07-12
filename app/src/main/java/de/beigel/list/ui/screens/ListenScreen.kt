@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,6 +29,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.beigel.list.R
 import de.beigel.list.data.ListCounts
 import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
@@ -52,13 +54,14 @@ fun ListenScreen(
 ) {
     val uiState           by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let { snackbarHostState.showSnackbar(it); viewModel.clearError() }
     }
     LaunchedEffect(uiState.joinSuccess) {
         uiState.joinSuccess?.let {
-            snackbarHostState.showSnackbar("\"${it.name}\" beigetreten!")
+            snackbarHostState.showSnackbar(context.getString(R.string.toast_joined_list, it.name))
             viewModel.clearJoinSuccess()
         }
     }
@@ -86,19 +89,19 @@ fun ListenScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment     = Alignment.CenterVertically
                         ) {
-                            Text("Meine Listen", fontSize = 34.sp, fontWeight = FontWeight.Medium,
+                            Text(stringResource(R.string.title_my_lists), fontSize = 34.sp, fontWeight = FontWeight.Medium,
                                 letterSpacing = (-0.5).sp, color = MaterialTheme.colorScheme.onSurface)
                             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Link, contentDescription = "Mit Code beitreten",
+                                Icon(Icons.Default.Link, contentDescription = stringResource(R.string.cd_join_with_code),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.clickable { haptic.tick(); viewModel.showJoinDialog() })
-                                Icon(Icons.Default.Search, contentDescription = "Suche", tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search), tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.clickable { haptic.tick(); onSearch() })
                             }
                         }
                         val shared = uiState.lists.count { it.memberIds.size > 1 }
                         Text(
-                            "${uiState.lists.size} Listen · $shared geteilt",
+                            stringResource(R.string.lists_summary, uiState.lists.size, shared),
                             fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                         )
@@ -134,7 +137,7 @@ fun ListenScreen(
                     ) {
                         Icon(Icons.Default.Link, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Mit Code beitreten")
+                        Text(stringResource(R.string.action_join_with_code))
                     }
                 }
             }
@@ -205,7 +208,7 @@ private fun NewListCard(onClick: () -> Unit) {
                 Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
             }
             Spacer(Modifier.height(10.dp))
-            Text("Neue Liste", fontSize = 14.sp, fontWeight = FontWeight.Medium,
+            Text(stringResource(R.string.action_new_list), fontSize = 14.sp, fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -252,7 +255,7 @@ private fun ListCard(
                     ) {
                         Icon(
                             if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                            contentDescription = if (isSelected) "In Aufgaben-Übersicht anzeigen (aktiv)" else "In Aufgaben-Übersicht anzeigen (inaktiv)",
+                            contentDescription = if (isSelected) stringResource(R.string.cd_toggle_active) else stringResource(R.string.cd_toggle_inactive),
                             tint     = if (isSelected) color else MaterialTheme.colorScheme.outline,
                             modifier = Modifier.size(18.dp)
                         )
@@ -273,7 +276,7 @@ private fun ListCard(
             Spacer(Modifier.height(16.dp))
             Text(list.name, fontSize = 16.sp, fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${counts.done} von ${counts.total} erledigt",
+            Text(stringResource(R.string.progress_done_of_total, counts.done, counts.total),
                 fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 3.dp))
             // Fortschrittsbalken (echte Erledigt-Quote)
@@ -313,7 +316,7 @@ private fun ListCard(
                         }
                     }
                     Spacer(Modifier.width(7.dp))
-                    Text("${list.memberIds.size} Personen",
+                    Text(stringResource(R.string.members_count_people, list.memberIds.size),
                         fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
@@ -322,7 +325,7 @@ private fun ListCard(
                         tint     = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(5.dp))
-                    Text("Nur du", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+                    Text(stringResource(R.string.label_only_you), fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
                 }
             }
         }
@@ -334,24 +337,24 @@ private fun JoinListDialog(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
     var code by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Liste beitreten") },
+        title = { Text(stringResource(R.string.dialog_join_list_title)) },
         text  = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Gib den Einladungscode ein:",
+                Text(stringResource(R.string.dialog_join_list_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(
                     value = code, onValueChange = { code = it.trim() },
-                    label = { Text("Einladungscode") }, singleLine = true,
+                    label = { Text(stringResource(R.string.placeholder_invite_code)) }, singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
             Button(onClick = { onJoin(code); onDismiss() }, enabled = code.isNotBlank()) {
-                Text("Beitreten")
+                Text(stringResource(R.string.action_join))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }

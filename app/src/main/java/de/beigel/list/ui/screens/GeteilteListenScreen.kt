@@ -19,9 +19,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.beigel.list.R
 import de.beigel.list.data.TodoList
 import de.beigel.list.data.displayNameFor
 import de.beigel.list.utils.HapticFeedback
@@ -48,7 +50,7 @@ fun GeteilteListenScreen(
             IconButton(onClick = { haptic.tick(); onBack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MaterialTheme.colorScheme.onSurface)
             }
-            Text("Geteilte Listen", fontSize = 20.sp, fontWeight = FontWeight.Medium,
+            Text(stringResource(R.string.title_shared_lists), fontSize = 20.sp, fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface)
         }
 
@@ -58,8 +60,8 @@ fun GeteilteListenScreen(
                     Icon(Icons.Default.GroupOff, null,
                         modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(12.dp))
-                    Text("Noch keine geteilten Listen", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Teile eine Liste über den Einladungscode", fontSize = 13.sp,
+                    Text(stringResource(R.string.empty_no_shared_lists), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.empty_shared_lists_hint), fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
                 }
             }
@@ -85,8 +87,11 @@ fun GeteilteListenScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(list.name, fontSize = 15.5.sp, color = MaterialTheme.colorScheme.onSurface)
                             Text(
-                                "${list.memberIds.size} Mitglieder · " +
-                                        list.memberIds.take(3).joinToString(", ") { list.displayNameFor(it) },
+                                stringResource(
+                                    R.string.members_summary,
+                                    list.memberIds.size,
+                                    list.memberIds.take(3).joinToString(", ") { list.displayNameFor(it) }
+                                ),
                                 fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 modifier = Modifier.padding(top = 2.dp)

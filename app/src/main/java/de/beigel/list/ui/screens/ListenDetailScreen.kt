@@ -22,6 +22,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.beigel.list.R
 import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
 import de.beigel.list.repository.TodoRepository
@@ -49,10 +51,11 @@ fun ListenDetailScreen(
     onShare   : () -> Unit,
     onOpenTask: (TodoItem) -> Unit = {},
 ) {
+    val context = LocalContext.current
     val vm by remember { mutableStateOf(null as TodosViewModel?) }
     val todoVm: TodosViewModel = viewModel(
         key     = "detail_${list.id}",
-        factory = TodosViewModel.Factory(repository, list.id)
+        factory = TodosViewModel.Factory(repository, list.id, context)
     )
     val uiState by todoVm.uiState.collectAsStateWithLifecycle()
 
@@ -68,7 +71,7 @@ fun ListenDetailScreen(
     var newText   by remember { mutableStateOf("") }
     val focusReq  = remember { FocusRequester() }
     val scope     = rememberCoroutineScope()
-    val context   = LocalContext.current
+    val copySuffix = stringResource(R.string.list_copy_suffix)
 
     var showOptionsSheet  by remember { mutableStateOf(false) }
     var showRenameDialog  by remember { mutableStateOf(false) }
@@ -83,8 +86,8 @@ fun ListenDetailScreen(
     LaunchedEffect(uiState.recentlyDeleted) {
         val deleted = uiState.recentlyDeleted ?: return@LaunchedEffect
         val result = snackbarHostState.showSnackbar(
-            message    = "„${deleted.title}“ gelöscht",
-            actionLabel = "Rückgängig",
+            message    = context.getString(R.string.toast_task_deleted, deleted.title),
+            actionLabel = context.getString(R.string.action_undo),
             duration   = SnackbarDuration.Short
         )
         if (result == SnackbarResult.ActionPerformed) {
@@ -135,11 +138,11 @@ fun ListenDetailScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 MemberAvatarStack(memberIds = list.memberIds, listColor = listColor)
                                 Spacer(Modifier.width(10.dp))
-                                Text("${list.memberIds.size} Mitglieder",
+                                Text(stringResource(R.string.members_count, list.memberIds.size),
                                     fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Text(
-                                text     = "Verwalten",
+                                text     = stringResource(R.string.action_manage),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 color    = MaterialTheme.colorScheme.primary,
@@ -148,7 +151,7 @@ fun ListenDetailScreen(
                         }
                         Spacer(Modifier.height(16.dp))
                     }
-                    Text("$doneCount von $total erledigt",
+                    Text(stringResource(R.string.progress_done_of_total, doneCount, total),
                         fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(8.dp))
                     LinearProgressIndicator(
@@ -173,7 +176,7 @@ fun ListenDetailScreen(
                         TextField(
                             value         = newText,
                             onValueChange = { newText = it },
-                            placeholder   = { Text("Neue Aufgabe hinzufügen…",
+                            placeholder   = { Text(stringResource(R.string.placeholder_add_task),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             colors        = TextFieldDefaults.colors(
                                 focusedContainerColor   = Color.Transparent,
@@ -202,11 +205,11 @@ fun ListenDetailScreen(
                 }
             }
             // Section Aufgaben
-            item { SectionLabel("Aufgaben") }
+            item { SectionLabel(stringResource(R.string.title_tasks)) }
             if (openTodos.isEmpty() && doneTodos.isEmpty()) {
                 item {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text("Noch keine Aufgaben", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.empty_no_tasks_yet), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -220,7 +223,7 @@ fun ListenDetailScreen(
                 )
             }
             if (doneTodos.isNotEmpty()) {
-                item { SectionLabel("Erledigt (${doneTodos.size})", modifier = Modifier.padding(top = 8.dp)) }
+                item { SectionLabel(stringResource(R.string.section_done_count, doneTodos.size), modifier = Modifier.padding(top = 8.dp)) }
                 items(doneTodos, key = { "done_${it.id}" }) { todo ->
                     DetailTaskRow(
                         todo      = todo,
@@ -241,7 +244,7 @@ fun ListenDetailScreen(
             contentColor   = MaterialTheme.colorScheme.onPrimary,
             shape          = RoundedCornerShape(18.dp),
             icon           = { Icon(Icons.Default.Add, null) },
-            text           = { Text("Aufgabe", fontWeight = FontWeight.Medium, fontSize = 15.sp) }
+            text           = { Text(stringResource(R.string.fab_task), fontWeight = FontWeight.Medium, fontSize = 15.sp) }
         )
 
         SnackbarHost(
@@ -272,7 +275,7 @@ fun ListenDetailScreen(
                 if (isOwner) {
                     OptionRow(
                         icon  = Icons.Default.Edit,
-                        label = "Bearbeiten",
+                        label = stringResource(R.string.action_edit),
                         onClick = {
                             showOptionsSheet = false
                             renameText = list.name
@@ -282,25 +285,25 @@ fun ListenDetailScreen(
                 }
                 OptionRow(
                     icon  = Icons.Default.ContentCopy,
-                    label = "Duplizieren",
+                    label = stringResource(R.string.action_duplicate),
                     onClick = {
                         showOptionsSheet = false
                         haptic.click()
                         scope.launch {
-                            repository.duplicateList(list, de.beigel.list.data.DeviceIdManager.getDeviceName(context))
+                            repository.duplicateList(list, de.beigel.list.data.DeviceIdManager.getDeviceName(context), copySuffix)
                         }
                     }
                 )
                 OptionRow(
                     icon  = Icons.Default.Share,
-                    label = "Teilen",
+                    label = stringResource(R.string.action_share),
                     onClick = { showOptionsSheet = false; onShare() }
                 )
                 run {
                     val isMuted = list.mutedBy.contains(deviceId)
                     OptionRow(
                         icon  = if (isMuted) Icons.Default.NotificationsOff else Icons.Default.Notifications,
-                        label = if (isMuted) "Stumm aufheben" else "Stummschalten",
+                        label = if (isMuted) stringResource(R.string.action_unmute) else stringResource(R.string.action_mute),
                         onClick = {
                             showOptionsSheet = false
                             haptic.click()
@@ -314,14 +317,14 @@ fun ListenDetailScreen(
                 if (isOwner) {
                     OptionRow(
                         icon     = Icons.Default.Delete,
-                        label    = "Löschen",
+                        label    = stringResource(R.string.action_delete),
                         tint     = MaterialTheme.colorScheme.error,
                         onClick  = { showOptionsSheet = false; showDeleteConfirm = true }
                     )
                 } else {
                     OptionRow(
                         icon     = Icons.AutoMirrored.Filled.Logout,
-                        label    = "Liste verlassen",
+                        label    = stringResource(R.string.action_leave),
                         tint     = MaterialTheme.colorScheme.error,
                         onClick  = { showOptionsSheet = false; showLeaveConfirm = true }
                     )
@@ -335,8 +338,8 @@ fun ListenDetailScreen(
     if (showLeaveConfirm) {
         AlertDialog(
             onDismissRequest = { if (!isLeaving) showLeaveConfirm = false },
-            title   = { Text("Liste verlassen?") },
-            text    = { Text("Du verlierst den Zugriff auf „${list.name}“. Andere Mitglieder behalten die Liste.") },
+            title   = { Text(stringResource(R.string.dialog_leave_list_title)) },
+            text    = { Text(stringResource(R.string.dialog_leave_list_message, list.name)) },
             confirmButton = {
                 TextButton(
                     enabled = !isLeaving,
@@ -350,14 +353,15 @@ fun ListenDetailScreen(
                                 onBack()
                             } catch (e: Exception) {
                                 isLeaving = false
-                                snackbarHostState.showSnackbar("Verlassen fehlgeschlagen: ${e.localizedMessage ?: "Unbekannter Fehler"}")
+                                val unknown = context.getString(R.string.error_unknown)
+                                snackbarHostState.showSnackbar(context.getString(R.string.error_leave_failed, e.localizedMessage ?: unknown))
                             }
                         }
                     }
-                ) { Text("Verlassen", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(R.string.action_leave), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(enabled = !isLeaving, onClick = { showLeaveConfirm = false }) { Text("Abbrechen") }
+                TextButton(enabled = !isLeaving, onClick = { showLeaveConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -366,7 +370,7 @@ fun ListenDetailScreen(
     if (showRenameDialog) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title   = { Text("Liste umbenennen") },
+            title   = { Text(stringResource(R.string.dialog_rename_list_title)) },
             text    = {
                 TextField(
                     value         = renameText,
@@ -383,9 +387,9 @@ fun ListenDetailScreen(
                         scope.launch { repository.renameList(list.id, renameText) }
                         showRenameDialog = false
                     }
-                ) { Text("Speichern") }
+                ) { Text(stringResource(R.string.action_save)) }
             },
-            dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text("Abbrechen") } }
+            dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 
@@ -393,17 +397,17 @@ fun ListenDetailScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title   = { Text("Liste löschen?") },
-            text    = { Text("„${list.name}“ und alle enthaltenen Aufgaben werden endgültig gelöscht.") },
+            title   = { Text(stringResource(R.string.dialog_delete_list_title)) },
+            text    = { Text(stringResource(R.string.dialog_delete_list_message, list.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     haptic.heavy()
                     scope.launch { repository.deleteList(list.id) }
                     showDeleteConfirm = false
                     onBack()
-                }) { Text("Löschen", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Abbrechen") } }
+            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 }
@@ -517,7 +521,7 @@ private fun DetailTaskRow(
             }
             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                 DropdownMenuItem(
-                    text = { Text("Löschen", color = MaterialTheme.colorScheme.error) },
+                    text = { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) },
                     leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                     onClick = { showMenu = false; onDelete() }
                 )

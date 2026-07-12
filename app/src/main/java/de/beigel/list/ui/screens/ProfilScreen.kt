@@ -17,11 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.beigel.list.R
 import de.beigel.list.data.DeviceIdManager
 import de.beigel.list.data.NotificationPreferences
 import de.beigel.list.data.TodoList
@@ -65,7 +67,7 @@ fun ProfilScreen(
     val todosViewModels: List<TodosViewModel> = lists.map { list ->
         viewModel<TodosViewModel>(
             key     = "profil_${list.id}",
-            factory = TodosViewModel.Factory(repository, list.id)
+            factory = TodosViewModel.Factory(repository, list.id, context)
         )
     }
     val allTodos = todosViewModels.flatMap { it.uiState.collectAsStateWithLifecycle().value.todos }
@@ -80,7 +82,7 @@ fun ProfilScreen(
     ) {
         // Titel
         Text(
-            text       = "Profil",
+            text       = stringResource(R.string.title_profile),
             fontSize   = 34.sp,
             fontWeight = FontWeight.Medium,
             letterSpacing = (-0.5).sp,
@@ -115,7 +117,7 @@ fun ProfilScreen(
                 modifier   = Modifier.padding(top = 14.dp)
             )
             Text(
-                text     = "Tippen zum Ändern",
+                text     = stringResource(R.string.action_tap_to_change),
                 fontSize = 13.sp,
                 color    = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 3.dp)
@@ -127,9 +129,9 @@ fun ProfilScreen(
             modifier              = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            StatCard("$openCount", "Offen",    Modifier.weight(1f))
-            StatCard("$doneCount", "Erledigt", Modifier.weight(1f))
-            StatCard("${lists.size}", "Listen", Modifier.weight(1f))
+            StatCard("$openCount", stringResource(R.string.stat_open),    Modifier.weight(1f))
+            StatCard("$doneCount", stringResource(R.string.stat_done), Modifier.weight(1f))
+            StatCard("${lists.size}", stringResource(R.string.stat_lists), Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(22.dp))
@@ -138,7 +140,7 @@ fun ProfilScreen(
         SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
             SettingsToggleRow(
                 icon    = Icons.Default.Notifications,
-                title   = "Benachrichtigungen",
+                title   = stringResource(R.string.setting_notifications),
                 checked = pushEnabled,
                 onToggle = {
                     haptic.tick()
@@ -153,7 +155,7 @@ fun ProfilScreen(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)
             SettingsToggleRow(
                 icon     = Icons.Default.DarkMode,
-                title    = "Dunkles Design",
+                title    = stringResource(R.string.setting_dark_mode),
                 checked  = isDark,
                 onToggle = {
                     haptic.tick()
@@ -173,21 +175,21 @@ fun ProfilScreen(
         SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
             SettingsNavRow(
                 icon  = Icons.Default.Group,
-                title = "Geteilte Listen",
+                title = stringResource(R.string.setting_shared_lists),
                 onClick = { haptic.tick(); onOpenGeteilteListen() }
             )
             HorizontalDivider(modifier = Modifier.padding(start = 52.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)
             SettingsNavRow(
                 icon  = Icons.Default.AccountCircle,
-                title = "Konto verwalten",
+                title = stringResource(R.string.setting_manage_account),
                 onClick = { haptic.tick(); onOpenKonto() }
             )
             HorizontalDivider(modifier = Modifier.padding(start = 52.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)
             SettingsNavRow(
                 icon  = Icons.Default.Help,
-                title = "Hilfe & Feedback",
+                title = stringResource(R.string.setting_help_feedback),
                 onClick = { haptic.tick(); onOpenHilfe() }
             )
         }
@@ -198,13 +200,13 @@ fun ProfilScreen(
     if (showRenameDialog) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title   = { Text("Dein Name") },
+            title   = { Text(stringResource(R.string.dialog_your_name_title)) },
             text    = {
                 TextField(
                     value         = renameText,
                     onValueChange = { renameText = it },
                     singleLine    = true,
-                    placeholder   = { Text("z.B. Alex") },
+                    placeholder   = { Text(stringResource(R.string.placeholder_name_example)) },
                     modifier      = Modifier.fillMaxWidth()
                 )
             },
@@ -217,9 +219,9 @@ fun ProfilScreen(
                         deviceName = renameText.trim()
                         showRenameDialog = false
                     }
-                ) { Text("Speichern") }
+                ) { Text(stringResource(R.string.action_save)) }
             },
-            dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text("Abbrechen") } }
+            dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 }

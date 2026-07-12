@@ -29,7 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import android.content.Context
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
@@ -38,7 +40,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Timestamp
+import de.beigel.list.R
 import de.beigel.list.data.Priority
+import de.beigel.list.data.displayLabel
 import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
 import de.beigel.list.data.displayNameFor
@@ -51,12 +55,13 @@ import java.util.Calendar
 import java.util.Locale
 
 /** Voreingestellte Erinnerungs-Optionen (Anzeigename zu Minuten-Vorlauf). */
-private val DetailReminderOptions: List<Pair<String, Int?>> = listOf(
-    "Keine"           to null,
-    "10 Min vorher"   to 10,
-    "30 Min vorher"   to 30,
-    "1 Stunde vorher" to 60,
-    "1 Tag vorher"    to 1440,
+@Composable
+private fun detailReminderOptions(): List<Pair<String, Int?>> = listOf(
+    stringResource(R.string.reminder_none)    to null,
+    stringResource(R.string.reminder_10_min)  to 10,
+    stringResource(R.string.reminder_30_min)  to 30,
+    stringResource(R.string.reminder_1_hour)  to 60,
+    stringResource(R.string.reminder_1_day)   to 1440,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,13 +75,14 @@ fun AufgabeDetailScreen(
     onBack          : () -> Unit,
     allLists        : List<TodoList> = listOf(list),
 ) {
+    val context   = LocalContext.current
     val todoVm: TodosViewModel = viewModel(
         key     = "detail_${list.id}",
-        factory = TodosViewModel.Factory(repository, list.id)
+        factory = TodosViewModel.Factory(repository, list.id, context)
     )
     val uiState by todoVm.uiState.collectAsStateWithLifecycle()
-    val context   = LocalContext.current
     val actorName = remember { de.beigel.list.data.DeviceIdManager.getDeviceName(context) }
+    val DetailReminderOptions = detailReminderOptions()
 
     // Immer die aktuelle Version aus dem Live-Stream nehmen, Fallback auf den übergebenen Stand
     val liveTodo = uiState.todos.find { it.id == todo.id } ?: todo
@@ -128,15 +134,15 @@ fun AufgabeDetailScreen(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(onClick = { haptic.tick(); save(); onBack() }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
             }
             Box {
                 IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Mehr")
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more))
                 }
                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                     DropdownMenuItem(
-                        text        = { Text("Löschen", color = MaterialTheme.colorScheme.error) },
+                        text        = { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) },
                         leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                         onClick     = { showMenu = false; showDeleteConfirm = true }
                     )
@@ -199,7 +205,7 @@ fun AufgabeDetailScreen(
                 OutlinedTextField(
                     value         = description,
                     onValueChange = { description = it },
-                    placeholder   = { Text("Beschreibung") },
+                    placeholder   = { Text(stringResource(R.string.placeholder_description)) },
                     minLines      = 2,
                     modifier      = Modifier.fillMaxWidth()
                 )
@@ -214,7 +220,7 @@ fun AufgabeDetailScreen(
                 ) {
                     Icon(Icons.Default.Segment, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
-                        "Beschreibung hinzufügen …",
+                        stringResource(R.string.action_add_description),
                         color    = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 15.sp
                     )
@@ -231,7 +237,7 @@ fun AufgabeDetailScreen(
                 Column {
                     DetailClickRow(
                         icon    = Icons.Default.ListIcon,
-                        label   = "Liste",
+                        label   = stringResource(R.string.label_list),
                         value   = list.name,
                         onClick = { if (allLists.size > 1) showListMenu = true }
                     )
@@ -242,7 +248,7 @@ fun AufgabeDetailScreen(
 
             // ── Priorität ─────────────────────────────────────────────
             Text(
-                "PRIORITÄT",
+                stringResource(R.string.section_priority),
                 fontSize      = 12.sp,
                 fontWeight    = FontWeight.Bold,
                 letterSpacing = 0.8.sp,
@@ -268,22 +274,22 @@ fun AufgabeDetailScreen(
                 Column {
                     DetailClickRow(
                         icon    = Icons.Default.DateRange,
-                        label   = "Fällig",
-                        value   = dueDateCal?.let { formatDueDate(it) } ?: "Kein Datum",
+                        label   = stringResource(R.string.label_due),
+                        value   = dueDateCal?.let { formatDueDate(it) } ?: stringResource(R.string.label_no_date),
                         onClick = { showDatePicker = true }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     DetailClickRow(
                         icon    = Icons.Default.Person,
-                        label   = "Zugewiesen",
-                        value   = assigneeLabelFor(assignedTo, currentDeviceId, list),
+                        label   = stringResource(R.string.label_assigned),
+                        value   = assigneeLabelFor(assignedTo, currentDeviceId, list, context),
                         onClick = { if (members.isNotEmpty()) showAssignMenu = true }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     DetailClickRow(
                         icon    = Icons.Default.Notifications,
-                        label   = "Erinnerung",
-                        value   = DetailReminderOptions.firstOrNull { it.second == reminderMinutes }?.first ?: "Keine",
+                        label   = stringResource(R.string.label_reminder),
+                        value   = DetailReminderOptions.firstOrNull { it.second == reminderMinutes }?.first ?: stringResource(R.string.reminder_none),
                         onClick = { showReminderMenu = true }
                     )
                 }
@@ -299,7 +305,7 @@ fun AufgabeDetailScreen(
                 verticalAlignment     = Alignment.CenterVertically
             ) {
                 Text(
-                    "UNTERAUFGABEN", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    stringResource(R.string.section_subtasks), fontSize = 12.sp, fontWeight = FontWeight.Bold,
                     letterSpacing = 0.8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (liveTodo.subtasks.isNotEmpty()) {
@@ -346,7 +352,7 @@ fun AufgabeDetailScreen(
                 TextField(
                     value           = newSubtaskText,
                     onValueChange   = { newSubtaskText = it },
-                    placeholder     = { Text("Unteraufgabe …") },
+                    placeholder     = { Text(stringResource(R.string.placeholder_subtask)) },
                     singleLine      = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = {
@@ -371,7 +377,7 @@ fun AufgabeDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    Text("Unteraufgabe hinzufügen", fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.action_add_subtask), fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -379,7 +385,7 @@ fun AufgabeDetailScreen(
 
             // ── Kommentare ────────────────────────────────────────────
             Text(
-                "KOMMENTARE", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                stringResource(R.string.section_comments), fontSize = 12.sp, fontWeight = FontWeight.Bold,
                 letterSpacing = 0.8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(10.dp))
@@ -388,7 +394,8 @@ fun AufgabeDetailScreen(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    val authorName = if (comment.authorId == currentDeviceId) "Ich" else list.displayNameFor(comment.authorId)
+                    val meLabel = stringResource(R.string.label_me)
+                    val authorName = if (comment.authorId == currentDeviceId) meLabel else list.displayNameFor(comment.authorId)
                     Box(
                         modifier = Modifier.size(32.dp).clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)),
@@ -399,7 +406,7 @@ fun AufgabeDetailScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(authorName, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                            Text(formatRelativeTime(comment.createdAt), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(formatRelativeTime(comment.createdAt, context), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(comment.text, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(top = 2.dp))
                     }
@@ -414,7 +421,7 @@ fun AufgabeDetailScreen(
                 OutlinedTextField(
                     value         = newCommentText,
                     onValueChange = { newCommentText = it },
-                    placeholder   = { Text("Kommentar schreiben …") },
+                    placeholder   = { Text(stringResource(R.string.placeholder_comment)) },
                     singleLine    = true,
                     shape         = RoundedCornerShape(24.dp),
                     modifier      = Modifier.weight(1f)
@@ -440,7 +447,7 @@ fun AufgabeDetailScreen(
 
     // ── Liste wählen ─────────────────────────────────────────────────────
     if (showListMenu) {
-        DetailChoiceDialog(title = "Liste wählen", onDismiss = { showListMenu = false }) {
+        DetailChoiceDialog(title = stringResource(R.string.dialog_choose_list), onDismiss = { showListMenu = false }) {
             allLists.forEach { l ->
                 DetailChoiceRow(
                     label   = l.name,
@@ -457,11 +464,11 @@ fun AufgabeDetailScreen(
 
     // ── Zuweisen wählen ────────────────────────────────────────────────
     if (showAssignMenu) {
-        DetailChoiceDialog(title = "Zuweisen an", onDismiss = { showAssignMenu = false }) {
-            DetailChoiceRow(label = "Niemand", onClick = { assignedTo = null; showAssignMenu = false; save() })
+        DetailChoiceDialog(title = stringResource(R.string.dialog_assign_to), onDismiss = { showAssignMenu = false }) {
+            DetailChoiceRow(label = stringResource(R.string.label_none), onClick = { assignedTo = null; showAssignMenu = false; save() })
             members.forEach { memberId ->
                 DetailChoiceRow(
-                    label   = if (memberId == currentDeviceId) "Ich" else list.displayNameFor(memberId),
+                    label   = if (memberId == currentDeviceId) stringResource(R.string.label_me) else list.displayNameFor(memberId),
                     onClick = { assignedTo = memberId; showAssignMenu = false; save() }
                 )
             }
@@ -470,7 +477,7 @@ fun AufgabeDetailScreen(
 
     // ── Erinnerung wählen ────────────────────────────────────────────────
     if (showReminderMenu) {
-        DetailChoiceDialog(title = "Erinnerung", onDismiss = { showReminderMenu = false }) {
+        DetailChoiceDialog(title = stringResource(R.string.label_reminder), onDismiss = { showReminderMenu = false }) {
             DetailReminderOptions.forEach { (label, minutes) ->
                 DetailChoiceRow(label = label, onClick = { reminderMinutes = minutes; showReminderMenu = false; save() })
             }
@@ -498,9 +505,9 @@ fun AufgabeDetailScreen(
                     }
                     showDatePicker = false
                     showTimePicker = true
-                }) { Text("Weiter") }
+                }) { Text(stringResource(R.string.action_continue)) }
             },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Abbrechen") } }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) } }
         ) {
             DatePicker(state = state)
         }
@@ -525,9 +532,9 @@ fun AufgabeDetailScreen(
                     dueDateCal = cal
                     showTimePicker = false
                     save()
-                }) { Text("Übernehmen") }
+                }) { Text(stringResource(R.string.action_apply)) }
             },
-            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Abbrechen") } },
+            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text(stringResource(R.string.action_cancel)) } },
             text = { TimePicker(state = timeState) }
         )
     }
@@ -536,17 +543,17 @@ fun AufgabeDetailScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title   = { Text("Aufgabe löschen?") },
-            text    = { Text("„${liveTodo.title}“ wird endgültig gelöscht.") },
+            title   = { Text(stringResource(R.string.dialog_delete_task_title)) },
+            text    = { Text(stringResource(R.string.dialog_delete_task_message, liveTodo.title)) },
             confirmButton = {
                 TextButton(onClick = {
                     haptic.heavy()
                     todoVm.deleteTodo(liveTodo.id)
                     showDeleteConfirm = false
                     onBack()
-                }) { Text("Löschen", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Abbrechen") } }
+            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 }
@@ -588,7 +595,7 @@ private fun DetailPriorityChip(priority: Priority, selected: Boolean, onClick: (
                 Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
             }
             Text(
-                priority.label,
+                priority.displayLabel(),
                 fontSize   = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color      = if (selected) Color(0xFF201A17) else MaterialTheme.colorScheme.onSurfaceVariant
@@ -603,7 +610,7 @@ private fun DetailChoiceDialog(title: String, onDismiss: () -> Unit, content: @C
         onDismissRequest = onDismiss,
         title            = { Text(title) },
         text             = { Column(content = content) },
-        confirmButton    = { TextButton(onClick = onDismiss) { Text("Fertig") } }
+        confirmButton    = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_done)) } }
     )
 }
 
@@ -620,9 +627,9 @@ private fun DetailChoiceRow(label: String, onClick: () -> Unit) {
     }
 }
 
-private fun assigneeLabelFor(assignedTo: String?, currentDeviceId: String, list: TodoList): String = when {
-    assignedTo == null            -> "Niemand"
-    assignedTo == currentDeviceId -> "Ich"
+private fun assigneeLabelFor(assignedTo: String?, currentDeviceId: String, list: TodoList, context: Context): String = when {
+    assignedTo == null            -> context.getString(R.string.label_none)
+    assignedTo == currentDeviceId -> context.getString(R.string.label_me)
     else                            -> list.displayNameFor(assignedTo)
 }
 
@@ -631,12 +638,15 @@ private fun formatDueDate(cal: Calendar): String {
     return fmt.format(cal.time)
 }
 
-private fun formatRelativeTime(ts: Timestamp): String {
+private fun formatRelativeTime(ts: Timestamp, context: Context): String {
     val diffMinutes = (System.currentTimeMillis() - ts.toDate().time) / 60000
     return when {
-        diffMinutes < 1   -> "gerade eben"
-        diffMinutes < 60  -> "vor $diffMinutes Min"
-        diffMinutes < 1440 -> "vor ${diffMinutes / 60} Std"
-        else               -> "vor ${diffMinutes / 1440} Tag${if (diffMinutes / 1440 > 1) "en" else ""}"
+        diffMinutes < 1   -> context.getString(R.string.time_just_now)
+        diffMinutes < 60  -> context.getString(R.string.time_minutes_ago, diffMinutes.toInt())
+        diffMinutes < 1440 -> context.getString(R.string.time_hours_ago, (diffMinutes / 60).toInt())
+        else               -> {
+            val days = (diffMinutes / 1440).toInt()
+            context.resources.getQuantityString(R.plurals.time_days_ago, days, days)
+        }
     }
 }

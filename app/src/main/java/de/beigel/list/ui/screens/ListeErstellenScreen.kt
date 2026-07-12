@@ -23,14 +23,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.beigel.list.R
 import de.beigel.list.ui.theme.ALL_LIST_ICONS
 import de.beigel.list.ui.theme.DEFAULT_LIST_ICON_NAME
 import de.beigel.list.ui.theme.ICONS_BY_CATEGORY
 import de.beigel.list.ui.theme.ListColors
 import de.beigel.list.ui.theme.ListIconCategory
+import de.beigel.list.ui.theme.displayLabel
 import de.beigel.list.ui.theme.listIconByName
 
 @Composable
@@ -61,7 +64,7 @@ fun ListeErstellenScreen(
             IconButton(onClick = onBack) {
                 Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurface)
             }
-            Text("Neue Liste", fontSize = 20.sp, fontWeight = FontWeight.Medium,
+            Text(stringResource(R.string.title_new_list), fontSize = 20.sp, fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface)
         }
 
@@ -84,7 +87,7 @@ fun ListeErstellenScreen(
                 TextField(
                     value         = name,
                     onValueChange = { name = it },
-                    placeholder   = { Text("Listenname",
+                    placeholder   = { Text(stringResource(R.string.placeholder_list_name),
                         color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     colors        = TextFieldDefaults.colors(
                         focusedContainerColor   = Color.Transparent,
@@ -99,7 +102,7 @@ fun ListeErstellenScreen(
         }
 
         // Farbe
-        SectionLabel("Farbe")
+        SectionLabel(stringResource(R.string.section_color))
         Row(
             modifier              = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -142,7 +145,7 @@ fun ListeErstellenScreen(
         }
 
         // Symbol
-        SectionLabel("Symbol", modifier = Modifier.padding(top = 20.dp))
+        SectionLabel(stringResource(R.string.section_icon), modifier = Modifier.padding(top = 20.dp))
         Row(
             modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -160,7 +163,7 @@ fun ListeErstellenScreen(
                 Icon(previewIcon, null, tint = previewColor, modifier = Modifier.size(23.dp))
             }
             Text(
-                text     = "Alle Symbole durchsuchen",
+                text     = stringResource(R.string.action_browse_all_icons),
                 fontSize = 14.sp,
                 color    = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Medium,
@@ -176,7 +179,7 @@ fun ListeErstellenScreen(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(54.dp),
             shape    = RoundedCornerShape(16.dp)
         ) {
-            Text("Liste erstellen", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.action_create_list), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(32.dp))
     }
@@ -199,20 +202,20 @@ fun ListeErstellenScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Symbol wählen", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.title_choose_icon), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                     item {
                         FilterChip(
                             selected = selectedCategory == null,
                             onClick  = { selectedCategory = null },
-                            label    = { Text("Alle") }
+                            label    = { Text(stringResource(R.string.filter_all_icons)) }
                         )
                     }
                     items(ListIconCategory.values().toList()) { category ->
                         FilterChip(
                             selected = selectedCategory == category,
                             onClick  = { selectedCategory = category },
-                            label    = { Text(category.label) }
+                            label    = { Text(category.displayLabel()) }
                         )
                     }
                 }
@@ -253,18 +256,18 @@ fun ListeErstellenScreen(
         var b by remember { mutableStateOf(android.graphics.Color.blue(init)) }
         AlertDialog(
             onDismissRequest = { showColorPicker = false },
-            title   = { Text("Eigene Farbe") },
+            title   = { Text(stringResource(R.string.title_custom_color)) },
             text    = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(
                         modifier = Modifier.size(40.dp).clip(CircleShape)
                             .background(Color(android.graphics.Color.rgb(r, g, b)))
                     )
-                    Text("Rot", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.color_red), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Slider(value = r.toFloat(), onValueChange = { r = it.toInt() }, valueRange = 0f..255f)
-                    Text("Grün", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.color_green), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Slider(value = g.toFloat(), onValueChange = { g = it.toInt() }, valueRange = 0f..255f)
-                    Text("Blau", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.color_blue), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Slider(value = b.toFloat(), onValueChange = { b = it.toInt() }, valueRange = 0f..255f)
                 }
             },
@@ -272,9 +275,9 @@ fun ListeErstellenScreen(
                 Button(onClick = {
                     selectedColor = String.format("#%02X%02X%02X", r, g, b)
                     showColorPicker = false
-                }) { Text("Übernehmen") }
+                }) { Text(stringResource(R.string.action_apply)) }
             },
-            dismissButton = { TextButton(onClick = { showColorPicker = false }) { Text("Abbrechen") } }
+            dismissButton = { TextButton(onClick = { showColorPicker = false }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 }

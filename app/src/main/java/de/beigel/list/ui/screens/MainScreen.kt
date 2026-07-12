@@ -20,8 +20,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.beigel.list.R
 import de.beigel.list.data.NotificationPreferences
 import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
@@ -54,15 +56,22 @@ private val AppScreen.isTopLevel
             this is AppScreen.Kalender || this is AppScreen.Profil
 
 private enum class NavTab(
-    val label         : String,
     val screen        : AppScreen,
     val selectedIcon  : ImageVector,
     val unselectedIcon: ImageVector,
 ) {
-    AUFGABEN("Aufgaben", AppScreen.Aufgaben, Icons.Filled.CheckCircle,   Icons.Outlined.CheckCircle),
-    LISTEN  ("Listen",   AppScreen.Listen,   Icons.AutoMirrored.Filled.ViewList, Icons.AutoMirrored.Outlined.ViewList),
-    KALENDER("Kalender", AppScreen.Kalender, Icons.Filled.CalendarMonth,  Icons.Outlined.CalendarMonth),
-    PROFIL  ("Profil",   AppScreen.Profil,   Icons.Filled.Person,         Icons.Outlined.Person),
+    AUFGABEN(AppScreen.Aufgaben, Icons.Filled.CheckCircle,   Icons.Outlined.CheckCircle),
+    LISTEN  (AppScreen.Listen,   Icons.AutoMirrored.Filled.ViewList, Icons.AutoMirrored.Outlined.ViewList),
+    KALENDER(AppScreen.Kalender, Icons.Filled.CalendarMonth,  Icons.Outlined.CalendarMonth),
+    PROFIL  (AppScreen.Profil,   Icons.Filled.Person,         Icons.Outlined.Person),
+}
+
+@Composable
+private fun NavTab.label(): String = when (this) {
+    NavTab.AUFGABEN -> stringResource(R.string.nav_tasks)
+    NavTab.LISTEN   -> stringResource(R.string.nav_lists)
+    NavTab.KALENDER -> stringResource(R.string.nav_calendar)
+    NavTab.PROFIL   -> stringResource(R.string.nav_profile)
 }
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
@@ -211,10 +220,10 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
                             icon  = {
                                 Icon(
                                     imageVector        = if (selected) tab.selectedIcon else tab.unselectedIcon,
-                                    contentDescription = tab.label
+                                    contentDescription = tab.label()
                                 )
                             },
-                            label = { Text(tab.label) }
+                            label = { Text(tab.label()) }
                         )
                     }
                 }

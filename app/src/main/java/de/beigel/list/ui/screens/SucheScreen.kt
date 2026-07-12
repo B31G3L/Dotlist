@@ -22,12 +22,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.beigel.list.R
 import de.beigel.list.data.RecentSearchesPreferences
 import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
@@ -53,7 +55,7 @@ fun SucheScreen(
     val recent by RecentSearchesPreferences.getRecent(context).collectAsState(initial = emptyList())
 
     val vms: List<Pair<TodoList, TodosViewModel>> = lists.map { list ->
-        list to viewModel(key = "suche_${list.id}", factory = TodosViewModel.Factory(repository, list.id))
+        list to viewModel(key = "suche_${list.id}", factory = TodosViewModel.Factory(repository, list.id, context))
     }
     val allTodos: List<Pair<TodoList, TodoItem>> = vms.flatMap { (list, vm) ->
         vm.uiState.collectAsStateWithLifecycle().value.todos.map { list to it }
@@ -90,7 +92,7 @@ fun SucheScreen(
                     TextField(
                         value           = query,
                         onValueChange   = { query = it },
-                        placeholder     = { Text("Aufgaben & Listen suchen", fontSize = 15.sp) },
+                        placeholder     = { Text(stringResource(R.string.placeholder_search), fontSize = 15.sp) },
                         singleLine      = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = {
@@ -120,14 +122,14 @@ fun SucheScreen(
         if (query.isBlank()) {
             // Letzte Suchen
             if (recent.isNotEmpty()) {
-                SectionLabel("Letzte Suchen")
+                SectionLabel(stringResource(R.string.section_recent_searches))
                 FlowRowChips(
                     items   = recent,
                     onClick = { query = it },
                 )
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Suche nach Aufgaben oder Listen",
+                    Text(stringResource(R.string.empty_search_hint),
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
             }
@@ -137,11 +139,11 @@ fun SucheScreen(
                     Icon(Icons.Default.SearchOff, null,
                         modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(10.dp))
-                    Text("Keine Ergebnisse für „$query“", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.empty_search_results, query), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
-            SectionLabel("Ergebnisse für „$query“")
+            SectionLabel(stringResource(R.string.section_results_for, query))
             LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
                 items(results, key = { "${it.first.id}_${it.second.id}" }) { (list, todo) ->
                     val vm = vms.find { it.first.id == list.id }?.second

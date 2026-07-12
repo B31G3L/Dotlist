@@ -16,11 +16,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.beigel.list.R
 import de.beigel.list.data.Priority
 import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
@@ -44,7 +46,7 @@ fun KalenderScreen(
     val activeLists = remember(lists, selectedIds) { lists.filter { it.id in selectedIds } }
 
     val allVms: List<Pair<TodoList, TodosViewModel>> = activeLists.map { list ->
-        list to viewModel(key = "kal_${list.id}", factory = TodosViewModel.Factory(repository, list.id))
+        list to viewModel(key = "kal_${list.id}", factory = TodosViewModel.Factory(repository, list.id, context))
     }
     val allTodos: List<Pair<TodoList, TodoItem>> = allVms.flatMap { (list, vm) ->
         vm.uiState.collectAsStateWithLifecycle().value.todos.map { list to it }
@@ -67,7 +69,12 @@ fun KalenderScreen(
         fmt.format(c.time).replaceFirstChar { it.uppercase() }
     }
 
-    val weekdays = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
+    val weekdays = listOf(
+        stringResource(R.string.weekday_mon), stringResource(R.string.weekday_tue),
+        stringResource(R.string.weekday_wed), stringResource(R.string.weekday_thu),
+        stringResource(R.string.weekday_fri), stringResource(R.string.weekday_sat),
+        stringResource(R.string.weekday_sun)
+    )
 
     // Offene Aufgaben mit Fälligkeitsdatum, gruppiert nach Tag-im-Monat (nur aktueller Monat/Jahr)
     val todosByDay: Map<Int, List<Pair<TodoList, TodoItem>>> = remember(allTodos, year, month) {
@@ -96,7 +103,7 @@ fun KalenderScreen(
         // Titel
         item {
             Column(modifier = Modifier.padding(horizontal = 22.dp, vertical = 16.dp)) {
-                Text("Kalender", fontSize = 34.sp, fontWeight = FontWeight.Medium,
+                Text(stringResource(R.string.title_calendar), fontSize = 34.sp, fontWeight = FontWeight.Medium,
                     letterSpacing = (-0.5).sp, color = MaterialTheme.colorScheme.onSurface)
             }
         }
@@ -207,7 +214,7 @@ fun KalenderScreen(
                     modifier         = Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 22.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Keine Aufgaben an diesem Tag",
+                    Text(stringResource(R.string.empty_no_tasks_this_day),
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
             }

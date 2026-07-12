@@ -18,11 +18,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.beigel.list.R
 import de.beigel.list.data.DeviceIdManager
 import de.beigel.list.utils.HapticFeedback
 
@@ -98,7 +100,7 @@ fun WillkommenScreen(
             Spacer(Modifier.height(28.dp))
 
             Text(
-                text          = "Willkommen bei Dotlist",
+                text          = stringResource(R.string.welcome_title),
                 fontSize      = 26.sp,
                 fontWeight    = FontWeight.SemiBold,
                 textAlign     = TextAlign.Center,
@@ -108,7 +110,7 @@ fun WillkommenScreen(
             Spacer(Modifier.height(10.dp))
 
             Text(
-                text       = "Wie sollen wir dich nennen? So erkennen dich andere in geteilten Listen wieder.",
+                text       = stringResource(R.string.welcome_subtitle),
                 fontSize   = 15.sp,
                 textAlign  = TextAlign.Center,
                 color      = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -121,7 +123,7 @@ fun WillkommenScreen(
                 value         = name,
                 onValueChange = { if (it.length <= 30) name = it },
                 singleLine    = true,
-                placeholder   = { Text("Dein Name") },
+                placeholder   = { Text(stringResource(R.string.placeholder_your_name)) },
                 shape         = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { confirm() }),
@@ -140,7 +142,7 @@ fun WillkommenScreen(
                     .fillMaxWidth()
                     .height(52.dp)
             ) {
-                Text("Los geht's", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.action_get_started), fontSize = 16.sp, fontWeight = FontWeight.Medium)
             }
 
             Spacer(Modifier.weight(1.4f))

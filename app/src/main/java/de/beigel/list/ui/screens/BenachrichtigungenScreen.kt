@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -22,10 +23,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.Timestamp
+import de.beigel.list.R
 import de.beigel.list.data.AppNotification
 import de.beigel.list.data.TodoList
 import de.beigel.list.utils.HapticFeedback
@@ -54,11 +58,11 @@ fun BenachrichtigungenScreen(
             IconButton(onClick = { haptic.tick(); onBack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MaterialTheme.colorScheme.onSurface)
             }
-            Text("Benachrichtigungen", fontSize = 20.sp, fontWeight = FontWeight.Medium,
+            Text(stringResource(R.string.title_notifications), fontSize = 20.sp, fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
             if (hasUnread) {
                 TextButton(onClick = { haptic.tick(); onMarkAllRead() }) {
-                    Text("Alle lesen", fontSize = 13.sp)
+                    Text(stringResource(R.string.action_mark_all_read), fontSize = 13.sp)
                 }
             }
         }
@@ -69,19 +73,19 @@ fun BenachrichtigungenScreen(
                     Icon(Icons.Default.NotificationsNone, null,
                         modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(12.dp))
-                    Text("Keine Benachrichtigungen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.empty_no_notifications), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
                 if (heute.isNotEmpty()) {
-                    item { SectionLabel("Heute") }
+                    item { SectionLabel(stringResource(R.string.section_today)) }
                     items(heute, key = { it.id }) { n ->
                         NotificationRow(n) { haptic.tick(); onOpenNotification(n) }
                     }
                 }
                 if (frueher.isNotEmpty()) {
-                    item { SectionLabel("Früher", modifier = Modifier.padding(top = 8.dp)) }
+                    item { SectionLabel(stringResource(R.string.section_earlier), modifier = Modifier.padding(top = 8.dp)) }
                     items(frueher, key = { it.id }) { n ->
                         NotificationRow(n) { haptic.tick(); onOpenNotification(n) }
                     }
@@ -94,6 +98,7 @@ fun BenachrichtigungenScreen(
 @Composable
 private fun NotificationRow(notification: AppNotification, onClick: () -> Unit) {
     val (icon, tint) = iconFor(notification.type)
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -114,8 +119,8 @@ private fun NotificationRow(notification: AppNotification, onClick: () -> Unit) 
             )
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(messageFor(notification), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-            Text(relativeTime(notification.createdAt), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Text(messageFor(notification, context), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(relativeTime(notification.createdAt, context), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp))
         }
         Box(
@@ -139,12 +144,12 @@ private fun iconFor(type: String): Pair<ImageVector, Color> = when (type) {
     else          -> Icons.Default.PersonAdd to Color(0xFF5B8DEF)
 }
 
-private fun messageFor(n: AppNotification): String = when (n.type) {
-    "ZUGEWIESEN" -> "${n.actorName} hat dir „${n.todoTitle}“ zugewiesen"
-    "ERLEDIGT"   -> "${n.actorName} hat „${n.todoTitle}“ erledigt"
-    "KOMMENTAR"  -> "${n.actorName} hat zu „${n.todoTitle}“ kommentiert"
-    "EINLADUNG"  -> "${n.actorName} lädt dich zur Liste „${n.todoTitle}“ ein"
-    else          -> "${n.actorName} hat „${n.todoTitle}“ bearbeitet"
+private fun messageFor(n: AppNotification, context: Context): String = when (n.type) {
+    "ZUGEWIESEN" -> context.getString(R.string.notif_assigned, n.actorName, n.todoTitle)
+    "ERLEDIGT"   -> context.getString(R.string.notif_done, n.actorName, n.todoTitle)
+    "KOMMENTAR"  -> context.getString(R.string.notif_comment, n.actorName, n.todoTitle)
+    "EINLADUNG"  -> context.getString(R.string.notif_invite, n.actorName, n.todoTitle)
+    else          -> context.getString(R.string.notif_edited, n.actorName, n.todoTitle)
 }
 
 private fun isToday(ts: Timestamp): Boolean {
@@ -154,12 +159,15 @@ private fun isToday(ts: Timestamp): Boolean {
             date.get(Calendar.YEAR) == today.get(Calendar.YEAR)
 }
 
-private fun relativeTime(ts: Timestamp): String {
+private fun relativeTime(ts: Timestamp, context: Context): String {
     val diffMinutes = (System.currentTimeMillis() - ts.toDate().time) / 60000
     return when {
-        diffMinutes < 1    -> "gerade eben"
-        diffMinutes < 60   -> "vor $diffMinutes Min"
-        diffMinutes < 1440 -> "vor ${diffMinutes / 60} Std"
-        else                -> "vor ${diffMinutes / 1440} Tag${if (diffMinutes / 1440 > 1) "en" else ""}"
+        diffMinutes < 1    -> context.getString(R.string.time_just_now)
+        diffMinutes < 60   -> context.getString(R.string.time_minutes_ago, diffMinutes.toInt())
+        diffMinutes < 1440 -> context.getString(R.string.time_hours_ago, (diffMinutes / 60).toInt())
+        else                -> {
+            val days = (diffMinutes / 1440).toInt()
+            context.resources.getQuantityString(R.plurals.time_days_ago, days, days)
+        }
     }
 }

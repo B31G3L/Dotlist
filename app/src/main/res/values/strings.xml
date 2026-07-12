@@ -1,6 +1,292 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App -->
     <string name="app_name">Dotlist</string>
-    <string name="google_web_client_id">513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com</string>
+    <string name="google_web_client_id" translatable="false">513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com</string>
+    <string name="feedback_email" translatable="false">feedback@example.com</string>
+
+    <!-- ===================== Common / shared ===================== -->
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_done">Done</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_duplicate">Duplicate</string>
+    <string name="action_share">Share</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_transfer">Transfer</string>
+    <string name="action_join">Join</string>
+    <string name="action_accept">Join</string>
+    <string name="action_decline">Decline</string>
+    <string name="action_leave">Leave</string>
+    <string name="action_sign_out">Sign out</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_copied">Copied</string>
+    <string name="action_mute">Mute</string>
+    <string name="action_unmute">Unmute</string>
+    <string name="action_manage">Manage</string>
+    <string name="action_remove_from_list">Remove from list</string>
+
+    <string name="label_none">Nobody</string>
+    <string name="label_me">Me</string>
+    <string name="label_no_date">No date</string>
+    <string name="label_only_you">Only you</string>
+    <string name="label_time">Time</string>
+
+    <string name="cd_close">Close</string>
+    <string name="cd_remove">Remove</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_more">More</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_notifications">Notifications</string>
+
+    <!-- ===================== Priorities ===================== -->
+    <string name="priority_high">High</string>
+    <string name="priority_medium">Medium</string>
+    <string name="priority_low">Low</string>
+
+    <!-- ===================== Member roles ===================== -->
+    <string name="role_owner">Owner</string>
+    <string name="role_admin">Admin</string>
+    <string name="role_editor">Editor</string>
+    <string name="member_fallback">Member %1$s</string>
+
+    <!-- ===================== Reminder options ===================== -->
+    <string name="reminder_none">None</string>
+    <string name="reminder_10_min">10 min before</string>
+    <string name="reminder_30_min">30 min before</string>
+    <string name="reminder_1_hour">1 hour before</string>
+    <string name="reminder_1_day">1 day before</string>
+
+    <!-- ===================== Relative time ===================== -->
+    <string name="time_just_now">just now</string>
+    <string name="time_minutes_ago">%1$d min ago</string>
+    <string name="time_hours_ago">%1$d h ago</string>
+    <plurals name="time_days_ago">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+    <string name="due_today">Today</string>
+    <string name="due_tomorrow">Tomorrow</string>
+
+    <!-- ===================== AufgabeDetailScreen / NeueAufgabeScreen (task detail / new task) ===================== -->
+    <string name="placeholder_description">Description</string>
+    <string name="action_add_description">Add description…</string>
+    <string name="label_list">List</string>
+    <string name="section_priority">PRIORITY</string>
+    <string name="label_due">Due</string>
+    <string name="label_assigned">Assigned</string>
+    <string name="label_reminder">Reminder</string>
+    <string name="section_subtasks">SUBTASKS</string>
+    <string name="placeholder_subtask">Subtask…</string>
+    <string name="action_add_subtask">Add subtask</string>
+    <string name="section_comments">COMMENTS</string>
+    <string name="placeholder_comment">Write a comment…</string>
+    <string name="dialog_choose_list">Choose list</string>
+    <string name="dialog_assign_to">Assign to</string>
+    <string name="dialog_delete_task_title">Delete task?</string>
+    <string name="dialog_delete_task_message">"\u201C%1$s\u201D will be permanently deleted."</string>
+    <string name="title_new_task">New task</string>
+    <string name="placeholder_task_title">What needs to be done?</string>
+
+    <!-- ===================== AufgabenScreen (task list) ===================== -->
+    <string name="sort_standard">Default</string>
+    <string name="sort_due_date">Due date</string>
+    <string name="sort_priority">Priority</string>
+    <string name="toast_task_deleted">"\u201C%1$s\u201D deleted"</string>
+    <string name="action_undo">Undo</string>
+    <string name="title_tasks">Tasks</string>
+    <string name="summary_open_done">%1$d open · %2$d done</string>
+    <string name="filter_all">All</string>
+    <string name="filter_open">Open</string>
+    <string name="filter_done">Done</string>
+    <string name="cd_sort_filter">Sort &amp; filter</string>
+    <string name="menu_sort_by">Sort by</string>
+    <string name="filter_only_mine">Only my tasks</string>
+    <string name="filter_only_overdue">Only overdue</string>
+    <string name="section_upcoming">Upcoming</string>
+    <string name="section_done">Done</string>
+    <string name="empty_no_tasks">No tasks</string>
+    <string name="fab_task">Task</string>
+    <string name="empty_no_tasks_hint">Create a list first.</string>
+    <string name="action_go_to_lists">Go to lists</string>
+
+    <!-- ===================== BenachrichtigungenScreen (notifications) ===================== -->
+    <string name="title_notifications">Notifications</string>
+    <string name="action_mark_all_read">Mark all read</string>
+    <string name="empty_no_notifications">No notifications</string>
+    <string name="section_today">Today</string>
+    <string name="section_earlier">Earlier</string>
+    <string name="notif_assigned">"%1$s assigned you \u201C%2$s\u201D"</string>
+    <string name="notif_done">"%1$s completed \u201C%2$s\u201D"</string>
+    <string name="notif_comment">"%1$s commented on \u201C%2$s\u201D"</string>
+    <string name="notif_invite">"%1$s invites you to the list \u201C%2$s\u201D"</string>
+    <string name="notif_edited">"%1$s edited \u201C%2$s\u201D"</string>
+
+    <!-- ===================== EinladungScreen (invitation) ===================== -->
+    <string name="title_invitation">Invitation</string>
+    <string name="invite_message">You\'ve been invited to the following list:</string>
+    <string name="invite_permissions">You can view, add, and check off tasks.</string>
+    <string name="members_count">%1$d members</string>
+
+    <!-- ===================== GeteilteListenScreen (shared lists) ===================== -->
+    <string name="title_shared_lists">Shared lists</string>
+    <string name="empty_no_shared_lists">No shared lists yet</string>
+    <string name="empty_shared_lists_hint">Share a list using the invite code</string>
+    <string name="members_summary">%1$d members · %2$s</string>
+
+    <!-- ===================== HilfeScreen (help) ===================== -->
+    <string name="title_help">Help &amp; feedback</string>
+    <string name="section_faq">FREQUENTLY ASKED QUESTIONS</string>
+    <string name="section_feedback">FEEDBACK</string>
+    <string name="action_send_feedback_email">Send feedback by email</string>
+    <string name="feedback_email_subject">Dotlist Feedback</string>
+    <string name="faq_q1">How do I share a list?</string>
+    <string name="faq_a1">Open the list, tap the share icon and copy the invite code. The other person enters it under \"My lists\" when joining.</string>
+    <string name="faq_q2">What\'s the difference between owner, admin, and editor?</string>
+    <string name="faq_a2">The owner created a list and can delete it or transfer ownership. Admins can additionally share the invite code and manage members. Editors can view and edit tasks, but can\'t manage members.</string>
+    <string name="faq_q3">Why do I lose access when I reinstall the app?</string>
+    <string name="faq_a3">Without a linked Google account, your access is only stored on this device. Link your Google account under \"Manage account\" to prevent this.</string>
+    <string name="faq_q4">Do I get notifications when the app is closed?</string>
+    <string name="faq_a4">Yes, as long as the app is still running in the background. If the app is fully terminated, notifications may be delayed or not arrive at all.</string>
+
+    <!-- ===================== KalenderScreen (calendar) ===================== -->
+    <string name="title_calendar">Calendar</string>
+    <string name="weekday_mon">Mon</string>
+    <string name="weekday_tue">Tue</string>
+    <string name="weekday_wed">Wed</string>
+    <string name="weekday_thu">Thu</string>
+    <string name="weekday_fri">Fri</string>
+    <string name="weekday_sat">Sat</string>
+    <string name="weekday_sun">Sun</string>
+    <string name="empty_no_tasks_this_day">No tasks on this day</string>
+
+    <!-- ===================== KontoScreen (account) ===================== -->
+    <string name="title_account">Manage account</string>
+    <string name="error_link_cancelled">Linking cancelled or failed</string>
+    <string name="error_link_failed">Linking failed: %1$s</string>
+    <string name="status_linked">Linked with Google</string>
+    <string name="status_not_linked">Stored on this device only</string>
+    <string name="status_not_linked_hint">If you lose this device, your lists are gone for good</string>
+    <string name="link_google_hint">Link your Google account so you can regain access to your lists after switching devices or reinstalling.</string>
+    <string name="action_link_google">Link Google account</string>
+    <string name="sign_out_hint">After signing out, you can sign back in with the same Google account and keep access to your lists.</string>
+    <string name="dialog_sign_out_title">Sign out?</string>
+    <string name="dialog_sign_out_message">You\'ll be signed out and the app will restart. You can get back in with the same Google account.</string>
+
+    <!-- ===================== ListeErstellenScreen (create list) ===================== -->
+    <string name="title_new_list">New list</string>
+    <string name="placeholder_list_name">List name</string>
+    <string name="section_color">Color</string>
+    <string name="section_icon">Icon</string>
+    <string name="action_browse_all_icons">Browse all icons</string>
+    <string name="action_create_list">Create list</string>
+    <string name="title_choose_icon">Choose icon</string>
+    <string name="filter_all_icons">All</string>
+    <string name="title_custom_color">Custom color</string>
+    <string name="color_red">Red</string>
+    <string name="color_green">Green</string>
+    <string name="color_blue">Blue</string>
+
+    <!-- List icon categories -->
+    <string name="icon_category_time">Time</string>
+    <string name="icon_category_travel">Travel</string>
+    <string name="icon_category_celebrate">Celebrate</string>
+    <string name="icon_category_work">Work</string>
+    <string name="icon_category_sport">Sport</string>
+    <string name="icon_category_nature">Nature</string>
+    <string name="icon_category_home">Home</string>
+    <string name="icon_category_other">Other</string>
+
+    <!-- ===================== ListeTeilenScreen (share list) ===================== -->
+    <string name="title_share_list">Share list</string>
+    <string name="label_invite_code">Invite code</string>
+    <string name="invite_code_restricted">Only owners and admins can see and share the invite code</string>
+    <string name="section_members">Members</string>
+    <string name="action_make_admin">Make admin</string>
+    <string name="action_remove_admin">Remove admin</string>
+    <string name="action_transfer_ownership">Transfer ownership</string>
+    <string name="dialog_remove_member_title">Remove member?</string>
+    <string name="dialog_remove_member_message">"\u201C%1$s\u201D will lose access to this list."</string>
+    <string name="dialog_transfer_ownership_title">Transfer ownership?</string>
+    <string name="dialog_transfer_ownership_message">"\u201C%1$s\u201D will become the new owner of this list. You\'ll then only be an admin and won\'t be able to delete the list."</string>
+    <string name="placeholder_invite_code">Invite code</string>
+
+    <!-- ===================== ListenDetailScreen (list detail) ===================== -->
+    <string name="progress_done_of_total">%1$d of %2$d done</string>
+    <string name="placeholder_add_task">Add a new task…</string>
+    <string name="empty_no_tasks_yet">No tasks yet</string>
+    <string name="section_done_count">Done (%1$d)</string>
+    <string name="dialog_leave_list_title">Leave list?</string>
+    <string name="dialog_leave_list_message">"You\'ll lose access to \u201C%1$s\u201D. Other members will keep the list."</string>
+    <string name="error_leave_failed">Failed to leave: %1$s</string>
+    <string name="error_unknown">Unknown error</string>
+    <string name="dialog_rename_list_title">Rename list</string>
+    <string name="dialog_delete_list_title">Delete list?</string>
+    <string name="dialog_delete_list_message">"\u201C%1$s\u201D and all its tasks will be permanently deleted."</string>
+
+    <!-- ===================== ListenScreen (lists overview) ===================== -->
+    <string name="toast_joined_list">"\u201C%1$s\u201D joined!"</string>
+    <string name="title_my_lists">My lists</string>
+    <string name="cd_join_with_code">Join with code</string>
+    <string name="lists_summary">%1$d lists · %2$d shared</string>
+    <string name="action_new_list">New list</string>
+    <string name="cd_toggle_active">Show in tasks overview (active)</string>
+    <string name="cd_toggle_inactive">Show in tasks overview (inactive)</string>
+    <string name="members_count_people">%1$d people</string>
+    <string name="dialog_join_list_title">Join list</string>
+    <string name="dialog_join_list_hint">Enter the invite code:</string>
+    <string name="action_join_with_code">Join with code</string>
+
+    <!-- ===================== MainScreen (bottom navigation) ===================== -->
+    <string name="nav_tasks">Tasks</string>
+    <string name="nav_lists">Lists</string>
+    <string name="nav_calendar">Calendar</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- ===================== ProfilScreen (profile) ===================== -->
+    <string name="title_profile">Profile</string>
+    <string name="action_tap_to_change">Tap to change</string>
+    <string name="stat_open">Open</string>
+    <string name="stat_done">Done</string>
+    <string name="stat_lists">Lists</string>
+    <string name="setting_notifications">Notifications</string>
+    <string name="setting_dark_mode">Dark theme</string>
+    <string name="setting_shared_lists">Shared lists</string>
+    <string name="setting_manage_account">Manage account</string>
+    <string name="setting_help_feedback">Help &amp; feedback</string>
+    <string name="dialog_your_name_title">Your name</string>
+    <string name="placeholder_name_example">e.g. Alex</string>
+
+    <!-- ===================== SucheScreen (search) ===================== -->
+    <string name="placeholder_search">Search tasks &amp; lists</string>
+    <string name="section_recent_searches">Recent searches</string>
+    <string name="empty_search_hint">Search for tasks or lists</string>
+    <string name="empty_search_results">"No results for \u201C%1$s\u201D"</string>
+    <string name="section_results_for">"Results for \u201C%1$s\u201D"</string>
+
+    <!-- ===================== WillkommenScreen (welcome / onboarding) ===================== -->
+    <string name="welcome_title">Welcome to Dotlist</string>
+    <string name="welcome_subtitle">What should we call you? This is how others will recognize you in shared lists.</string>
+    <string name="placeholder_your_name">Your name</string>
+    <string name="action_get_started">Get started</string>
+
+    <!-- ===================== ViewModel error messages ===================== -->
+    <string name="error_list_create_failed">Failed to create list</string>
+    <string name="error_list_delete_failed">Failed to delete list</string>
+    <string name="error_list_not_found">List not found</string>
+    <string name="error_todo_add_failed">Failed to add task</string>
+    <string name="error_todo_delete_failed">Failed to delete task</string>
+    <string name="error_restore_failed">Failed to restore</string>
+    <string name="error_todo_move_failed">Failed to move task</string>
+    <string name="error_subtask_save_failed">Failed to save subtask</string>
+    <string name="error_subtask_update_failed">Failed to update subtask</string>
+    <string name="error_subtask_delete_failed">Failed to delete subtask</string>
+    <string name="error_comment_save_failed">Failed to save comment</string>
+
+    <!-- ===================== Repository ===================== -->
+    <string name="list_copy_suffix">Copy</string>
 
 </resources>

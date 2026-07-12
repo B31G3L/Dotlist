@@ -2,7 +2,10 @@ package de.beigel.list.ui.theme
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import de.beigel.list.R
 import de.beigel.list.data.TodoList
 
 // ─── Icon-Kategorien ──────────────────────────────────────────────────────────
@@ -16,6 +19,19 @@ enum class ListIconCategory(val label: String) {
     NATUR("Natur"),
     ZUHAUSE("Zuhause"),
     SONSTIGES("Sonstiges"),
+}
+
+/** Lokalisiertes Label für die UI (ersetzt das interne, deutsche [ListIconCategory.label]). */
+@Composable
+fun ListIconCategory.displayLabel(): String = when (this) {
+    ListIconCategory.ZEIT      -> stringResource(R.string.icon_category_time)
+    ListIconCategory.REISEN    -> stringResource(R.string.icon_category_travel)
+    ListIconCategory.FEIERN    -> stringResource(R.string.icon_category_celebrate)
+    ListIconCategory.ARBEIT    -> stringResource(R.string.icon_category_work)
+    ListIconCategory.SPORT     -> stringResource(R.string.icon_category_sport)
+    ListIconCategory.NATUR     -> stringResource(R.string.icon_category_nature)
+    ListIconCategory.ZUHAUSE   -> stringResource(R.string.icon_category_home)
+    ListIconCategory.SONSTIGES -> stringResource(R.string.icon_category_other)
 }
 
 data class ListIconOption(

@@ -17,35 +17,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.beigel.list.R
 import de.beigel.list.utils.HapticFeedback
 
 private data class FaqEntry(val question: String, val answer: String)
 
-private val faqEntries = listOf(
-    FaqEntry(
-        "Wie teile ich eine Liste?",
-        "Öffne die Liste, tippe auf das Teilen-Icon und kopiere den Einladungscode. " +
-                "Die andere Person fügt ihn beim Beitreten in \"Meine Listen\" ein."
-    ),
-    FaqEntry(
-        "Was ist der Unterschied zwischen Besitzer, Admin und Bearbeiter?",
-        "Der Besitzer hat eine Liste erstellt und kann sie löschen oder den Besitz übertragen. " +
-                "Admins dürfen zusätzlich den Einladungscode weitergeben und Mitglieder verwalten. " +
-                "Bearbeiter können Aufgaben ansehen und bearbeiten, aber keine Mitglieder verwalten."
-    ),
-    FaqEntry(
-        "Warum verliere ich Zugriff, wenn ich die App neu installiere?",
-        "Ohne ein verknüpftes Google-Konto ist dein Zugang nur auf diesem Gerät gespeichert. " +
-                "Verknüpfe dein Google-Konto unter \"Konto verwalten\", um das zu vermeiden."
-    ),
-    FaqEntry(
-        "Bekomme ich Benachrichtigungen, wenn die App geschlossen ist?",
-        "Ja, solange die App im Hintergrund noch läuft. Bei vollständig beendeter App " +
-                "können Benachrichtigungen verzögert oder gar nicht ankommen."
-    ),
+@Composable
+private fun faqEntries(): List<FaqEntry> = listOf(
+    FaqEntry(stringResource(R.string.faq_q1), stringResource(R.string.faq_a1)),
+    FaqEntry(stringResource(R.string.faq_q2), stringResource(R.string.faq_a2)),
+    FaqEntry(stringResource(R.string.faq_q3), stringResource(R.string.faq_a3)),
+    FaqEntry(stringResource(R.string.faq_q4), stringResource(R.string.faq_a4)),
 )
 
 @Composable
@@ -55,6 +41,7 @@ fun HilfeScreen(
 ) {
     val context = LocalContext.current
     var expandedIndex by remember { mutableStateOf<Int?>(null) }
+    val faqEntries = faqEntries()
 
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         Row(
@@ -65,13 +52,13 @@ fun HilfeScreen(
             IconButton(onClick = { haptic.tick(); onBack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MaterialTheme.colorScheme.onSurface)
             }
-            Text("Hilfe & Feedback", fontSize = 20.sp, fontWeight = FontWeight.Medium,
+            Text(stringResource(R.string.title_help), fontSize = 20.sp, fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface)
         }
 
         Column(modifier = Modifier.padding(horizontal = 22.dp)) {
             Text(
-                "HÄUFIGE FRAGEN", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                stringResource(R.string.section_faq), fontSize = 12.sp, fontWeight = FontWeight.Bold,
                 letterSpacing = 0.8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(10.dp))
@@ -115,18 +102,20 @@ fun HilfeScreen(
             Spacer(Modifier.height(20.dp))
 
             Text(
-                "FEEDBACK", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                stringResource(R.string.section_feedback), fontSize = 12.sp, fontWeight = FontWeight.Bold,
                 letterSpacing = 0.8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(10.dp))
 
+            val feedbackEmail = stringResource(R.string.feedback_email)
+            val feedbackSubject = stringResource(R.string.feedback_email_subject)
             OutlinedButton(
                 onClick = {
                     haptic.tick()
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
                         data = Uri.parse("mailto:")
-                        putExtra(Intent.EXTRA_EMAIL, arrayOf("feedback@example.com"))
-                        putExtra(Intent.EXTRA_SUBJECT, "Dotlist Feedback")
+                        putExtra(Intent.EXTRA_EMAIL, arrayOf(feedbackEmail))
+                        putExtra(Intent.EXTRA_SUBJECT, feedbackSubject)
                     }
                     runCatching { context.startActivity(intent) }
                 },
@@ -134,7 +123,7 @@ fun HilfeScreen(
             ) {
                 Icon(Icons.Default.MailOutline, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Feedback per E-Mail senden")
+                Text(stringResource(R.string.action_send_feedback_email))
             }
         }
 

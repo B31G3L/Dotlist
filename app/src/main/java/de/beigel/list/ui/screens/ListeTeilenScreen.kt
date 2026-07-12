@@ -17,13 +17,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.beigel.list.R
 import de.beigel.list.data.MemberRole
 import de.beigel.list.data.TodoList
 import de.beigel.list.data.canManageMembers
+import de.beigel.list.data.displayLabel
 import de.beigel.list.data.displayNameFor
 import de.beigel.list.data.roleOf
 import de.beigel.list.repository.TodoRepository
@@ -69,7 +72,7 @@ fun ListeTeilenScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, null,
                         tint = MaterialTheme.colorScheme.onSurface)
                 }
-                Text("Liste teilen", fontSize = 20.sp, fontWeight = FontWeight.Medium,
+                Text(stringResource(R.string.title_share_list), fontSize = 20.sp, fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface)
             }
         }
@@ -90,7 +93,7 @@ fun ListeTeilenScreen(
                 Column {
                     Text(list.name, fontSize = 18.sp, fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface)
-                    Text("${list.memberIds.size} Mitglieder",
+                    Text(stringResource(R.string.members_count, list.memberIds.size),
                         fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 2.dp))
                 }
@@ -118,7 +121,7 @@ fun ListeTeilenScreen(
                                 tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                         }
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Einladungscode", fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text(stringResource(R.string.label_invite_code), fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
                             Text(list.id.take(12) + "…", fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
                         }
@@ -132,7 +135,7 @@ fun ListeTeilenScreen(
                                 null, modifier = Modifier.size(18.dp)
                             )
                             Spacer(Modifier.width(4.dp))
-                            Text(if (copied) "Kopiert" else "Kopieren", fontSize = 13.sp)
+                            Text(if (copied) stringResource(R.string.action_copied) else stringResource(R.string.action_copy), fontSize = 13.sp)
                         }
                     }
                 }
@@ -147,14 +150,14 @@ fun ListeTeilenScreen(
                     Icon(Icons.Default.Lock, null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                     Text(
-                        "Nur Besitzer und Admins können den Einladungscode sehen und weitergeben",
+                        stringResource(R.string.invite_code_restricted),
                         fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
         // Mitglieder-Section
-        item { SectionLabel("Mitglieder", modifier = Modifier.padding(top = 12.dp)) }
+        item { SectionLabel(stringResource(R.string.section_members), modifier = Modifier.padding(top = 12.dp)) }
         items(list.memberIds.toList(), key = { it }) { memberId ->
             val idx        = list.memberIds.indexOf(memberId)
             val name       = list.displayNameFor(memberId)
@@ -180,13 +183,13 @@ fun ListeTeilenScreen(
                         Text(initial, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(if (isSelf) "Ich" else name,
+                        Text(if (isSelf) stringResource(R.string.label_me) else name,
                             fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
                         Text(memberId.take(14), fontSize = 12.5.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(targetRole.label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(targetRole.displayLabel(), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (canActOnThis) {
                             Icon(Icons.Default.ExpandMore, null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
@@ -200,7 +203,7 @@ fun ListeTeilenScreen(
                 ) {
                     if (targetRole == MemberRole.MITGLIED) {
                         DropdownMenuItem(
-                            text = { Text("Zum Admin machen") },
+                            text = { Text(stringResource(R.string.action_make_admin)) },
                             leadingIcon = { Icon(Icons.Default.AdminPanelSettings, null) },
                             onClick = {
                                 expandedMemberId = null
@@ -210,7 +213,7 @@ fun ListeTeilenScreen(
                         )
                     } else if (targetRole == MemberRole.ADMIN) {
                         DropdownMenuItem(
-                            text = { Text("Admin entfernen") },
+                            text = { Text(stringResource(R.string.action_remove_admin)) },
                             leadingIcon = { Icon(Icons.Default.RemoveModerator, null) },
                             onClick = {
                                 expandedMemberId = null
@@ -221,7 +224,7 @@ fun ListeTeilenScreen(
                     }
                     if (myRole == MemberRole.BESITZER) {
                         DropdownMenuItem(
-                            text = { Text("Besitz übertragen") },
+                            text = { Text(stringResource(R.string.action_transfer_ownership)) },
                             leadingIcon = { Icon(Icons.Default.WorkspacePremium, null) },
                             onClick = {
                                 expandedMemberId = null
@@ -231,7 +234,7 @@ fun ListeTeilenScreen(
                     }
                     HorizontalDivider()
                     DropdownMenuItem(
-                        text = { Text("Aus Liste entfernen", color = MaterialTheme.colorScheme.error) },
+                        text = { Text(stringResource(R.string.action_remove_from_list), color = MaterialTheme.colorScheme.error) },
                         leadingIcon = { Icon(Icons.Default.PersonRemove, null, tint = MaterialTheme.colorScheme.error) },
                         onClick = {
                             expandedMemberId = null
@@ -247,16 +250,16 @@ fun ListeTeilenScreen(
     removeConfirmMember?.let { memberId ->
         AlertDialog(
             onDismissRequest = { removeConfirmMember = null },
-            title   = { Text("Mitglied entfernen?") },
-            text    = { Text("„${list.displayNameFor(memberId)}“ verliert den Zugriff auf diese Liste.") },
+            title   = { Text(stringResource(R.string.dialog_remove_member_title)) },
+            text    = { Text(stringResource(R.string.dialog_remove_member_message, list.displayNameFor(memberId))) },
             confirmButton = {
                 TextButton(onClick = {
                     haptic.heavy()
                     scope.launch { repository.removeMember(list.id, memberId) }
                     removeConfirmMember = null
-                }) { Text("Entfernen", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.action_remove), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { removeConfirmMember = null }) { Text("Abbrechen") } }
+            dismissButton = { TextButton(onClick = { removeConfirmMember = null }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 
@@ -264,21 +267,18 @@ fun ListeTeilenScreen(
     transferTargetMember?.let { memberId ->
         AlertDialog(
             onDismissRequest = { transferTargetMember = null },
-            title   = { Text("Besitz übertragen?") },
+            title   = { Text(stringResource(R.string.dialog_transfer_ownership_title)) },
             text    = {
-                Text(
-                    "„${list.displayNameFor(memberId)}“ wird neuer Besitzer dieser Liste. " +
-                            "Du selbst bist danach nur noch Admin und kannst die Liste nicht mehr löschen."
-                )
+                Text(stringResource(R.string.dialog_transfer_ownership_message, list.displayNameFor(memberId)))
             },
             confirmButton = {
                 TextButton(onClick = {
                     haptic.heavy()
                     scope.launch { repository.transferOwnership(list.id, memberId) }
                     transferTargetMember = null
-                }) { Text("Übertragen") }
+                }) { Text(stringResource(R.string.action_transfer)) }
             },
-            dismissButton = { TextButton(onClick = { transferTargetMember = null }) { Text("Abbrechen") } }
+            dismissButton = { TextButton(onClick = { transferTargetMember = null }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 }

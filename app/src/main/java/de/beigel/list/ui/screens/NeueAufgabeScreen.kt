@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -31,8 +32,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.google.firebase.Timestamp
+import de.beigel.list.R
 import de.beigel.list.data.Priority
 import de.beigel.list.data.TodoList
+import de.beigel.list.data.displayLabel
 import de.beigel.list.data.displayNameFor
 import de.beigel.list.ui.theme.priorityColor
 import java.text.SimpleDateFormat
@@ -40,12 +43,13 @@ import java.util.Calendar
 import java.util.Locale
 
 /** Voreingestellte Erinnerungs-Optionen (Anzeigename zu Minuten-Vorlauf). */
-private val ReminderOptions: List<Pair<String, Int?>> = listOf(
-    "Keine"           to null,
-    "10 Min vorher"   to 10,
-    "30 Min vorher"   to 30,
-    "1 Stunde vorher" to 60,
-    "1 Tag vorher"    to 1440,
+@Composable
+private fun reminderOptions(): List<Pair<String, Int?>> = listOf(
+    stringResource(R.string.reminder_none)    to null,
+    stringResource(R.string.reminder_10_min)  to 10,
+    stringResource(R.string.reminder_30_min)  to 30,
+    stringResource(R.string.reminder_1_hour)  to 60,
+    stringResource(R.string.reminder_1_day)   to 1440,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,6 +85,9 @@ fun NeueAufgabeScreen(
     var showAssignMenu   by remember { mutableStateOf(false) }
     var showReminderMenu by remember { mutableStateOf(false) }
 
+    val ReminderOptions = reminderOptions()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
     val selectedList = lists.find { it.id == selectedListId } ?: lists.firstOrNull()
     val members = selectedList?.memberIds ?: emptyList()
 
@@ -103,10 +110,10 @@ fun NeueAufgabeScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, contentDescription = "Schließen")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_close))
                         }
                         Text(
-                            text       = "Neue Aufgabe",
+                            text       = stringResource(R.string.title_new_task),
                             fontSize   = 19.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -119,7 +126,7 @@ fun NeueAufgabeScreen(
                             onSave(list.id, title, description, priority, ts, assignedTo, reminderMinutes)
                         }
                     ) {
-                        Text("Speichern", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.action_save), fontWeight = FontWeight.SemiBold)
                     }
                 }
 
@@ -133,7 +140,7 @@ fun NeueAufgabeScreen(
                     TextField(
                         value         = title,
                         onValueChange = { title = it },
-                        placeholder   = { Text("Was ist zu tun?", fontSize = 22.sp) },
+                        placeholder   = { Text(stringResource(R.string.placeholder_task_title), fontSize = 22.sp) },
                         textStyle     = androidx.compose.ui.text.TextStyle(fontSize = 22.sp),
                         singleLine    = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -155,7 +162,7 @@ fun NeueAufgabeScreen(
                         OutlinedTextField(
                             value         = description,
                             onValueChange = { description = it },
-                            placeholder   = { Text("Beschreibung") },
+                            placeholder   = { Text(stringResource(R.string.placeholder_description)) },
                             minLines      = 2,
                             modifier      = Modifier.fillMaxWidth()
                         )
@@ -170,7 +177,7 @@ fun NeueAufgabeScreen(
                         ) {
                             Icon(Icons.Default.Segment, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
-                                "Beschreibung hinzufügen …",
+                                stringResource(R.string.action_add_description),
                                 color    = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 15.sp
                             )
@@ -181,7 +188,7 @@ fun NeueAufgabeScreen(
 
                     // ── Priorität ────────────────────────────────────────
                     Text(
-                        "PRIORITÄT",
+                        stringResource(R.string.section_priority),
                         fontSize      = 12.sp,
                         fontWeight    = FontWeight.Bold,
                         letterSpacing = 0.8.sp,
@@ -208,7 +215,7 @@ fun NeueAufgabeScreen(
                         Column {
                             DetailRow(
                                 icon      = Icons.Default.ListIcon,
-                                label     = "Liste",
+                                label     = stringResource(R.string.label_list),
                                 value     = selectedList?.name ?: "–",
                                 valueDot  = selectedList?.let { listColor(it.color) },
                                 onClick   = { if (lists.size > 1) showListMenu = true }
@@ -216,8 +223,8 @@ fun NeueAufgabeScreen(
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                             DetailRow(
                                 icon    = Icons.Default.DateRange,
-                                label   = "Fällig",
-                                value   = dueDateCal?.let { formatDueDateOnly(it) } ?: "Kein Datum",
+                                label   = stringResource(R.string.label_due),
+                                value   = dueDateCal?.let { formatDueDateOnly(it) } ?: stringResource(R.string.label_no_date),
                                 onClick = { showDatePicker = true },
                                 onClear = if (dueDateCal != null) {
                                     { dueDateCal = null; dueHasTime = false }
@@ -227,8 +234,8 @@ fun NeueAufgabeScreen(
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                                 DetailRow(
                                     icon    = Icons.Default.Schedule,
-                                    label   = "Uhrzeit",
-                                    value   = if (dueHasTime) formatDueTimeOnly(dueDateCal!!) else "Keine",
+                                    label   = stringResource(R.string.label_time),
+                                    value   = if (dueHasTime) formatDueTimeOnly(dueDateCal!!) else stringResource(R.string.reminder_none),
                                     onClick = { showTimePicker = true },
                                     onClear = if (dueHasTime) {
                                         { dueHasTime = false }
@@ -238,15 +245,15 @@ fun NeueAufgabeScreen(
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                             DetailRow(
                                 icon    = Icons.Default.Person,
-                                label   = "Zuweisen an",
-                                value   = assigneeLabel(assignedTo, currentDeviceId, selectedList),
+                                label   = stringResource(R.string.dialog_assign_to),
+                                value   = assigneeLabel(assignedTo, currentDeviceId, selectedList, context),
                                 onClick = { if (members.isNotEmpty()) showAssignMenu = true }
                             )
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                             DetailRow(
                                 icon    = Icons.Default.Notifications,
-                                label   = "Erinnerung",
-                                value   = ReminderOptions.firstOrNull { it.second == reminderMinutes }?.first ?: "Keine",
+                                label   = stringResource(R.string.label_reminder),
+                                value   = ReminderOptions.firstOrNull { it.second == reminderMinutes }?.first ?: stringResource(R.string.reminder_none),
                                 onClick = { showReminderMenu = true }
                             )
                         }
@@ -259,7 +266,7 @@ fun NeueAufgabeScreen(
             // ── Liste wählen ─────────────────────────────────────────────
             if (showListMenu) {
                 ChoiceDialog(
-                    title    = "Liste wählen",
+                    title    = stringResource(R.string.dialog_choose_list),
                     onDismiss = { showListMenu = false }
                 ) {
                     lists.forEach { l ->
@@ -275,16 +282,16 @@ fun NeueAufgabeScreen(
             // ── Zuweisen wählen ──────────────────────────────────────────
             if (showAssignMenu) {
                 ChoiceDialog(
-                    title    = "Zuweisen an",
+                    title    = stringResource(R.string.dialog_assign_to),
                     onDismiss = { showAssignMenu = false }
                 ) {
                     ChoiceRow(
-                        label   = "Niemand",
+                        label   = stringResource(R.string.label_none),
                         onClick = { assignedTo = null; showAssignMenu = false }
                     )
                     members.forEach { memberId ->
                         ChoiceRow(
-                            label   = if (memberId == currentDeviceId) "Ich" else selectedList?.displayNameFor(memberId) ?: memberId.take(4).uppercase(),
+                            label   = if (memberId == currentDeviceId) stringResource(R.string.label_me) else selectedList?.displayNameFor(memberId) ?: memberId.take(4).uppercase(),
                             onClick = { assignedTo = memberId; showAssignMenu = false }
                         )
                     }
@@ -294,7 +301,7 @@ fun NeueAufgabeScreen(
             // ── Erinnerung wählen ────────────────────────────────────────
             if (showReminderMenu) {
                 ChoiceDialog(
-                    title    = "Erinnerung",
+                    title    = stringResource(R.string.label_reminder),
                     onDismiss = { showReminderMenu = false }
                 ) {
                     ReminderOptions.forEach { (label, minutes) ->
@@ -329,9 +336,9 @@ fun NeueAufgabeScreen(
                                 dueDateCal = cal
                             }
                             showDatePicker = false
-                        }) { Text("Übernehmen") }
+                        }) { Text(stringResource(R.string.action_apply)) }
                     },
-                    dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Abbrechen") } }
+                    dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) } }
                 ) {
                     DatePicker(state = state)
                 }
@@ -356,9 +363,9 @@ fun NeueAufgabeScreen(
                             dueDateCal = cal
                             dueHasTime = true
                             showTimePicker = false
-                        }) { Text("Übernehmen") }
+                        }) { Text(stringResource(R.string.action_apply)) }
                     },
-                    dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Abbrechen") } },
+                    dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text(stringResource(R.string.action_cancel)) } },
                     text = { TimePicker(state = timeState) }
                 )
             }
@@ -386,7 +393,7 @@ private fun PriorityChip(priority: Priority, selected: Boolean, onClick: () -> U
                 )
             }
             Text(
-                priority.label,
+                priority.displayLabel(),
                 fontSize   = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color      = if (selected) Color(0xFF201A17) else MaterialTheme.colorScheme.onSurfaceVariant
@@ -423,7 +430,7 @@ private fun DetailRow(
             IconButton(onClick = onClear, modifier = Modifier.size(22.dp)) {
                 Icon(
                     androidx.compose.material.icons.Icons.Default.Close,
-                    contentDescription = "Entfernen",
+                    contentDescription = stringResource(R.string.cd_remove),
                     tint     = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp)
                 )
@@ -444,7 +451,7 @@ private fun ChoiceDialog(title: String, onDismiss: () -> Unit, content: @Composa
         onDismissRequest = onDismiss,
         title            = { Text(title) },
         text             = { Column(content = content) },
-        confirmButton    = { TextButton(onClick = onDismiss) { Text("Fertig") } }
+        confirmButton    = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_done)) } }
     )
 }
 
@@ -465,9 +472,9 @@ private fun ChoiceRow(label: String, dotColor: Color? = null, onClick: () -> Uni
     }
 }
 
-private fun assigneeLabel(assignedTo: String?, currentDeviceId: String, list: TodoList?): String = when {
-    assignedTo == null              -> "Niemand"
-    assignedTo == currentDeviceId   -> "Ich"
+private fun assigneeLabel(assignedTo: String?, currentDeviceId: String, list: TodoList?, context: android.content.Context): String = when {
+    assignedTo == null              -> context.getString(R.string.label_none)
+    assignedTo == currentDeviceId   -> context.getString(R.string.label_me)
     else                             -> list?.displayNameFor(assignedTo) ?: assignedTo.take(4).uppercase()
 }
 

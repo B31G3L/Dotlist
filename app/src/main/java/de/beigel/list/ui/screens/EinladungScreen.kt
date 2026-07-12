@@ -15,10 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.beigel.list.R
 import de.beigel.list.data.TodoList
 import de.beigel.list.utils.HapticFeedback
 
@@ -40,7 +42,7 @@ fun EinladungScreen(
             IconButton(onClick = { haptic.tick(); onDecline() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MaterialTheme.colorScheme.onSurface)
             }
-            Text("Einladung", fontSize = 20.sp, fontWeight = FontWeight.Medium,
+            Text(stringResource(R.string.title_invitation), fontSize = 20.sp, fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface)
         }
 
@@ -72,7 +74,7 @@ fun EinladungScreen(
             }
 
             Text(
-                text       = "Du wurdest zu folgender Liste eingeladen:",
+                text       = stringResource(R.string.invite_message),
                 fontSize   = 20.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign  = TextAlign.Center,
@@ -87,7 +89,7 @@ fun EinladungScreen(
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                text      = "Du kannst Aufgaben ansehen, hinzufügen und abhaken.",
+                text      = stringResource(R.string.invite_permissions),
                 fontSize  = 14.sp,
                 textAlign = TextAlign.Center,
                 color     = MaterialTheme.colorScheme.onSurfaceVariant
@@ -116,7 +118,7 @@ fun EinladungScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(list.name, fontSize = 15.sp, fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurface)
-                        Text("${list.memberIds.size} Mitglieder",
+                        Text(stringResource(R.string.members_count, list.memberIds.size),
                             fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -137,13 +139,13 @@ fun EinladungScreen(
                 ),
                 modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
-                Text("Beitreten", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.action_accept), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
             TextButton(
                 onClick  = { haptic.tick(); onDecline() },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Ablehnen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.action_decline), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

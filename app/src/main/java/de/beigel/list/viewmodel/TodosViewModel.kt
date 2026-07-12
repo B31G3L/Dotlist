@@ -3,6 +3,7 @@ package de.beigel.list.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import de.beigel.list.R
 import de.beigel.list.data.Comment
 import de.beigel.list.data.Subtask
 import de.beigel.list.data.TodoItem
@@ -22,7 +23,8 @@ data class TodosUiState(
 
 class TodosViewModel(
     private val repository: TodoRepository,
-    private val listId: String
+    private val listId: String,
+    private val context: android.content.Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TodosUiState())
@@ -61,7 +63,7 @@ class TodosViewModel(
                     repository.notifyAssigned(assignedTo, actorName, title, listId, "")
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Todo konnte nicht hinzugefügt werden") }
+                _uiState.update { it.copy(error = context.getString(R.string.error_todo_add_failed)) }
             }
         }
     }
@@ -87,7 +89,7 @@ class TodosViewModel(
                 repository.deleteTodo(listId, todoId)
                 _uiState.update { it.copy(recentlyDeleted = deleted) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Todo konnte nicht gelöscht werden") }
+                _uiState.update { it.copy(error = context.getString(R.string.error_todo_delete_failed)) }
             }
         }
     }
@@ -100,7 +102,7 @@ class TodosViewModel(
             try {
                 repository.restoreTodo(listId, todo)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Wiederherstellen fehlgeschlagen") }
+                _uiState.update { it.copy(error = context.getString(R.string.error_restore_failed)) }
             }
         }
     }
@@ -155,7 +157,7 @@ class TodosViewModel(
                 repository.moveTodo(listId, toListId, todo)
                 onDone()
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Aufgabe konnte nicht verschoben werden") }
+                _uiState.update { it.copy(error = context.getString(R.string.error_todo_move_failed)) }
             }
         }
     }
@@ -167,7 +169,7 @@ class TodosViewModel(
             try {
                 repository.updateSubtasks(listId, todo.id, todo.subtasks + newSubtask)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Unteraufgabe konnte nicht gespeichert werden") }
+                _uiState.update { it.copy(error = context.getString(R.string.error_subtask_save_failed)) }
             }
         }
     }
@@ -178,7 +180,7 @@ class TodosViewModel(
             try {
                 repository.updateSubtasks(listId, todo.id, updated)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Unteraufgabe konnte nicht aktualisiert werden") }
+                _uiState.update { it.copy(error = context.getString(R.string.error_subtask_update_failed)) }
             }
         }
     }
@@ -188,7 +190,7 @@ class TodosViewModel(
             try {
                 repository.updateSubtasks(listId, todo.id, todo.subtasks.filterNot { it.id == subtaskId })
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Unteraufgabe konnte nicht gelöscht werden") }
+                _uiState.update { it.copy(error = context.getString(R.string.error_subtask_delete_failed)) }
             }
         }
     }
@@ -207,7 +209,7 @@ class TodosViewModel(
                 // Zuständige Person benachrichtigen (falls es nicht der Kommentierende selbst ist)
                 repository.notifyComment(todo.assignedTo, actorName, todo.title, listId, todo.id)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Kommentar konnte nicht gespeichert werden") }
+                _uiState.update { it.copy(error = context.getString(R.string.error_comment_save_failed)) }
             }
         }
     }
@@ -218,10 +220,11 @@ class TodosViewModel(
 
     class Factory(
         private val repository: TodoRepository,
-        private val listId: String
+        private val listId: String,
+        private val context: android.content.Context
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            TodosViewModel(repository, listId) as T
+            TodosViewModel(repository, listId, context.applicationContext) as T
     }
 }

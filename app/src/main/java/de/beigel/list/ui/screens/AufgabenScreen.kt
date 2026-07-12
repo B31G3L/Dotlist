@@ -23,12 +23,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.beigel.list.R
 import de.beigel.list.data.Priority
 import de.beigel.list.data.TodoItem
 import de.beigel.list.data.TodoList
@@ -38,10 +40,17 @@ import de.beigel.list.utils.HapticFeedback
 import de.beigel.list.viewmodel.TodosViewModel
 
 private enum class AufgabenFilter { ALLE, OFFEN, ERLEDIGT }
-private enum class SortOption(val label: String) {
-    STANDARD("Standard"),
-    FAELLIGKEIT("Fälligkeit"),
-    PRIORITAET("Priorität"),
+private enum class SortOption {
+    STANDARD,
+    FAELLIGKEIT,
+    PRIORITAET,
+}
+
+@Composable
+private fun SortOption.displayLabel(): String = when (this) {
+    SortOption.STANDARD    -> stringResource(R.string.sort_standard)
+    SortOption.FAELLIGKEIT -> stringResource(R.string.sort_due_date)
+    SortOption.PRIORITAET  -> stringResource(R.string.sort_priority)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,7 +79,7 @@ fun AufgabenScreen(
     val viewModels: List<Pair<TodoList, TodosViewModel>> = activeLists.map { list ->
         list to viewModel(
             key     = "detail_${list.id}",
-            factory = TodosViewModel.Factory(repository, list.id)
+            factory = TodosViewModel.Factory(repository, list.id, context)
         )
     }
 
@@ -101,8 +110,8 @@ fun AufgabenScreen(
     LaunchedEffect(deletedEntry) {
         val (vm, deleted) = deletedEntry ?: return@LaunchedEffect
         val result = snackbarHostState.showSnackbar(
-            message     = "„${deleted.title}“ gelöscht",
-            actionLabel = "Rückgängig",
+            message     = context.getString(R.string.toast_task_deleted, deleted.title),
+            actionLabel = context.getString(R.string.action_undo),
             duration    = SnackbarDuration.Short
         )
         if (result == SnackbarResult.ActionPerformed) vm.undoDelete() else vm.dismissRecentlyDeleted()
@@ -156,18 +165,18 @@ fun AufgabenScreen(
                     verticalAlignment     = Alignment.CenterVertically
                 ) {
                     Text(
-                        text          = "Aufgaben",
+                        text          = stringResource(R.string.title_tasks),
                         fontSize      = 32.sp,
                         fontWeight    = FontWeight.Bold,
                         letterSpacing = (-0.5).sp,
                         color         = MaterialTheme.colorScheme.onSurface
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Search, contentDescription = "Suche",
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.clickable { haptic.tick(); onSearch() })
                         Box(modifier = Modifier.clickable { haptic.tick(); onNotifications() }) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Benachrichtigungen",
+                            Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.cd_notifications),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             if (unreadNotifications > 0) {
                                 Box(
@@ -185,7 +194,7 @@ fun AufgabenScreen(
             // Untertitel
             item {
                 Text(
-                    text      = "${openPairs.size} offen · ${donePairs.size} erledigt",
+                    text      = stringResource(R.string.summary_open_done, openPairs.size, donePairs.size),
                     fontSize  = 13.sp,
                     color     = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier  = Modifier.padding(horizontal = 22.dp)
@@ -202,9 +211,9 @@ fun AufgabenScreen(
                         AufgabenFilter.entries.forEach { f ->
                             val active = filter == f
                             val label  = when (f) {
-                                AufgabenFilter.ALLE     -> "Alle"
-                                AufgabenFilter.OFFEN    -> "Offen"
-                                AufgabenFilter.ERLEDIGT -> "Erledigt"
+                                AufgabenFilter.ALLE     -> stringResource(R.string.filter_all)
+                                AufgabenFilter.OFFEN    -> stringResource(R.string.filter_open)
+                                AufgabenFilter.ERLEDIGT -> stringResource(R.string.filter_done)
                             }
                             Box(
                                 modifier = Modifier
@@ -228,17 +237,17 @@ fun AufgabenScreen(
                         IconButton(onClick = { showSortMenu = true }, modifier = Modifier.size(30.dp)) {
                             Icon(
                                 Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = "Sortieren & Filtern",
+                                contentDescription = stringResource(R.string.cd_sort_filter),
                                 tint = if (sortActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
-                            Text("Sortieren nach", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                            Text(stringResource(R.string.menu_sort_by), fontSize = 12.sp, fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                             SortOption.entries.forEach { option ->
                                 DropdownMenuItem(
-                                    text = { Text(option.label) },
+                                    text = { Text(option.displayLabel()) },
                                     leadingIcon = {
                                         if (sortOption == option) {
                                             Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
@@ -251,7 +260,7 @@ fun AufgabenScreen(
                             }
                             HorizontalDivider()
                             DropdownMenuItem(
-                                text = { Text("Nur meine Aufgaben") },
+                                text = { Text(stringResource(R.string.filter_only_mine)) },
                                 leadingIcon = {
                                     if (onlyMine) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
                                     else Spacer(Modifier.size(24.dp))
@@ -259,7 +268,7 @@ fun AufgabenScreen(
                                 onClick = { onlyMine = !onlyMine }
                             )
                             DropdownMenuItem(
-                                text = { Text("Nur überfällige") },
+                                text = { Text(stringResource(R.string.filter_only_overdue)) },
                                 leadingIcon = {
                                     if (onlyOverdue) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
                                     else Spacer(Modifier.size(24.dp))
@@ -273,7 +282,7 @@ fun AufgabenScreen(
             // Anstehend-Section
             if (shownOpen.isNotEmpty()) {
                 item {
-                    SectionLabel("Anstehend")
+                    SectionLabel(stringResource(R.string.section_upcoming))
                 }
                 items(shownOpen, key = { "${it.first.id}_${it.second.id}" }) { (list, todo) ->
                     val vm = viewModels.find { it.first.id == list.id }?.second
@@ -288,7 +297,7 @@ fun AufgabenScreen(
             // Erledigt-Section
             if (shownDone.isNotEmpty()) {
                 item {
-                    SectionLabel("Erledigt", modifier = Modifier.padding(top = 8.dp))
+                    SectionLabel(stringResource(R.string.section_done), modifier = Modifier.padding(top = 8.dp))
                 }
                 items(shownDone, key = { "done_${it.first.id}_${it.second.id}" }) { (list, todo) ->
                     val vm = viewModels.find { it.first.id == list.id }?.second
@@ -308,7 +317,7 @@ fun AufgabenScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "Keine Aufgaben",
+                            stringResource(R.string.empty_no_tasks),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 15.sp
                         )
@@ -325,7 +334,7 @@ fun AufgabenScreen(
             contentColor     = MaterialTheme.colorScheme.onPrimary,
             shape            = RoundedCornerShape(18.dp),
             icon             = { Icon(Icons.Default.Add, contentDescription = null) },
-            text             = { Text("Aufgabe", fontWeight = FontWeight.Medium, fontSize = 15.sp) }
+            text             = { Text(stringResource(R.string.fab_task), fontWeight = FontWeight.Medium, fontSize = 15.sp) }
         )
 
         SnackbarHost(
@@ -424,8 +433,9 @@ fun AufgabenTaskRow(
                 textDecoration = if (todo.isDone) TextDecoration.LineThrough else TextDecoration.None,
                 lineHeight     = 20.sp
             )
+            val context = androidx.compose.ui.platform.LocalContext.current
             val subtitle = buildString {
-                todo.dueDate?.let { append(formatRelativeDue(it)); append(" · ") }
+                todo.dueDate?.let { append(formatRelativeDue(it, context)); append(" · ") }
                 append(listName)
             }
             Text(
@@ -445,13 +455,13 @@ fun AufgabenTaskRow(
 }
 
 /** Formatiert ein Fälligkeitsdatum locker relativ ("Heute", "Morgen", "Fr, 3. Juli"). */
-private fun formatRelativeDue(ts: com.google.firebase.Timestamp): String {
+private fun formatRelativeDue(ts: com.google.firebase.Timestamp, context: android.content.Context): String {
     val due   = java.util.Calendar.getInstance().apply { time = ts.toDate() }
     val today = java.util.Calendar.getInstance()
     val diffDays = ((due.timeInMillis - today.timeInMillis) / (1000 * 60 * 60 * 24)).toInt()
     return when (diffDays) {
-        0    -> "Heute"
-        1    -> "Morgen"
+        0    -> context.getString(R.string.due_today)
+        1    -> context.getString(R.string.due_tomorrow)
         else -> java.text.SimpleDateFormat("E, d. MMM", java.util.Locale.GERMAN).format(due.time)
     }
 }
@@ -479,12 +489,12 @@ private fun EmptyAufgabenHint(onGoListen: () -> Unit) {
             Icon(Icons.Default.CheckCircle, null,
                 modifier = Modifier.size(64.dp),
                 tint     = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
-            Text("Keine Aufgaben", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Erstelle zuerst eine Liste.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.empty_no_tasks), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.empty_no_tasks_hint), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Button(onClick = onGoListen, shape = RoundedCornerShape(16.dp)) {
                 Icon(Icons.Default.List, null)
                 Spacer(Modifier.width(8.dp))
-                Text("Zu den Listen")
+                Text(stringResource(R.string.action_go_to_lists))
             }
         }
     }

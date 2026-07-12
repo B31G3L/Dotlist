@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import de.beigel.list.data.DeviceIdManager
 import de.beigel.list.data.ListCounts
 import de.beigel.list.data.SelectedListsPreferences
+import de.beigel.list.R
 import de.beigel.list.data.TodoList
 import de.beigel.list.repository.TodoRepository
 import kotlinx.coroutines.flow.*
@@ -117,7 +118,7 @@ class ListsViewModel(
                 SelectedListsPreferences.setSelectedIds(context, updated)
                 _uiState.update { it.copy(lastListId = newId, selectedListIds = updated) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Liste konnte nicht erstellt werden") }
+                _uiState.update { it.copy(error = context.getString(R.string.error_list_create_failed)) }
             }
         }
     }
@@ -129,7 +130,7 @@ class ListsViewModel(
                 val updated = _uiState.value.selectedListIds - listId
                 SelectedListsPreferences.setSelectedIds(context, updated)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Liste konnte nicht gelöscht werden") }
+                _uiState.update { it.copy(error = context.getString(R.string.error_list_delete_failed)) }
             }
         }
     }
@@ -154,7 +155,7 @@ class ListsViewModel(
                 if (list != null) {
                     _uiState.update { it.copy(invitePreview = list, showJoinDialog = false) }
                 } else {
-                    _uiState.update { it.copy(error = "Liste nicht gefunden") }
+                    _uiState.update { it.copy(error = context.getString(R.string.error_list_not_found)) }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Fehler beim Laden der Einladung") }
@@ -177,7 +178,7 @@ class ListsViewModel(
                         selectedListIds = updated
                     )}
                 } else {
-                    _uiState.update { it.copy(error = "Liste nicht gefunden", invitePreview = null) }
+                    _uiState.update { it.copy(error = context.getString(R.string.error_list_not_found), invitePreview = null) }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Fehler beim Beitreten", invitePreview = null) }
@@ -203,7 +204,7 @@ class ListsViewModel(
                         selectedListIds = updated
                     )}
                 } else {
-                    _uiState.update { it.copy(error = "Liste nicht gefunden") }
+                    _uiState.update { it.copy(error = context.getString(R.string.error_list_not_found)) }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Fehler beim Beitreten") }
