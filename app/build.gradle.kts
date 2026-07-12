@@ -6,15 +6,15 @@ plugins {
 }
 
 android {
-    namespace = "de.beigel.list"
+    namespace = "com.beigel.dotlist"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "de.beigel.list"
+        applicationId = "com.beigel.dotlist"
         minSdk = 29
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

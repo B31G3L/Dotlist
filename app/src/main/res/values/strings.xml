@@ -226,6 +226,7 @@
     <string name="dialog_rename_list_title">Rename list</string>
     <string name="dialog_delete_list_title">Delete list?</string>
     <string name="dialog_delete_list_message">"\u201C%1$s\u201D and all its tasks will be permanently deleted."</string>
+    <string name="share_list_message">"Join my list \u201C%1$s\u201D in Dotlist! Open the app, tap \u201CJoin with code\u201D and enter this code:\n\n%2$s"</string>
 
     <!-- ===================== ListenScreen (lists overview) ===================== -->
     <string name="toast_joined_list">"\u201C%1$s\u201D joined!"</string>

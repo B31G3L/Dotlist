@@ -224,6 +224,7 @@
     <string name="dialog_rename_list_title">Liste umbenennen</string>
     <string name="dialog_delete_list_title">Liste löschen?</string>
     <string name="dialog_delete_list_message">"„%1$s“ und alle enthaltenen Aufgaben werden endgültig gelöscht."</string>
+    <string name="share_list_message">"Tritt meiner Liste „%1$s“ in Dotlist bei! Öffne die App, tippe auf „Mit Code beitreten“ und gib diesen Code ein:\n\n%2$s"</string>
 
     <!-- ===================== ListenScreen (Listenübersicht) ===================== -->
     <string name="toast_joined_list">"„%1$s“ beigetreten!"</string>

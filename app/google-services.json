@@ -7,12 +7,17 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:513118560897:android:244fd61f20a9a2bb7e6380",
+        "mobilesdk_app_id": "1:513118560897:android:1336128e48edccee7e6380",
         "android_client_info": {
-          "package_name": "de.beigel.list"
+          "package_name": "com.beigel.dotlist"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyA0gidNejiuPEBPeTNjsiU6x4yhH2QTSG8"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
