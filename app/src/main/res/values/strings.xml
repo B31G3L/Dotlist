@@ -4,6 +4,9 @@
     <string name="app_name">Dotlist</string>
     <string name="google_web_client_id" translatable="false">513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com</string>
     <string name="feedback_email" translatable="false">feedback@example.com</string>
+    <string name="discord_invite_url" translatable="false">https://discord.gg/ww9DEnFUJp</string>
+    <string name="kofi_url" translatable="false">https://ko-fi.com/beigel</string>
+    <string name="play_store_url" translatable="false">https://play.google.com/store/apps/details?id=com.beigel.dotlist</string>
 
     <!-- ===================== Common / shared ===================== -->
     <string name="action_cancel">Cancel</string>
@@ -140,6 +143,10 @@
     <!-- ===================== HilfeScreen (help) ===================== -->
     <string name="title_help">Help &amp; feedback</string>
     <string name="section_faq">FREQUENTLY ASKED QUESTIONS</string>
+    <string name="section_support">SUPPORT</string>
+    <string name="action_join_discord">Join Discord community</string>
+    <string name="action_support_kofi">Support on Ko-fi</string>
+    <string name="action_rate_app">Rate this app</string>
     <string name="section_feedback">FEEDBACK</string>
     <string name="action_send_feedback_email">Send feedback by email</string>
     <string name="feedback_email_subject">Dotlist Feedback</string>
@@ -289,5 +296,11 @@
 
     <!-- ===================== Repository ===================== -->
     <string name="list_copy_suffix">Copy</string>
+
+
+    <string name="community_welcome_title">Join the community</string>
+    <string name="community_welcome_subtitle">Chat with other users, share ideas, and get help on our Discord server.</string>
+    <string name="action_join_discord_now">Join Discord</string>
+    <string name="action_maybe_later">Maybe later</string>
 
 </resources>

@@ -10,6 +10,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -95,6 +98,60 @@ fun HilfeScreen(
                         }
                     }
                 }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Text(
+                stringResource(R.string.section_support), fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(10.dp))
+
+            val discordUrl = stringResource(R.string.discord_invite_url)
+            OutlinedButton(
+                onClick = {
+                    haptic.tick()
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(discordUrl))
+                    runCatching { context.startActivity(intent) }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Groups, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.action_join_discord))
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            val kofiUrl = stringResource(R.string.kofi_url)
+            OutlinedButton(
+                onClick = {
+                    haptic.tick()
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(kofiUrl))
+                    runCatching { context.startActivity(intent) }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Favorite, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.action_support_kofi))
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            val playStoreUrl = stringResource(R.string.play_store_url)
+            OutlinedButton(
+                onClick = {
+                    haptic.tick()
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(playStoreUrl))
+                    runCatching { context.startActivity(intent) }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Star, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.action_rate_app))
             }
 
             Spacer(Modifier.height(20.dp))

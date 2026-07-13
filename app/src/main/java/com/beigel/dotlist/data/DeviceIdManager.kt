@@ -15,6 +15,7 @@ object DeviceIdManager {
     private const val KEY_DEVICE_ID = "device_id"
     private const val KEY_DEVICE_NAME = "device_name"
     private const val KEY_NAME_SET = "device_name_set"
+    private const val KEY_COMMUNITY_SCREEN_SHOWN = "community_screen_shown"
 
     fun getDeviceId(context: Context): String {
         val prefs = prefs(context)
@@ -44,6 +45,17 @@ object DeviceIdManager {
      */
     fun isNameSet(context: Context): Boolean =
         prefs(context).getBoolean(KEY_NAME_SET, false)
+
+    /**
+     * True, sobald der zweite Onboarding-Screen (Community/Discord-Vorstellung)
+     * einmal angezeigt bzw. übersprungen wurde. Wird danach nie wieder gezeigt.
+     */
+    fun isCommunityScreenShown(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_COMMUNITY_SCREEN_SHOWN, false)
+
+    fun setCommunityScreenShown(context: Context) {
+        prefs(context).edit().putBoolean(KEY_COMMUNITY_SCREEN_SHOWN, true).apply()
+    }
 
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

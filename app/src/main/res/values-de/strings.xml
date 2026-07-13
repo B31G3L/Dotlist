@@ -138,6 +138,10 @@
     <!-- ===================== HilfeScreen (Hilfe) ===================== -->
     <string name="title_help">Hilfe &amp; Feedback</string>
     <string name="section_faq">HÄUFIGE FRAGEN</string>
+    <string name="section_support">SUPPORT</string>
+    <string name="action_join_discord">Discord-Community beitreten</string>
+    <string name="action_support_kofi">Auf Ko-fi unterstützen</string>
+    <string name="action_rate_app">App bewerten</string>
     <string name="section_feedback">FEEDBACK</string>
     <string name="action_send_feedback_email">Feedback per E-Mail senden</string>
     <string name="feedback_email_subject">Dotlist Feedback</string>
@@ -288,4 +292,9 @@
     <!-- ===================== Repository ===================== -->
     <string name="list_copy_suffix">Kopie</string>
 
+
+    <string name="community_welcome_title">Tritt der Community bei</string>
+    <string name="community_welcome_subtitle">Tausch dich mit anderen Nutzer:innen aus, teile Ideen und hol dir Hilfe auf unserem Discord-Server.</string>
+    <string name="action_join_discord_now">Discord beitreten</string>
+    <string name="action_maybe_later">Vielleicht später</string>
 </resources>

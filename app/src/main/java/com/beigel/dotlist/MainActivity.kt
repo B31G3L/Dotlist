@@ -25,6 +25,8 @@ import com.beigel.dotlist.data.NotificationPreferences
 import com.beigel.dotlist.repository.TodoRepository
 import com.beigel.dotlist.ui.screens.MainScreen
 import com.beigel.dotlist.ui.screens.WillkommenScreen
+import com.beigel.dotlist.ui.screens.CommunityWillkommenScreen
+import com.beigel.dotlist.utils.ReviewManager
 import com.beigel.dotlist.ui.theme.AccentColor
 import com.beigel.dotlist.ui.theme.AccentColorPreferences
 import com.beigel.dotlist.ui.theme.ThemeMode
@@ -91,11 +93,26 @@ class MainActivity : ComponentActivity() {
                     var nameSet by remember {
                         mutableStateOf(DeviceIdManager.isNameSet(this@MainActivity))
                     }
+                    var communityScreenShown by remember {
+                        mutableStateOf(DeviceIdManager.isCommunityScreenShown(this@MainActivity))
+                    }
                     if (!nameSet) {
                         val haptic = remember { HapticFeedback(this@MainActivity) }
                         WillkommenScreen(haptic = haptic, onDone = { nameSet = true })
+                    } else if (!communityScreenShown) {
+                        val haptic = remember { HapticFeedback(this@MainActivity) }
+                        CommunityWillkommenScreen(
+                            haptic = haptic,
+                            onDone = {
+                                DeviceIdManager.setCommunityScreenShown(this@MainActivity)
+                                communityScreenShown = true
+                            }
+                        )
                     } else {
                         val repository = remember(currentUid) { TodoRepository(currentUid) }
+                        LaunchedEffect(Unit) {
+                            ReviewManager.maybeRequestReview(this@MainActivity)
+                        }
                         MainScreen(repository = repository, deviceId = currentUid)
                     }
                 }
