@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App -->
-    <string name="app_name">Dotlist</string>
+    <string name="app_name">List2Share</string>
     <string name="google_web_client_id" translatable="false">513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com</string>
     <string name="feedback_email" translatable="false">feedback@example.com</string>
-    <string name="discord_invite_url" translatable="false">https://discord.gg/ww9DEnFUJp</string>
     <string name="kofi_url" translatable="false">https://ko-fi.com/beigel</string>
     <string name="play_store_url" translatable="false">https://play.google.com/store/apps/details?id=com.beigel.dotlist</string>
 
@@ -144,12 +143,11 @@
     <string name="title_help">Help &amp; feedback</string>
     <string name="section_faq">FREQUENTLY ASKED QUESTIONS</string>
     <string name="section_support">SUPPORT</string>
-    <string name="action_join_discord">Join Discord community</string>
     <string name="action_support_kofi">Support on Ko-fi</string>
     <string name="action_rate_app">Rate this app</string>
     <string name="section_feedback">FEEDBACK</string>
     <string name="action_send_feedback_email">Send feedback by email</string>
-    <string name="feedback_email_subject">Dotlist Feedback</string>
+    <string name="feedback_email_subject">List2Share Feedback</string>
     <string name="faq_q1">How do I share a list?</string>
     <string name="faq_a1">Open the list, tap the share icon and copy the invite code. The other person enters it under \"My lists\" when joining.</string>
     <string name="faq_q2">What\'s the difference between owner, admin, and editor?</string>
@@ -233,7 +231,13 @@
     <string name="dialog_rename_list_title">Rename list</string>
     <string name="dialog_delete_list_title">Delete list?</string>
     <string name="dialog_delete_list_message">"\u201C%1$s\u201D and all its tasks will be permanently deleted."</string>
-    <string name="share_list_message">"Join my list \u201C%1$s\u201D in Dotlist! Open the app, tap \u201CJoin with code\u201D and enter this code:\n\n%2$s"</string>
+    <string name="share_list_message">"Join my list \u201C%1$s\u201D in List2Share! Open the app, tap \u201CJoin with code\u201D and enter this code:\n\n%2$s"</string>
+    <string name="label_share_toggle">Share via cloud</string>
+    <string name="hint_share_toggle_on">Visible online, can be shared with others</string>
+    <string name="hint_share_toggle_off">Stored only on this device</string>
+    <string name="dialog_unshare_title">Turn off sharing?</string>
+    <string name="dialog_unshare_message">"The list will be removed from the cloud. Other members will lose access. It will only remain on this device."</string>
+    <string name="action_disable_sharing">Turn off</string>
 
     <!-- ===================== ListenScreen (lists overview) ===================== -->
     <string name="toast_joined_list">"\u201C%1$s\u201D joined!"</string>
@@ -276,7 +280,7 @@
     <string name="section_results_for">"Results for \u201C%1$s\u201D"</string>
 
     <!-- ===================== WillkommenScreen (welcome / onboarding) ===================== -->
-    <string name="welcome_title">Welcome to Dotlist</string>
+    <string name="welcome_title">Welcome to List2Share</string>
     <string name="welcome_subtitle">What should we call you? This is how others will recognize you in shared lists.</string>
     <string name="placeholder_your_name">Your name</string>
     <string name="action_get_started">Get started</string>
@@ -296,11 +300,5 @@
 
     <!-- ===================== Repository ===================== -->
     <string name="list_copy_suffix">Copy</string>
-
-
-    <string name="community_welcome_title">Join the community</string>
-    <string name="community_welcome_subtitle">Chat with other users, share ideas, and get help on our Discord server.</string>
-    <string name="action_join_discord_now">Join Discord</string>
-    <string name="action_maybe_later">Maybe later</string>
 
 </resources>

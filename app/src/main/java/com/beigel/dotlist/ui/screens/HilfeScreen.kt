@@ -12,7 +12,6 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -107,22 +106,6 @@ fun HilfeScreen(
                 letterSpacing = 0.8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(10.dp))
-
-            val discordUrl = stringResource(R.string.discord_invite_url)
-            OutlinedButton(
-                onClick = {
-                    haptic.tick()
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(discordUrl))
-                    runCatching { context.startActivity(intent) }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Groups, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.action_join_discord))
-            }
-
-            Spacer(Modifier.height(8.dp))
 
             val kofiUrl = stringResource(R.string.kofi_url)
             OutlinedButton(

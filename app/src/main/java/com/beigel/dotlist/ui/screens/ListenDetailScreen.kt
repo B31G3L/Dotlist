@@ -34,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.beigel.dotlist.R
 import com.beigel.dotlist.data.TodoItem
 import com.beigel.dotlist.data.TodoList
+import com.beigel.dotlist.data.canManageMembers
 import com.beigel.dotlist.repository.TodoRepository
 import com.beigel.dotlist.ui.theme.priorityColor
 import com.beigel.dotlist.utils.HapticFeedback
@@ -66,7 +67,13 @@ fun ListenDetailScreen(
     val progress  = if (total > 0) doneCount.toFloat() / total else 0f
 
     val listColor = listColor(list.color)
-    val isShared  = list.memberIds.size > 1
+    val hasMultipleMembers = list.memberIds.size > 1
+    // Lokaler Stand des Cloud-Teilen-Reglers – wird bei Umschalten sofort aktualisiert,
+    // damit die UI reagiert, auch wenn der `list`-Parameter selbst (Navigations-Snapshot)
+    // erst beim erneuten Betreten des Screens den echten Stand widerspiegelt.
+    var listIsShared by remember(list.id) { mutableStateOf(list.isShared) }
+    var isTogglingShare by remember { mutableStateOf(false) }
+    var showUnshareConfirm by remember { mutableStateOf(false) }
     var showAdd   by remember { mutableStateOf(false) }
     var newText   by remember { mutableStateOf("") }
     val focusReq  = remember { FocusRequester() }
@@ -125,7 +132,7 @@ fun ListenDetailScreen(
             // Kopfbereich: Mitglieder + Fortschritt
             item {
                 Column(modifier = Modifier.padding(horizontal = 22.dp)) {
-                    if (isShared) {
+                    if (hasMultipleMembers) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             MemberAvatarStack(memberIds = list.memberIds, listColor = listColor)
                             Spacer(Modifier.width(10.dp))
@@ -250,7 +257,8 @@ fun ListenDetailScreen(
     }
 
     // ── Options-Sheet (Bearbeiten / Duplizieren / Teilen / Löschen / Verlassen) ──
-    val isOwner = list.createdBy == deviceId
+    val isOwner   = list.createdBy == deviceId
+    val canManage = list.canManageMembers(deviceId)
 
     if (showOptionsSheet) {
         ModalBottomSheet(onDismissRequest = { showOptionsSheet = false }) {
@@ -266,7 +274,53 @@ fun ListenDetailScreen(
                         }
                     )
                 }
-                if (isShared) {
+                // ── Cloud-Teilen-Regler ────────────────────────────────────
+                if (canManage) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        Icon(
+                            if (listIsShared) Icons.Default.CloudDone else Icons.Default.CloudOff,
+                            null, tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.label_share_toggle), fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                if (listIsShared) stringResource(R.string.hint_share_toggle_on)
+                                else stringResource(R.string.hint_share_toggle_off),
+                                fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
+                        Switch(
+                            checked  = listIsShared,
+                            enabled  = !isTogglingShare,
+                            onCheckedChange = { turnOn ->
+                                haptic.tick()
+                                if (turnOn) {
+                                    isTogglingShare = true
+                                    scope.launch {
+                                        try {
+                                            repository.shareList(list, com.beigel.dotlist.data.DeviceIdManager.getDeviceName(context))
+                                            listIsShared = true
+                                        } catch (e: Exception) {
+                                            snackbarHostState.showSnackbar(context.getString(R.string.error_unknown))
+                                        } finally {
+                                            isTogglingShare = false
+                                        }
+                                    }
+                                } else {
+                                    showUnshareConfirm = true
+                                }
+                            }
+                        )
+                    }
+                }
+                if (listIsShared) {
                     OptionRow(
                         icon  = Icons.Default.Group,
                         label = stringResource(R.string.action_manage),
@@ -284,19 +338,21 @@ fun ListenDetailScreen(
                         }
                     }
                 )
-                OptionRow(
-                    icon  = Icons.Default.Share,
-                    label = stringResource(R.string.action_share),
-                    onClick = {
-                        showOptionsSheet = false
-                        haptic.click()
-                        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(android.content.Intent.EXTRA_TEXT, shareMessage)
+                if (listIsShared) {
+                    OptionRow(
+                        icon  = Icons.Default.Share,
+                        label = stringResource(R.string.action_share),
+                        onClick = {
+                            showOptionsSheet = false
+                            haptic.click()
+                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_TEXT, shareMessage)
+                            }
+                            context.startActivity(android.content.Intent.createChooser(shareIntent, null))
                         }
-                        context.startActivity(android.content.Intent.createChooser(shareIntent, null))
-                    }
-                )
+                    )
+                }
                 run {
                     val isMuted = list.mutedBy.contains(deviceId)
                     OptionRow(
@@ -360,6 +416,38 @@ fun ListenDetailScreen(
             },
             dismissButton = {
                 TextButton(enabled = !isLeaving, onClick = { showLeaveConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
+            }
+        )
+    }
+
+    // ── Teilen deaktivieren bestätigen (entfernt Firebase-Eintrag + Zugriff für alle) ──
+    if (showUnshareConfirm) {
+        AlertDialog(
+            onDismissRequest = { if (!isTogglingShare) showUnshareConfirm = false },
+            title   = { Text(stringResource(R.string.dialog_unshare_title)) },
+            text    = { Text(stringResource(R.string.dialog_unshare_message)) },
+            confirmButton = {
+                TextButton(
+                    enabled = !isTogglingShare,
+                    onClick = {
+                        haptic.heavy()
+                        isTogglingShare = true
+                        scope.launch {
+                            try {
+                                repository.unshareList(list)
+                                listIsShared = false
+                                showUnshareConfirm = false
+                            } catch (e: Exception) {
+                                snackbarHostState.showSnackbar(context.getString(R.string.error_unknown))
+                            } finally {
+                                isTogglingShare = false
+                            }
+                        }
+                    }
+                ) { Text(stringResource(R.string.action_disable_sharing), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(enabled = !isTogglingShare, onClick = { showUnshareConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }

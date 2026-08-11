@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App -->
-    <string name="app_name">Dotlist</string>
+    <string name="app_name">List2Share</string>
 
     <!-- ===================== Common / shared ===================== -->
     <string name="action_cancel">Abbrechen</string>
@@ -139,12 +139,11 @@
     <string name="title_help">Hilfe &amp; Feedback</string>
     <string name="section_faq">HÄUFIGE FRAGEN</string>
     <string name="section_support">SUPPORT</string>
-    <string name="action_join_discord">Discord-Community beitreten</string>
     <string name="action_support_kofi">Auf Ko-fi unterstützen</string>
     <string name="action_rate_app">App bewerten</string>
     <string name="section_feedback">FEEDBACK</string>
     <string name="action_send_feedback_email">Feedback per E-Mail senden</string>
-    <string name="feedback_email_subject">Dotlist Feedback</string>
+    <string name="feedback_email_subject">List2Share Feedback</string>
     <string name="faq_q1">Wie teile ich eine Liste?</string>
     <string name="faq_a1">Öffne die Liste, tippe auf das Teilen-Icon und kopiere den Einladungscode. Die andere Person fügt ihn beim Beitreten in \"Meine Listen\" ein.</string>
     <string name="faq_q2">Was ist der Unterschied zwischen Besitzer, Admin und Bearbeiter?</string>
@@ -228,7 +227,13 @@
     <string name="dialog_rename_list_title">Liste umbenennen</string>
     <string name="dialog_delete_list_title">Liste löschen?</string>
     <string name="dialog_delete_list_message">"„%1$s“ und alle enthaltenen Aufgaben werden endgültig gelöscht."</string>
-    <string name="share_list_message">"Tritt meiner Liste „%1$s“ in Dotlist bei! Öffne die App, tippe auf „Mit Code beitreten“ und gib diesen Code ein:\n\n%2$s"</string>
+    <string name="share_list_message">"Tritt meiner Liste „%1$s“ in List2Share bei! Öffne die App, tippe auf „Mit Code beitreten“ und gib diesen Code ein:\n\n%2$s"</string>
+    <string name="label_share_toggle">Über die Cloud teilen</string>
+    <string name="hint_share_toggle_on">Online sichtbar, kann mit anderen geteilt werden</string>
+    <string name="hint_share_toggle_off">Nur auf diesem Gerät gespeichert</string>
+    <string name="dialog_unshare_title">Teilen deaktivieren?</string>
+    <string name="dialog_unshare_message">"Die Liste wird aus der Cloud entfernt. Andere Mitglieder verlieren den Zugriff. Sie bleibt nur noch auf diesem Gerät erhalten."</string>
+    <string name="action_disable_sharing">Deaktivieren</string>
 
     <!-- ===================== ListenScreen (Listenübersicht) ===================== -->
     <string name="toast_joined_list">"„%1$s“ beigetreten!"</string>
@@ -271,7 +276,7 @@
     <string name="section_results_for">"Ergebnisse für „%1$s“"</string>
 
     <!-- ===================== WillkommenScreen (Willkommen / Onboarding) ===================== -->
-    <string name="welcome_title">Willkommen bei Dotlist</string>
+    <string name="welcome_title">Willkommen bei List2Share</string>
     <string name="welcome_subtitle">Wie sollen wir dich nennen? So erkennen dich andere in geteilten Listen wieder.</string>
     <string name="placeholder_your_name">Dein Name</string>
     <string name="action_get_started">Los geht\'s</string>
@@ -291,10 +296,4 @@
 
     <!-- ===================== Repository ===================== -->
     <string name="list_copy_suffix">Kopie</string>
-
-
-    <string name="community_welcome_title">Tritt der Community bei</string>
-    <string name="community_welcome_subtitle">Tausch dich mit anderen Nutzer:innen aus, teile Ideen und hol dir Hilfe auf unserem Discord-Server.</string>
-    <string name="action_join_discord_now">Discord beitreten</string>
-    <string name="action_maybe_later">Vielleicht später</string>
 </resources>

@@ -33,7 +33,7 @@ class DotlistMessagingService : FirebaseMessagingService() {
         val uid = AuthManager.currentUid ?: return
         scope.launch {
             try {
-                TodoRepository(uid).saveDeviceToken(token)
+                TodoRepository(uid, this@DotlistMessagingService).saveDeviceToken(token)
             } catch (_: Exception) {
                 // Wird beim nächsten App-Start / Token-Refresh erneut versucht
             }
@@ -42,7 +42,7 @@ class DotlistMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
-        val title = message.notification?.title ?: "Dotlist"
+        val title = message.notification?.title ?: "List2Share"
         val body  = message.notification?.body ?: return
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

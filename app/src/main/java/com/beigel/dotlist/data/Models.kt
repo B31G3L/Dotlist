@@ -17,6 +17,11 @@ import com.beigel.dotlist.R
  * @param color         Farbe der Liste (Hex-String, z.B. "#FF5733")
  * @param icon          Name des gewählten Icons (siehe ALL_LIST_ICONS), leer = alte Positions-Rotation
  * @param mutedBy       Geräte-IDs, die für diese Liste keine Push-Benachrichtigungen wollen
+ * @param isShared      True = Liste liegt in Firestore und ist geräteübergreifend teilbar.
+ *                      False (Standard) = Liste liegt nur lokal auf diesem Gerät (Room-DB).
+ *                      Wird nicht in Firestore gespeichert, sondern beim Laden abgeleitet:
+ *                      aus Firestore gelesene Listen sind immer true, aus der lokalen
+ *                      DB gelesene Listen immer false.
  */
 data class TodoList(
     val id: String = "",
@@ -28,10 +33,11 @@ data class TodoList(
     val createdAt: Timestamp = Timestamp.now(),
     val color: String = "#6750A4",
     val icon: String = "",
-    val mutedBy: List<String> = emptyList()
+    val mutedBy: List<String> = emptyList(),
+    val isShared: Boolean = false
 ) {
     // Parameterloser Konstruktor für Firestore-Deserialisierung
-    constructor() : this("", "", emptyList(), emptyMap(), emptyList(), "", Timestamp.now(), "#6750A4", "", emptyList())
+    constructor() : this("", "", emptyList(), emptyMap(), emptyList(), "", Timestamp.now(), "#6750A4", "", emptyList(), false)
 }
 
 /**
