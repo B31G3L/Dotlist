@@ -14,6 +14,51 @@
       },
       "oauth_client": [
         {
+          "client_id": "513118560897-fb07jh8nsm30524orbrtbj2qchfpbj0b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.beigel.dotlist",
+            "certificate_hash": "f94a52bf09207c6e48c9af275cae943b0184a078"
+          }
+        },
+        {
+          "client_id": "513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0gidNejiuPEBPeTNjsiU6x4yhH2QTSG8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:513118560897:android:b0c4ebf0a18a9e957e6380",
+        "android_client_info": {
+          "package_name": "com.beigel.list2share"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "513118560897-t0h99gq5uls53l4u73v5gcbat912g7k8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.beigel.list2share",
+            "certificate_hash": "f94a52bf09207c6e48c9af275cae943b0184a078"
+          }
+        },
+        {
           "client_id": "513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com",
           "client_type": 3
         }
