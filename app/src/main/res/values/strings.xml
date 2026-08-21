@@ -4,8 +4,8 @@
     <string name="app_name">List2Share</string>
     <string name="google_web_client_id" translatable="false">513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com</string>
     <string name="feedback_email" translatable="false">beigel.dev@gmail.com</string>
-    <string name="kofi_url" translatable="false">https://ko-fi.com/beigel</string>
-    <string name="play_store_url" translatable="false">https://play.google.com/store/apps/details?id=com.beigel.dotlist</string>
+    <string name="kofi_url" translatable="false">https://ko-fi.com/beigelapps</string>
+    <string name="play_store_url" translatable="false">https://play.google.com/store/apps/details?id=com.beigel.list2share</string>
 
     <!-- ===================== Common / shared ===================== -->
     <string name="action_cancel">Cancel</string>
