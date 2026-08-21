@@ -1,0 +1,141 @@
+rules_version = '2';
+
+/*
+ * Security Rules für List2Share.
+ *
+ * Grundidee: das Listendokument ist ausschließlich für Mitglieder lesbar.
+ * Wer einer Liste beitreten will, kommt nicht über die Listen-ID, sondern über
+ * ein separates Einladungsdokument, das ablaufen und widerrufen werden kann.
+ *
+ * Deployment:
+ *   firebase deploy --only firestore:rules
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    // ─── Listen ──────────────────────────────────────────────────────────────
+
+    function listData() {
+      return resource.data;
+    }
+
+    function isMember() {
+      return signedIn() && uid() in listData().memberIds;
+    }
+
+    function isOwner() {
+      return signedIn() && listData().createdBy == uid();
+    }
+
+    function isAdmin() {
+      return isOwner() || (signedIn() && uid() in listData().adminIds);
+    }
+
+    /*
+     * Beitritt per Einladung: erlaubt ist ausschließlich, sich selbst zur
+     * Mitgliederliste hinzuzufügen – und nur, wenn der mitgeschickte Code auf
+     * eine gültige Einladung für genau diese Liste zeigt.
+     */
+    function validInvite(listId) {
+      let code = request.resource.data.joinedVia;
+      let path = /databases/$(database)/documents/invites/$(code);
+      return code is string
+        && exists(path)
+        && get(path).data.listId == listId
+        && get(path).data.revoked == false
+        && get(path).data.expiresAt > request.time;
+    }
+
+    function joiningSelf() {
+      return signedIn()
+        && !(uid() in resource.data.memberIds)
+        && request.resource.data.memberIds.hasAll(resource.data.memberIds)
+        && request.resource.data.memberIds.hasOnly(resource.data.memberIds.concat([uid()]))
+        // Beim Beitritt darf sonst nichts verändert werden.
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['memberIds', 'memberNames', 'joinedVia'])
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.adminIds == resource.data.adminIds;
+    }
+
+    match /lists/{listId} {
+      allow read: if isMember();
+
+      allow create: if signedIn()
+        && request.resource.data.createdBy == uid()
+        && request.resource.data.memberIds.hasOnly([uid()]);
+
+      // Normale Bearbeitung durch Mitglieder ODER Beitritt per gültiger Einladung.
+      allow update: if isMember()
+        || (joiningSelf() && validInvite(listId));
+
+      allow delete: if isOwner();
+
+      match /todos/{todoId} {
+        // Zugriff auf Todos hängt an der Mitgliedschaft in der Elternliste.
+        function parentList() {
+          return get(/databases/$(database)/documents/lists/$(listId)).data;
+        }
+        allow read, write: if signedIn() && uid() in parentList().memberIds;
+      }
+    }
+
+    // ─── Einladungen ─────────────────────────────────────────────────────────
+
+    match /invites/{code} {
+      /*
+       * Lesbar für jeden Angemeldeten: der Code selbst ist das Geheimnis. Das
+       * Dokument enthält bewusst nur Anzeigedaten (Name, Farbe, Icon, Anzahl
+       * Mitglieder), keine Inhalte der Liste.
+       */
+      allow get: if signedIn();
+      // Kein list(): sonst könnte man sich alle Codes auf einmal holen.
+      allow list: if false;
+
+      function ownsTargetList() {
+        let list = get(/databases/$(database)/documents/lists/$(request.resource.data.listId)).data;
+        return list.createdBy == uid() || uid() in list.adminIds;
+      }
+
+      allow create: if signedIn()
+        && request.resource.data.createdBy == uid()
+        && request.resource.data.revoked == false
+        && ownsTargetList();
+
+      // Widerrufen darf nur, wer die Einladung erstellt hat oder die Liste verwaltet.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revoked'])
+        && (resource.data.createdBy == uid()
+            || uid() in get(/databases/$(database)/documents/lists/$(resource.data.listId)).data.adminIds
+            || get(/databases/$(database)/documents/lists/$(resource.data.listId)).data.createdBy == uid());
+
+      allow delete: if signedIn() && resource.data.createdBy == uid();
+    }
+
+    // ─── Benachrichtigungen ──────────────────────────────────────────────────
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn() && resource.data.recipientId == uid();
+      allow create: if signedIn() && request.resource.data.actorId == uid();
+      // Nur das Gelesen-Flag darf der Empfänger ändern.
+      allow update: if signedIn()
+        && resource.data.recipientId == uid()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if signedIn() && resource.data.recipientId == uid();
+    }
+
+    // ─── FCM-Tokens ──────────────────────────────────────────────────────────
+
+    match /deviceTokens/{deviceId} {
+      allow read, write: if signedIn() && deviceId == uid();
+    }
+  }
+}

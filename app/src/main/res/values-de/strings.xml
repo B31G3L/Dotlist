@@ -204,6 +204,16 @@
     <!-- ===================== ListeTeilenScreen (Liste teilen) ===================== -->
     <string name="title_share_list">Liste teilen</string>
     <string name="label_invite_code">Einladungscode</string>
+    <string name="invite_loading">Wird geladen\u2026</string>
+    <string name="invite_none">Kein aktiver Code</string>
+    <string name="invite_error">Code konnte nicht geladen werden</string>
+    <string name="invite_valid_until">G\u00fcltig bis %1$s</string>
+    <string name="action_create_invite">Erstellen</string>
+    <string name="action_regenerate_invite">Neuer Code</string>
+    <string name="invite_regenerate_hint">Ein neuer Code macht den bisherigen sofort ung\u00fcltig.</string>
+    <string name="error_invite_invalid">Dieser Code ist ung\u00fcltig oder abgelaufen</string>
+    <string name="error_invite_load_failed">Einladung konnte nicht geladen werden</string>
+    <string name="error_join_failed">Beitritt fehlgeschlagen</string>
     <string name="invite_code_restricted">Nur Besitzer und Admins können den Einladungscode sehen und weitergeben</string>
     <string name="section_members">Mitglieder</string>
     <string name="action_make_admin">Zum Admin machen</string>

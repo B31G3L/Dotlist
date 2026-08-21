@@ -23,7 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.beigel.list2share.R
+import com.beigel.list2share.data.Invite
 import com.beigel.list2share.data.MemberRole
+import com.beigel.list2share.data.asDisplayInviteCode
 import com.beigel.list2share.data.TodoList
 import com.beigel.list2share.data.canManageMembers
 import com.beigel.list2share.data.displayLabel
@@ -33,6 +35,7 @@ import com.beigel.list2share.repository.TodoRepository
 import com.beigel.list2share.utils.HapticFeedback
 import com.beigel.list2share.ui.theme.iconFor
 import kotlinx.coroutines.launch
+import java.text.DateFormat
 
 @Composable
 fun ListeTeilenScreen(
@@ -49,6 +52,38 @@ fun ListeTeilenScreen(
     val listColor  = listColor(list.color)
     val myRole     = list.roleOf(currentDeviceId)
     val canManage  = list.canManageMembers(currentDeviceId)
+
+    // Einladung wird beim Öffnen geladen; null = es gibt (noch) keine gültige.
+    var invite       by remember(list.id) { mutableStateOf<Invite?>(null) }
+    var inviteLoading by remember(list.id) { mutableStateOf(true) }
+    var inviteError  by remember(list.id) { mutableStateOf(false) }
+
+    LaunchedEffect(list.id) {
+        inviteLoading = true
+        inviteError = false
+        invite = try {
+            repository.activeInvite(list.id)
+        } catch (e: Exception) {
+            inviteError = true
+            null
+        }
+        inviteLoading = false
+    }
+
+    fun newInvite() {
+        scope.launch {
+            inviteLoading = true
+            inviteError = false
+            invite = try {
+                repository.createInvite(list)
+            } catch (e: Exception) {
+                inviteError = true
+                null
+            }
+            copied = false
+            inviteLoading = false
+        }
+    }
 
     var expandedMemberId    by remember { mutableStateOf<String?>(null) }
     var removeConfirmMember by remember { mutableStateOf<String?>(null) }
@@ -123,22 +158,71 @@ fun ListeTeilenScreen(
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(stringResource(R.string.label_invite_code), fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
-                            Text(list.id.take(12) + "…", fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
-                        }
-                        TextButton(onClick = {
-                            clipboard.setText(AnnotatedString(list.id))
-                            copied = true
-                            haptic.tick()
-                        }) {
-                            Icon(
-                                if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
-                                null, modifier = Modifier.size(18.dp)
+                            val current = invite
+                            Text(
+                                text = when {
+                                    inviteLoading -> stringResource(R.string.invite_loading)
+                                    inviteError   -> stringResource(R.string.invite_error)
+                                    current != null -> current.code.asDisplayInviteCode()
+                                    else          -> stringResource(R.string.invite_none)
+                                },
+                                fontSize   = if (current != null && !inviteLoading) 17.sp else 12.sp,
+                                fontWeight = if (current != null && !inviteLoading) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (inviteError) MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 2.dp)
                             )
-                            Spacer(Modifier.width(4.dp))
-                            Text(if (copied) stringResource(R.string.action_copied) else stringResource(R.string.action_copy), fontSize = 13.sp)
+                            if (current != null && !inviteLoading) {
+                                Text(
+                                    stringResource(
+                                        R.string.invite_valid_until,
+                                        DateFormat.getDateInstance(DateFormat.MEDIUM)
+                                            .format(current.expiresAt.toDate())
+                                    ),
+                                    fontSize = 11.5.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+                        }
+                        val current = invite
+                        if (current != null && !inviteLoading) {
+                            TextButton(onClick = {
+                                clipboard.setText(AnnotatedString(current.code.asDisplayInviteCode()))
+                                copied = true
+                                haptic.tick()
+                            }) {
+                                Icon(
+                                    if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
+                                    null, modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(if (copied) stringResource(R.string.action_copied) else stringResource(R.string.action_copy), fontSize = 13.sp)
+                            }
+                        } else if (!inviteLoading) {
+                            TextButton(onClick = { haptic.tick(); newInvite() }) {
+                                Text(stringResource(R.string.action_create_invite), fontSize = 13.sp)
+                            }
                         }
                     }
+                }
+                if (invite != null && !inviteLoading) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { haptic.tick(); newInvite() }) {
+                            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.action_regenerate_invite), fontSize = 13.sp)
+                        }
+                    }
+                    Text(
+                        stringResource(R.string.invite_regenerate_hint),
+                        fontSize = 11.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp)
+                    )
                 }
             }
         } else {

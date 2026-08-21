@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.beigel.list2share.data.DeviceIdManager
+import com.beigel.list2share.data.Invite
 import com.beigel.list2share.data.ListCounts
 import com.beigel.list2share.data.SelectedListsPreferences
 import com.beigel.list2share.R
@@ -24,7 +25,7 @@ data class ListsUiState(
     val showCreateDialog: Boolean        = false,
     val showJoinDialog  : Boolean        = false,
     val joinSuccess     : TodoList?      = null,
-    val invitePreview   : TodoList?      = null,
+    val invitePreview   : Invite?        = null,
     val lastListId      : String?        = null,
     val selectedListIds : Set<String>    = emptySet()
 )
@@ -148,27 +149,32 @@ class ListsViewModel(
         }
     }
 
-    fun previewInvite(listId: String) {
-        if (listId.isBlank()) return
+    /**
+     * Einladung zu einem Code laden, ohne beizutreten. Ein unbekannter,
+     * abgelaufener oder widerrufener Code ist für den Nutzer dasselbe:
+     * die Einladung gilt nicht (mehr).
+     */
+    fun previewInvite(code: String) {
+        if (code.isBlank()) return
         viewModelScope.launch {
             try {
-                val list = repository.previewList(listId.trim())
-                if (list != null) {
-                    _uiState.update { it.copy(invitePreview = list, showJoinDialog = false) }
+                val invite = repository.previewInvite(code)
+                if (invite != null) {
+                    _uiState.update { it.copy(invitePreview = invite, showJoinDialog = false) }
                 } else {
-                    _uiState.update { it.copy(error = context.getString(R.string.error_list_not_found)) }
+                    _uiState.update { it.copy(error = context.getString(R.string.error_invite_invalid)) }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Fehler beim Laden der Einladung") }
+                _uiState.update { it.copy(error = context.getString(R.string.error_invite_load_failed)) }
             }
         }
     }
 
-    fun confirmJoin(listId: String) {
+    fun confirmJoin(code: String) {
         viewModelScope.launch {
             try {
                 val displayName = DeviceIdManager.getDeviceName(context)
-                val list = repository.joinList(listId, displayName)
+                val list = repository.joinWithInvite(code, displayName)
                 if (list != null) {
                     val updated = _uiState.value.selectedListIds + list.id
                     SelectedListsPreferences.setSelectedIds(context, updated)
@@ -179,22 +185,23 @@ class ListsViewModel(
                         selectedListIds = updated
                     )}
                 } else {
-                    _uiState.update { it.copy(error = context.getString(R.string.error_list_not_found), invitePreview = null) }
+                    _uiState.update { it.copy(error = context.getString(R.string.error_invite_invalid), invitePreview = null) }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Fehler beim Beitreten", invitePreview = null) }
+                _uiState.update { it.copy(error = context.getString(R.string.error_join_failed), invitePreview = null) }
             }
         }
     }
 
     fun clearInvitePreview() = _uiState.update { it.copy(invitePreview = null) }
 
-    fun joinList(listId: String) {
-        if (listId.isBlank()) return
+    /** Direkter Beitritt ohne Vorschau (Code-Eingabe im Dialog). */
+    fun joinList(code: String) {
+        if (code.isBlank()) return
         viewModelScope.launch {
             try {
                 val displayName = DeviceIdManager.getDeviceName(context)
-                val list = repository.joinList(listId.trim(), displayName)
+                val list = repository.joinWithInvite(code, displayName)
                 if (list != null) {
                     val updated = _uiState.value.selectedListIds + list.id
                     SelectedListsPreferences.setSelectedIds(context, updated)
@@ -205,10 +212,10 @@ class ListsViewModel(
                         selectedListIds = updated
                     )}
                 } else {
-                    _uiState.update { it.copy(error = context.getString(R.string.error_list_not_found)) }
+                    _uiState.update { it.copy(error = context.getString(R.string.error_invite_invalid)) }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Fehler beim Beitreten") }
+                _uiState.update { it.copy(error = context.getString(R.string.error_join_failed)) }
             }
         }
     }

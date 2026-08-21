@@ -1,11 +1,20 @@
+@file:OptIn(ExperimentalCoroutinesApi::class)
+
 package com.beigel.list2share.repository
 
 import android.content.Context
+import android.util.Log
+import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.beigel.list2share.data.AppNotification
 import com.beigel.list2share.data.Comment
+import com.beigel.list2share.data.Invite
+import com.beigel.list2share.data.isUsable
+import com.beigel.list2share.data.generateInviteCode
+import com.beigel.list2share.data.normalizeInviteCode
 import com.beigel.list2share.data.ListCounts
 import com.beigel.list2share.data.NotificationType
 import com.beigel.list2share.data.Subtask
@@ -22,16 +31,17 @@ import com.beigel.list2share.data.Priority
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import java.util.Calendar
 import java.util.UUID
-import kotlin.collections.plus
 
 /**
  * Alle Daten-Operationen für Listen und Todos.
@@ -44,43 +54,137 @@ import kotlin.collections.plus
  *
  * Firestore-Struktur (nur für geteilte Listen):
  *   lists/{listId}
- *       name, memberIds, createdBy, createdAt, color
+ *       name, memberIds, memberNames, adminIds, createdBy, createdAt, color, icon, mutedBy
  *   lists/{listId}/todos/{todoId}
- *       title, isDone, createdBy, createdAt, doneBy, doneAt, position
+ *       title, isDone, createdBy, createdAt, doneBy, doneAt, position, subtasks, comments
  */
 class TodoRepository(private val deviceId: String, context: Context) {
 
+    private companion object {
+        const val TAG = "TodoRepository"
+
+        /**
+         * Firestore erlaubt 500 Operationen pro Batch. Mit etwas Reserve, damit
+         * ein Batch nicht am Limit kippt, wenn noch eine Operation dazukommt.
+         */
+        const val BATCH_LIMIT = 450
+
+        /** Standard-Gültigkeit eines Einladungscodes in Tagen. */
+        const val DEFAULT_INVITE_DAYS = 7
+
+        /** Wie oft bei einer Code-Kollision ein neuer Code probiert wird. */
+        const val INVITE_CODE_ATTEMPTS = 5
+    }
+
     private val db = FirebaseFirestore.getInstance()
     private val listsRef = db.collection("lists")
+    private val invitesRef = db.collection("invites")
     private val database = AppDatabase.getInstance(context)
     private val listDao get() = database.listDao()
     private val todoDao get() = database.todoDao()
 
+    private fun todosRef(listId: String): CollectionReference =
+        listsRef.document(listId).collection("todos")
+
     private suspend fun isLocalList(listId: String): Boolean = listDao.getList(listId) != null
+
+    // ─── Firestore-Helfer ────────────────────────────────────────────────────
+
+    /**
+     * Löscht Dokumente in Blöcken zu [BATCH_LIMIT], damit auch Listen mit mehr
+     * als 500 Todos verarbeitet werden können.
+     */
+    private suspend fun deleteInChunks(refs: List<DocumentReference>) {
+        refs.chunked(BATCH_LIMIT).forEach { chunk ->
+            val batch = db.batch()
+            chunk.forEach { batch.delete(it) }
+            batch.commit().await()
+        }
+    }
+
+    /** Schreibt beliebig viele Dokumente in Blöcken zu [BATCH_LIMIT]. */
+    private suspend fun <T : Any> setInChunks(items: List<Pair<DocumentReference, T>>) {
+        items.chunked(BATCH_LIMIT).forEach { chunk ->
+            val batch = db.batch()
+            chunk.forEach { (ref, value) -> batch.set(ref, value) }
+            batch.commit().await()
+        }
+    }
+
+    /** Listendokument samt aller Todos entfernen. */
+    private suspend fun deleteRemoteListCompletely(listId: String) {
+        // Erst die Einladungen entwerten – sonst zeigt ein noch kursierender Code
+        // auf eine Liste, die es nicht mehr gibt.
+        runCatching { revokeInvitesFor(listId) }
+            .onFailure { Log.w(TAG, "Einladungen zu $listId nicht widerrufen", it) }
+        val todos = todosRef(listId).get().await()
+        deleteInChunks(todos.documents.map { it.reference })
+        listsRef.document(listId).delete().await()
+    }
+
+    /**
+     * Nächste freie Position in einer geteilten Liste.
+     *
+     * Bewusst über das höchste vorhandene `position`-Feld statt über die Anzahl
+     * der Dokumente: das kostet einen einzigen Read statt eines Reads pro Todo,
+     * funktioniert offline über den Firestore-Cache und vergibt auch dann keine
+     * doppelten Positionen, wenn zwischendurch Todos gelöscht wurden.
+     */
+    private suspend fun nextRemotePosition(listId: String): Long {
+        val snapshot = todosRef(listId)
+            .orderBy("position", Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .await()
+        return (snapshot.documents.firstOrNull()?.getLong("position") ?: -1L) + 1L
+    }
 
     // ─── Listen ──────────────────────────────────────────────────────────────
 
     /**
      * Alle Listen des Geräts als Echtzeit-Flow: lokale (nicht geteilte) +
      * remote (geteilte, Mitgliedschaft über memberIds) Listen zusammengeführt.
+     *
+     * Sollte dieselbe ID ausnahmsweise an beiden Orten liegen – etwa weil ein
+     * [shareList] mitten im Upload abgebrochen ist – gewinnt die geteilte
+     * Version. Ohne diese Deduplizierung käme dieselbe ID zweimal in der UI an,
+     * was in einer LazyColumn mit `key = { it.id }` zum Absturz führt.
      */
     fun observeLists(): Flow<List<TodoList>> {
         val localFlow = listDao.observeLists().map { entities -> entities.map { it.toTodoList() } }
         val remoteFlow = observeRemoteLists()
         return combine(localFlow, remoteFlow) { local, remote ->
-            (local + remote).sortedByDescending { it.createdAt.seconds }
+            val remoteIds = remote.mapTo(HashSet()) { it.id }
+            (remote + local.filterNot { it.id in remoteIds })
+                .sortedByDescending { it.createdAt.seconds }
         }
     }
 
+    /**
+     * Ein Fehler darf diesen Flow NICHT schließen: `observeLists` kombiniert ihn
+     * mit den lokalen Listen, und ein geschlossener Flow würde das combine
+     * beenden – die rein lokalen Listen wären dann ebenfalls verschwunden,
+     * obwohl sie mit Firestore nichts zu tun haben.
+     *
+     * Stattdessen wird der bisherige Stand beibehalten. Nur wenn noch nie Daten
+     * ankamen (z.B. fehlender Composite-Index oder Permission-Denied), wird
+     * einmalig eine leere Liste gemeldet, damit das combine nicht ewig wartet.
+     */
     private fun observeRemoteLists(): Flow<List<TodoList>> = callbackFlow {
+        var received = false
         val registration: ListenerRegistration = listsRef
             .whereArrayContains("memberIds", deviceId)
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.w(TAG, "Listen-Listener fehlgeschlagen", error)
+                    if (!received) {
+                        received = true
+                        trySend(emptyList())
+                    }
                     return@addSnapshotListener
                 }
+                received = true
                 val lists = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(TodoList::class.java)?.copy(id = doc.id, isShared = true)
                 } ?: emptyList()
@@ -117,7 +221,7 @@ class TodoRepository(private val deviceId: String, context: Context) {
         if (isLocalList(listId)) {
             listDao.renameList(listId, newName.trim())
         } else {
-            listsRef.document(listId).update("name", newName).await()
+            listsRef.document(listId).update("name", newName.trim()).await()
         }
     }
 
@@ -130,18 +234,17 @@ class TodoRepository(private val deviceId: String, context: Context) {
             listDao.deleteList(listId)
             return
         }
-        // Zuerst alle Todos löschen
-        val todos = listsRef.document(listId).collection("todos").get().await()
-        val batch = db.batch()
-        todos.documents.forEach { batch.delete(it.reference) }
-        batch.delete(listsRef.document(listId))
-        batch.commit().await()
+        deleteRemoteListCompletely(listId)
     }
 
     /**
      * Liste in Firestore hochladen und damit teilbar machen ("Teilen"-Regler an).
      * Nimmt eine bisher lokale Liste inkl. aller Todos, legt sie unter derselben
      * ID in Firestore an und entfernt anschließend die lokale Kopie.
+     *
+     * Reihenfolge ist bewusst "erst hoch, dann lokal weg": bricht der Upload ab,
+     * sind die Daten noch lokal vorhanden. Damit dabei keine halb hochgeladene
+     * Geisterliste in Firestore zurückbleibt, wird im Fehlerfall aufgeräumt.
      */
     suspend fun shareList(list: TodoList, creatorName: String): TodoList {
         val localTodos = todoDao.getTodosOnce(list.id)
@@ -160,14 +263,17 @@ class TodoRepository(private val deviceId: String, context: Context) {
         )
         listsRef.document(list.id).set(remoteList).await()
 
-        if (localTodos.isNotEmpty()) {
-            val batch = db.batch()
-            localTodos.forEach { entity ->
-                val todo = entity.toTodoItem()
-                val ref = listsRef.document(list.id).collection("todos").document(todo.id)
-                batch.set(ref, todo)
-            }
-            batch.commit().await()
+        try {
+            setInChunks(
+                localTodos.map { entity ->
+                    val todo = entity.toTodoItem()
+                    todosRef(list.id).document(todo.id) to todo
+                }
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Upload der Todos fehlgeschlagen, Rollback", e)
+            runCatching { deleteRemoteListCompletely(list.id) }
+            throw e
         }
 
         todoDao.deleteTodosForList(list.id)
@@ -184,7 +290,8 @@ class TodoRepository(private val deviceId: String, context: Context) {
      * diesem Gerät erhalten.
      */
     suspend fun unshareList(list: TodoList) {
-        val todosSnapshot = listsRef.document(list.id).collection("todos").get().await()
+        // Einmal lesen und für beides verwenden: lokale Kopie UND Löschliste.
+        val todosSnapshot = todosRef(list.id).get().await()
         val todos = todosSnapshot.documents.mapNotNull { doc ->
             doc.toObject(TodoItem::class.java)?.copy(id = doc.id)
         }
@@ -193,8 +300,10 @@ class TodoRepository(private val deviceId: String, context: Context) {
             LocalListEntity(
                 id = list.id,
                 name = list.name,
-                createdBy = deviceId,
-                creatorName = list.displayNameForOrFallback(deviceId),
+                // Besitz bleibt beim ursprünglichen Ersteller, sofern das dieses
+                // Gerät ist; sonst übernimmt der ausführende Admin.
+                createdBy = if (list.createdBy.isNotBlank()) list.createdBy else deviceId,
+                creatorName = list.displayNameForOrFallback(list.createdBy.ifBlank { deviceId }),
                 createdAt = list.createdAt.toDate().time,
                 color = list.color,
                 icon = list.icon
@@ -204,12 +313,11 @@ class TodoRepository(private val deviceId: String, context: Context) {
             todoDao.insertTodos(todos.map { it.toLocalEntity(list.id) })
         }
 
-        // Firestore-Eintrag komplett löschen (entfernt Zugriff für alle Mitglieder)
-        val todosSnap = listsRef.document(list.id).collection("todos").get().await()
-        val batch = db.batch()
-        todosSnap.documents.forEach { batch.delete(it.reference) }
-        batch.delete(listsRef.document(list.id))
-        batch.commit().await()
+        // Erst jetzt remote löschen – schlägt das fehl, sind die Daten lokal schon sicher.
+        runCatching { revokeInvitesFor(list.id) }
+            .onFailure { Log.w(TAG, "Einladungen zu ${list.id} nicht widerrufen", it) }
+        deleteInChunks(todosSnapshot.documents.map { it.reference })
+        listsRef.document(list.id).delete().await()
     }
 
     private fun TodoList.displayNameForOrFallback(memberId: String): String =
@@ -251,49 +359,139 @@ class TodoRepository(private val deviceId: String, context: Context) {
         )
         val newDoc = listsRef.add(newList).await()
 
-        val todos = listsRef.document(list.id).collection("todos").get().await()
-        if (!todos.isEmpty) {
-            val batch = db.batch()
-            todos.documents.forEach { doc ->
-                val todo = doc.toObject(TodoItem::class.java) ?: return@forEach
-                val newTodoRef = listsRef.document(newDoc.id).collection("todos").document()
-                batch.set(newTodoRef, todo)
+        val todos = todosRef(list.id).get().await()
+        setInChunks(
+            todos.documents.mapNotNull { doc ->
+                val todo = doc.toObject(TodoItem::class.java) ?: return@mapNotNull null
+                todosRef(newDoc.id).document() to todo
             }
-            batch.commit().await()
-        }
+        )
         return newDoc.id
     }
 
+    // ─── Einladungen ─────────────────────────────────────────────────────────
+
     /**
-     * Liste anhand der ID ansehen, ohne beizutreten (für den Einladungs-Screen).
-     * Betrifft immer nur geteilte (Firestore-)Listen, da nur diese über eine
-     * Einladungs-ID erreichbar sind.
+     * Erzeugt einen neuen Einladungscode und macht alle bisherigen Codes dieser
+     * Liste ungültig. Es ist also immer höchstens ein Code gleichzeitig aktiv.
+     *
+     * Der Code ist die Dokument-ID unter `invites/`. Da die Anzeigedaten der
+     * Liste redundant im Einladungsdokument liegen, kommt der Einladungs-Screen
+     * ohne Lesezugriff auf das Listendokument aus – Nicht-Mitglieder sehen die
+     * Liste selbst also nie.
      */
-    suspend fun previewList(listId: String): TodoList? {
-        val doc = listsRef.document(listId).get().await()
-        if (!doc.exists()) return null
-        return doc.toObject(TodoList::class.java)?.copy(id = doc.id, isShared = true)
+    suspend fun createInvite(list: TodoList, validDays: Int = DEFAULT_INVITE_DAYS): Invite {
+        revokeInvitesFor(list.id)
+
+        val expiresAt = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, validDays)
+        }.time
+
+        var lastError: Exception? = null
+        repeat(INVITE_CODE_ATTEMPTS) {
+            val code = generateInviteCode()
+            val invite = Invite(
+                code = code,
+                listId = list.id,
+                listName = list.name,
+                listColor = list.color,
+                listIcon = list.icon,
+                memberCount = list.memberIds.size,
+                createdBy = deviceId,
+                createdAt = Timestamp.now(),
+                expiresAt = Timestamp(expiresAt),
+                revoked = false,
+            )
+            val ref = invitesRef.document(code)
+            try {
+                // Transaktion, damit ein (extrem unwahrscheinlicher) Kollisionsfall
+                // nicht die fremde Einladung überschreibt.
+                db.runTransaction { transaction ->
+                    if (transaction.get(ref).exists()) {
+                        throw IllegalStateException("Code bereits vergeben")
+                    }
+                    transaction.set(ref, invite)
+                    null
+                }.await()
+                return invite
+            } catch (e: Exception) {
+                Log.w(TAG, "Einladungscode $code konnte nicht angelegt werden", e)
+                lastError = e
+            }
+        }
+        throw lastError ?: IllegalStateException("Einladungscode konnte nicht erzeugt werden")
     }
 
     /**
-     * Dem Gerät über einen Einladungslink einer Liste beitreten.
-     * Der eigene Anzeigename wird dabei mit in die Liste übernommen.
-     * Gibt die Liste zurück wenn erfolgreich, sonst null.
+     * Aktuell gültige Einladung einer Liste (für die Teilen-Ansicht), oder null,
+     * wenn es keine gibt bzw. die vorhandene abgelaufen oder widerrufen ist.
      */
-    suspend fun joinList(listId: String, displayName: String): TodoList? {
-        val docRef = listsRef.document(listId)
-        val doc = docRef.get().await()
-        if (!doc.exists()) return null
+    suspend fun activeInvite(listId: String): Invite? {
+        val snapshot = invitesRef
+            .whereEqualTo("listId", listId)
+            .whereEqualTo("revoked", false)
+            .get()
+            .await()
+        return snapshot.documents
+            .mapNotNull { doc -> doc.toObject(Invite::class.java)?.copy(code = doc.id) }
+            .filter { it.isUsable }
+            .maxByOrNull { it.createdAt.seconds }
+    }
 
-        val list = doc.toObject(TodoList::class.java)?.copy(id = doc.id) ?: return null
-
-        // deviceId zu memberIds hinzufügen falls nicht bereits dabei, Name immer aktualisieren
-        val updates = mutableMapOf<String, Any>("memberNames.$deviceId" to displayName)
-        if (deviceId !in list.memberIds) {
-            updates["memberIds"] = list.memberIds + deviceId
+    /** Alle Einladungen einer Liste entwerten (z. B. beim Erzeugen eines neuen Codes). */
+    suspend fun revokeInvitesFor(listId: String) {
+        val snapshot = invitesRef
+            .whereEqualTo("listId", listId)
+            .whereEqualTo("revoked", false)
+            .get()
+            .await()
+        snapshot.documents.chunked(BATCH_LIMIT).forEach { chunk ->
+            val batch = db.batch()
+            chunk.forEach { batch.update(it.reference, "revoked", true) }
+            batch.commit().await()
         }
-        docRef.update(updates).await()
-        return list.copy(isShared = true)
+    }
+
+    /**
+     * Einladung ansehen, ohne beizutreten (für den Einladungs-Screen).
+     * Gibt null zurück, wenn der Code unbekannt, widerrufen oder abgelaufen ist.
+     */
+    suspend fun previewInvite(rawCode: String): Invite? {
+        val code = rawCode.normalizeInviteCode()
+        if (code.isBlank()) return null
+        val doc = invitesRef.document(code).get().await()
+        if (!doc.exists()) return null
+        val invite = doc.toObject(Invite::class.java)?.copy(code = doc.id) ?: return null
+        return invite.takeIf { it.isUsable }
+    }
+
+    /**
+     * Über einen Einladungscode einer Liste beitreten. Der eigene Anzeigename
+     * wird dabei mit in die Liste übernommen.
+     *
+     * `arrayUnion` statt read-modify-write: treten zwei Personen gleichzeitig
+     * bei, würde die gelesene Mitgliederliste sonst gegenseitig überschrieben
+     * und einer der beiden wieder herausfliegen.
+     *
+     * Das Feld `joinedVia` trägt den verwendeten Code – die Security Rules
+     * prüfen darüber, ob eine gültige Einladung vorliegt, bevor sie das
+     * Hinzufügen zur Mitgliederliste erlauben. Erst danach besteht Lesezugriff
+     * auf das Listendokument, deshalb wird es anschließend geladen.
+     */
+    suspend fun joinWithInvite(rawCode: String, displayName: String): TodoList? {
+        val invite = previewInvite(rawCode) ?: return null
+        val docRef = listsRef.document(invite.listId)
+
+        docRef.update(
+            mapOf(
+                "memberIds" to FieldValue.arrayUnion(deviceId),
+                "memberNames.$deviceId" to displayName,
+                "joinedVia" to invite.code,
+            )
+        ).await()
+
+        val doc = docRef.get().await()
+        return doc.toObject(TodoList::class.java)?.copy(id = doc.id, isShared = true)
     }
 
     /**
@@ -308,15 +506,15 @@ class TodoRepository(private val deviceId: String, context: Context) {
         val docRef = listsRef.document(listId)
         val doc = docRef.get().await()
         val list = doc.toObject(TodoList::class.java) ?: return
-        val updated = list.memberIds.filter { it != deviceId }
-        if (updated.isEmpty()) {
+        if (list.memberIds.filter { it != deviceId }.isEmpty()) {
             // Letzte Person – Liste löschen
-            deleteList(listId)
+            deleteRemoteListCompletely(listId)
         } else {
             docRef.update(
                 mapOf(
-                    "memberIds" to updated,
-                    "adminIds"  to list.adminIds.filter { it != deviceId },
+                    "memberIds" to FieldValue.arrayRemove(deviceId),
+                    "adminIds"  to FieldValue.arrayRemove(deviceId),
+                    "mutedBy"   to FieldValue.arrayRemove(deviceId),
                     "memberNames.$deviceId" to FieldValue.delete()
                 )
             ).await()
@@ -336,58 +534,72 @@ class TodoRepository(private val deviceId: String, context: Context) {
     }
 
     suspend fun removeMember(listId: String, memberId: String) {
-        val docRef = listsRef.document(listId)
-        val doc = docRef.get().await()
-        val list = doc.toObject(TodoList::class.java) ?: return
-        docRef.update(
+        listsRef.document(listId).update(
             mapOf(
-                "memberIds" to list.memberIds.filter { it != memberId },
-                "adminIds"  to list.adminIds.filter { it != memberId },
+                "memberIds" to FieldValue.arrayRemove(memberId),
+                "adminIds"  to FieldValue.arrayRemove(memberId),
+                "mutedBy"   to FieldValue.arrayRemove(memberId),
                 "memberNames.$memberId" to FieldValue.delete()
             )
         ).await()
     }
 
+    /**
+     * Besitz übertragen. Läuft als Transaktion, damit der bisherige Besitzer
+     * nicht seine Admin-Rechte verliert, wenn parallel jemand die Adminliste
+     * ändert.
+     */
     suspend fun transferOwnership(listId: String, newOwnerId: String) {
         val docRef = listsRef.document(listId)
-        val doc = docRef.get().await()
-        val list = doc.toObject(TodoList::class.java) ?: return
-        if (newOwnerId !in list.memberIds) return
-        val newAdminIds = (list.adminIds + deviceId - newOwnerId).distinct()
-        docRef.update(
-            mapOf(
-                "createdBy" to newOwnerId,
-                "adminIds"  to newAdminIds
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(docRef)
+            val list = snapshot.toObject(TodoList::class.java) ?: return@runTransaction null
+            if (newOwnerId !in list.memberIds) return@runTransaction null
+            val newAdminIds = (list.adminIds + deviceId - newOwnerId).distinct()
+            transaction.update(
+                docRef,
+                mapOf(
+                    "createdBy" to newOwnerId,
+                    "adminIds"  to newAdminIds
+                )
             )
-        ).await()
+            null
+        }.await()
     }
 
     // ─── Todos ───────────────────────────────────────────────────────────────
 
     /**
      * Anzahl erledigter/aller Todos einer Liste als Echtzeit-Flow (für die Listen-Übersicht).
+     * Wechselt wie [observeTodos] automatisch zwischen lokaler und geteilter Quelle.
      */
-    fun observeTodoCounts(listId: String): Flow<ListCounts> = flow {
-        if (isLocalList(listId)) {
-            emitAll(
-                todoDao.observeTodos(listId).map { todos ->
-                    ListCounts(done = todos.count { it.isDone }, total = todos.size)
+    fun observeTodoCounts(listId: String): Flow<ListCounts> =
+        listDao.observeIsLocal(listId)
+            .map { it > 0 }
+            .distinctUntilChanged()
+            .flatMapLatest { isLocal ->
+                if (isLocal) {
+                    todoDao.observeTodos(listId).map { todos ->
+                        ListCounts(done = todos.count { it.isDone }, total = todos.size)
+                    }
+                } else {
+                    observeRemoteTodoCounts(listId)
                 }
-            )
-        } else {
-            emitAll(observeRemoteTodoCounts(listId))
-        }
-    }
+            }
 
     private fun observeRemoteTodoCounts(listId: String): Flow<ListCounts> = callbackFlow {
-        val registration: ListenerRegistration = listsRef
-            .document(listId)
-            .collection("todos")
+        var received = false
+        val registration: ListenerRegistration = todosRef(listId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.w(TAG, "Zähler-Listener für $listId fehlgeschlagen", error)
+                    if (!received) {
+                        received = true
+                        trySend(ListCounts())
+                    }
                     return@addSnapshotListener
                 }
+                received = true
                 val docs  = snapshot?.documents ?: emptyList()
                 val total = docs.size
                 val done  = docs.count { it.getBoolean("isDone") == true }
@@ -398,25 +610,38 @@ class TodoRepository(private val deviceId: String, context: Context) {
 
     /**
      * Alle Todos einer Liste als Echtzeit-Flow.
+     *
+     * Die Quelle (Room oder Firestore) wird nicht einmalig festgelegt, sondern
+     * an das Vorhandensein der lokalen Zeile gekoppelt: schaltet jemand den
+     * "Teilen"-Regler um, während die Detailansicht offen ist, wechselt der
+     * Stream automatisch mit.
      */
-    fun observeTodos(listId: String): Flow<List<TodoItem>> = flow {
-        if (isLocalList(listId)) {
-            emitAll(todoDao.observeTodos(listId).map { entities -> entities.map { it.toTodoItem() } })
-        } else {
-            emitAll(observeRemoteTodos(listId))
-        }
-    }
+    fun observeTodos(listId: String): Flow<List<TodoItem>> =
+        listDao.observeIsLocal(listId)
+            .map { it > 0 }
+            .distinctUntilChanged()
+            .flatMapLatest { isLocal ->
+                if (isLocal) {
+                    todoDao.observeTodos(listId).map { entities -> entities.map { it.toTodoItem() } }
+                } else {
+                    observeRemoteTodos(listId)
+                }
+            }
 
     private fun observeRemoteTodos(listId: String): Flow<List<TodoItem>> = callbackFlow {
-        val registration: ListenerRegistration = listsRef
-            .document(listId)
-            .collection("todos")
+        var received = false
+        val registration: ListenerRegistration = todosRef(listId)
             .orderBy("position", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.w(TAG, "Todo-Listener für $listId fehlgeschlagen", error)
+                    if (!received) {
+                        received = true
+                        trySend(emptyList())
+                    }
                     return@addSnapshotListener
                 }
+                received = true
                 val todos = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(TodoItem::class.java)?.copy(id = doc.id)
                 } ?: emptyList()
@@ -438,7 +663,7 @@ class TodoRepository(private val deviceId: String, context: Context) {
         reminderMinutes : Int? = null,
     ) {
         if (isLocalList(listId)) {
-            val count = todoDao.countTodos(listId).toLong()
+            val position = todoDao.maxPosition(listId) + 1L
             val todo = TodoItem(
                 id = UUID.randomUUID().toString(),
                 title = title.trim(),
@@ -449,17 +674,11 @@ class TodoRepository(private val deviceId: String, context: Context) {
                 assignedTo = assignedTo,
                 reminderMinutes = reminderMinutes,
                 createdBy = deviceId,
-                position = count
+                position = position
             )
             todoDao.insertTodo(todo.toLocalEntity(listId))
             return
         }
-
-        // Position = aktuelle Anzahl Todos
-        val count = listsRef
-            .document(listId)
-            .collection("todos")
-            .get().await().size().toLong()
 
         val todo = TodoItem(
             title = title.trim(),
@@ -470,9 +689,9 @@ class TodoRepository(private val deviceId: String, context: Context) {
             assignedTo = assignedTo,
             reminderMinutes = reminderMinutes,
             createdBy = deviceId,
-            position = count
+            position = nextRemotePosition(listId)
         )
-        listsRef.document(listId).collection("todos").add(todo).await()
+        todosRef(listId).add(todo).await()
     }
 
     /**
@@ -504,8 +723,7 @@ class TodoRepository(private val deviceId: String, context: Context) {
                 "doneAt" to null
             )
         }
-        listsRef.document(listId).collection("todos")
-            .document(todo.id).update(updates).await()
+        todosRef(listId).document(todo.id).update(updates).await()
     }
 
     /**
@@ -516,8 +734,7 @@ class TodoRepository(private val deviceId: String, context: Context) {
             todoDao.deleteTodo(todoId)
             return
         }
-        listsRef.document(listId).collection("todos")
-            .document(todoId).delete().await()
+        todosRef(listId).document(todoId).delete().await()
     }
 
     /**
@@ -528,8 +745,7 @@ class TodoRepository(private val deviceId: String, context: Context) {
             todoDao.insertTodo(todo.toLocalEntity(listId))
             return
         }
-        listsRef.document(listId).collection("todos")
-            .document(todo.id).set(todo).await()
+        todosRef(listId).document(todo.id).set(todo).await()
     }
 
     /**
@@ -541,8 +757,7 @@ class TodoRepository(private val deviceId: String, context: Context) {
             todoDao.updateTodo(entity.copy(title = newTitle.trim()))
             return
         }
-        listsRef.document(listId).collection("todos")
-            .document(todoId).update("title", newTitle.trim()).await()
+        todosRef(listId).document(todoId).update("title", newTitle.trim()).await()
     }
 
     /**
@@ -579,9 +794,10 @@ class TodoRepository(private val deviceId: String, context: Context) {
             "dueDate"         to dueDate,
             "assignedTo"      to assignedTo,
             "reminderMinutes" to reminderMinutes,
+            // Neue Fälligkeit bedeutet: die Erinnerung muss erneut ausgelöst werden.
+            "reminderSent"    to false,
         )
-        listsRef.document(listId).collection("todos")
-            .document(todoId).update(updates).await()
+        todosRef(listId).document(todoId).update(updates).await()
     }
 
     /**
@@ -596,30 +812,32 @@ class TodoRepository(private val deviceId: String, context: Context) {
 
         if (fromLocal && toLocal) {
             val entity = todoDao.getTodo(todo.id) ?: return
-            val newPosition = todoDao.countTodos(toListId).toLong()
+            val newPosition = todoDao.maxPosition(toListId) + 1L
             todoDao.updateTodo(entity.copy(listId = toListId, position = newPosition))
             return
         }
         if (!fromLocal && !toLocal) {
-            val newPosition = listsRef.document(toListId).collection("todos").get().await().size().toLong()
-            val movedTodo = todo.copy(position = newPosition)
-            listsRef.document(toListId).collection("todos").document(todo.id).set(movedTodo).await()
-            listsRef.document(fromListId).collection("todos").document(todo.id).delete().await()
+            val newPosition = nextRemotePosition(toListId)
+            // Als Batch, damit das Todo nicht doppelt existiert oder verloren geht,
+            // falls zwischen Schreiben und Löschen etwas schiefgeht.
+            val batch = db.batch()
+            batch.set(todosRef(toListId).document(todo.id), todo.copy(position = newPosition))
+            batch.delete(todosRef(fromListId).document(todo.id))
+            batch.commit().await()
             return
         }
         if (fromLocal && !toLocal) {
             val entity = todoDao.getTodo(todo.id) ?: return
-            val newPosition = listsRef.document(toListId).collection("todos").get().await().size().toLong()
+            val newPosition = nextRemotePosition(toListId)
             val movedTodo = entity.toTodoItem().copy(position = newPosition)
-            listsRef.document(toListId).collection("todos").document(todo.id).set(movedTodo).await()
+            todosRef(toListId).document(todo.id).set(movedTodo).await()
             todoDao.deleteTodo(todo.id)
             return
         }
-        // remote -> lokal
-        val newPosition = todoDao.countTodos(toListId).toLong()
-        val movedTodo = todo.copy(position = newPosition)
-        todoDao.insertTodo(movedTodo.toLocalEntity(toListId))
-        listsRef.document(fromListId).collection("todos").document(todo.id).delete().await()
+        // remote -> lokal: erst lokal sichern, dann remote löschen
+        val newPosition = todoDao.maxPosition(toListId) + 1L
+        todoDao.insertTodo(todo.copy(position = newPosition).toLocalEntity(toListId))
+        todosRef(fromListId).document(todo.id).delete().await()
     }
 
     /**
@@ -631,8 +849,7 @@ class TodoRepository(private val deviceId: String, context: Context) {
             todoDao.updateTodo(entity.copy(subtasksJson = subtasks.toJson()))
             return
         }
-        listsRef.document(listId).collection("todos")
-            .document(todoId).update("subtasks", subtasks).await()
+        todosRef(listId).document(todoId).update("subtasks", subtasks).await()
     }
 
     /**
@@ -648,8 +865,7 @@ class TodoRepository(private val deviceId: String, context: Context) {
             )
             return
         }
-        listsRef.document(listId).collection("todos")
-            .document(todoId).update("comments", FieldValue.arrayUnion(comment)).await()
+        todosRef(listId).document(todoId).update("comments", FieldValue.arrayUnion(comment)).await()
     }
 
     // ─── Benachrichtigungen ──────────────────────────────────────────────────
@@ -731,12 +947,21 @@ class TodoRepository(private val deviceId: String, context: Context) {
      * Live-Stream aller Benachrichtigungen für das aktuelle Gerät, neueste zuerst.
      */
     fun observeNotifications(): Flow<List<AppNotification>> = callbackFlow {
+        var received = false
         val registration = notificationsRef
             .whereEqualTo("recipientId", deviceId)
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .limit(50)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) { close(error); return@addSnapshotListener }
+                if (error != null) {
+                    Log.w(TAG, "Benachrichtigungs-Listener fehlgeschlagen", error)
+                    if (!received) {
+                        received = true
+                        trySend(emptyList())
+                    }
+                    return@addSnapshotListener
+                }
+                received = true
                 val items = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(AppNotification::class.java)?.copy(id = doc.id)
                 } ?: emptyList()
@@ -751,8 +976,10 @@ class TodoRepository(private val deviceId: String, context: Context) {
 
     suspend fun markAllNotificationsRead(ids: List<String>) {
         if (ids.isEmpty()) return
-        val batch = db.batch()
-        ids.forEach { batch.update(notificationsRef.document(it), "isRead", true) }
-        batch.commit().await()
+        ids.chunked(BATCH_LIMIT).forEach { chunk ->
+            val batch = db.batch()
+            chunk.forEach { batch.update(notificationsRef.document(it), "isRead", true) }
+            batch.commit().await()
+        }
     }
 }

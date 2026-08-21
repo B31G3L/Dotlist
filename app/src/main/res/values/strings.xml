@@ -208,6 +208,16 @@
     <!-- ===================== ListeTeilenScreen (share list) ===================== -->
     <string name="title_share_list">Share list</string>
     <string name="label_invite_code">Invite code</string>
+    <string name="invite_loading">Loading…</string>
+    <string name="invite_none">No active code</string>
+    <string name="invite_error">Could not load the code</string>
+    <string name="invite_valid_until">Valid until %1$s</string>
+    <string name="action_create_invite">Create</string>
+    <string name="action_regenerate_invite">New code</string>
+    <string name="invite_regenerate_hint">Creating a new code invalidates the previous one immediately.</string>
+    <string name="error_invite_invalid">This code is invalid or has expired</string>
+    <string name="error_invite_load_failed">Could not load the invitation</string>
+    <string name="error_join_failed">Could not join the list</string>
     <string name="invite_code_restricted">Only owners and admins can see and share the invite code</string>
     <string name="section_members">Members</string>
     <string name="action_make_admin">Make admin</string>

@@ -21,17 +21,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.beigel.list2share.R
-import com.beigel.list2share.data.TodoList
+import com.beigel.list2share.data.Invite
 import com.beigel.list2share.utils.HapticFeedback
 
+/**
+ * Vorschau einer Einladung. Zeigt bewusst nur die Daten aus dem
+ * Einladungsdokument – die Liste selbst ist für Nicht-Mitglieder nicht lesbar.
+ */
 @Composable
 fun EinladungScreen(
-    list      : TodoList,
+    invite    : Invite,
     haptic    : HapticFeedback,
     onAccept  : () -> Unit,
     onDecline : () -> Unit,
 ) {
-    val color = listColor(list.color)
+    val color = listColor(invite.listColor)
 
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         // App-Bar
@@ -60,7 +64,7 @@ fun EinladungScreen(
                         modifier         = Modifier.size(64.dp).clip(CircleShape).background(color.copy(alpha = 0.85f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(list.name.firstOrNull()?.uppercase() ?: "?",
+                        Text(invite.listName.firstOrNull()?.uppercase() ?: "?",
                             fontSize = 24.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onPrimary)
                     }
                     Box(
@@ -81,7 +85,7 @@ fun EinladungScreen(
                 color      = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text       = "„${list.name}“",
+                text       = "„${invite.listName}“",
                 fontSize   = 20.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign  = TextAlign.Center,
@@ -116,9 +120,9 @@ fun EinladungScreen(
                         Icon(Icons.Default.Group, null, tint = color, modifier = Modifier.size(22.dp))
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(list.name, fontSize = 15.sp, fontWeight = FontWeight.Medium,
+                        Text(invite.listName, fontSize = 15.sp, fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurface)
-                        Text(stringResource(R.string.members_count, list.memberIds.size),
+                        Text(stringResource(R.string.members_count, invite.memberCount),
                             fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

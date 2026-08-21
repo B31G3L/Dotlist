@@ -156,7 +156,7 @@ fun ListenScreen(
         )
     }
 
-    uiState.invitePreview?.let { previewList ->
+    uiState.invitePreview?.let { invite ->
         Dialog(
             onDismissRequest = { viewModel.clearInvitePreview() },
             properties       = DialogProperties(
@@ -166,9 +166,9 @@ fun ListenScreen(
         ) {
             Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 EinladungScreen(
-                    list      = previewList,
+                    invite    = invite,
                     haptic    = haptic,
-                    onAccept  = { viewModel.confirmJoin(previewList.id) },
+                    onAccept  = { viewModel.confirmJoin(invite.code) },
                     onDecline = { viewModel.clearInvitePreview() }
                 )
             }

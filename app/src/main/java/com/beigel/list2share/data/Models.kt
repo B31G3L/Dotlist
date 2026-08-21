@@ -2,6 +2,7 @@ package com.beigel.list2share.data
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.PropertyName
 import com.beigel.list2share.R
 
@@ -24,7 +25,7 @@ import com.beigel.list2share.R
  *                      DB gelesene Listen immer false.
  */
 data class TodoList(
-    val id: String = "",
+    @get:Exclude val id: String = "",
     val name: String = "",
     val memberIds: List<String> = emptyList(),
     val memberNames: Map<String, String> = emptyMap(),
@@ -34,7 +35,7 @@ data class TodoList(
     val color: String = "#6750A4",
     val icon: String = "",
     val mutedBy: List<String> = emptyList(),
-    val isShared: Boolean = false
+    @get:Exclude val isShared: Boolean = false
 ) {
     // Parameterloser Konstruktor für Firestore-Deserialisierung
     constructor() : this("", "", emptyList(), emptyMap(), emptyList(), "", Timestamp.now(), "#6750A4", "", emptyList(), false)
@@ -140,7 +141,7 @@ data class Comment(
  * @param comments          Liste von Kommentaren
  */
 data class TodoItem(
-    val id: String = "",
+    @get:Exclude val id: String = "",
     val title: String = "",
     val description: String = "",
     @get:PropertyName("isDone") @set:PropertyName("isDone")
@@ -182,7 +183,7 @@ enum class NotificationType {
  * Eine Benachrichtigung für ein Gerät (z.B. "Jana hat dir eine Aufgabe zugewiesen").
  */
 data class AppNotification(
-    val id: String = "",
+    @get:Exclude val id: String = "",
     val recipientId: String = "",
     val actorId: String = "",
     val actorName: String = "",
@@ -196,3 +197,58 @@ data class AppNotification(
 ) {
     constructor() : this("", "", "", "", NotificationType.ZUGEWIESEN.name, "", "", "", false, Timestamp.now())
 }
+
+/**
+ * Eine Einladung zu einer geteilten Liste.
+ *
+ * Bewusst ein eigenes Dokument statt der blanken Listen-ID als Code:
+ *
+ *  - Die Anzeigedaten (Name, Farbe, Icon, Mitgliederzahl) liegen redundant hier
+ *    drin, damit der Einladungs-Screen die Liste vorab zeigen kann, ohne dass
+ *    Nicht-Mitglieder Lesezugriff auf das Listendokument brauchen.
+ *  - Einladungen laufen ab und können widerrufen werden. Mit der Listen-ID als
+ *    Code war jeder einmal verteilte Link dauerhaft gültig und nur durch
+ *    Löschen der Liste aus dem Verkehr zu ziehen.
+ *
+ * Die Dokument-ID ist der Code selbst (siehe [generateInviteCode]).
+ */
+data class Invite(
+    @get:Exclude val code: String = "",
+    val listId: String = "",
+    val listName: String = "",
+    val listColor: String = "#6750A4",
+    val listIcon: String = "",
+    val memberCount: Int = 0,
+    val createdBy: String = "",
+    val createdAt: Timestamp = Timestamp.now(),
+    val expiresAt: Timestamp = Timestamp.now(),
+    val revoked: Boolean = false,
+) {
+    constructor() : this("", "", "", "#6750A4", "", 0, "", Timestamp.now(), Timestamp.now(), false)
+}
+
+val Invite.isExpired: Boolean get() = expiresAt.toDate().time < System.currentTimeMillis()
+
+val Invite.isUsable: Boolean get() = !revoked && !isExpired
+
+/**
+ * Zeichenvorrat ohne verwechselbare Zeichen (kein I/1, kein O/0), damit ein Code
+ * auch mündlich oder abgetippt ankommt.
+ */
+private const val INVITE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+const val INVITE_CODE_LENGTH = 8
+
+fun generateInviteCode(): String =
+    (1..INVITE_CODE_LENGTH).map { INVITE_ALPHABET.random() }.joinToString("")
+
+/** Anzeigeform mit Trennstrich: ABCD-EFGH */
+fun String.asDisplayInviteCode(): String =
+    if (length == INVITE_CODE_LENGTH) "${take(4)}-${drop(4)}" else this
+
+/**
+ * Eingabe des Nutzers auf die gespeicherte Form bringen: Groß-/Kleinschreibung,
+ * Leerzeichen und Trennstriche sind egal.
+ */
+fun String.normalizeInviteCode(): String =
+    filter { it.isLetterOrDigit() }.uppercase()

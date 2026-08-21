@@ -17,6 +17,14 @@ interface LocalListDao {
     @Query("SELECT * FROM local_lists WHERE id = :id LIMIT 1")
     suspend fun getList(id: String): LocalListEntity?
 
+    /**
+     * Liegt diese Liste (noch) lokal? Als Flow, damit ein laufender Todo-Stream
+     * automatisch von Room auf Firestore umschaltet, sobald die Liste geteilt
+     * wird – und umgekehrt.
+     */
+    @Query("SELECT COUNT(*) FROM local_lists WHERE id = :id")
+    fun observeIsLocal(id: String): Flow<Int>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertList(list: LocalListEntity)
 
@@ -49,6 +57,14 @@ interface LocalTodoDao {
 
     @Query("SELECT COUNT(*) FROM local_todos WHERE listId = :listId")
     suspend fun countTodos(listId: String): Int
+
+    /**
+     * Höchste vergebene Position. Basis für die nächste freie Position – im
+     * Gegensatz zu COUNT(*) entstehen so keine doppelten Positionen, nachdem
+     * zwischendurch Todos gelöscht wurden.
+     */
+    @Query("SELECT COALESCE(MAX(position), -1) FROM local_todos WHERE listId = :listId")
+    suspend fun maxPosition(listId: String): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTodo(todo: LocalTodoEntity)
