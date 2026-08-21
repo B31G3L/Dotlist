@@ -1,5 +1,6 @@
 package com.beigel.list2share.ui.screens
 
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -19,15 +20,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.credentials.CredentialManager
-import androidx.credentials.CustomCredential
-import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.beigel.list2share.R
 import com.beigel.list2share.auth.AuthManager
+import com.beigel.list2share.auth.GoogleAuthResult
+import com.beigel.list2share.auth.GoogleIdentity
+import com.beigel.list2share.auth.requestGoogleIdentity
 import com.beigel.list2share.data.DeviceIdManager
+import com.beigel.list2share.data.local.LocalOwnership
 import com.beigel.list2share.utils.HapticFeedback
 import kotlinx.coroutines.launch
 
@@ -46,24 +46,54 @@ fun KontoScreen(
     var showSignOutConfirm by remember { mutableStateOf(false) }
     var isLinking     by remember { mutableStateOf(false) }
 
-    suspend fun startGoogleLink() {
+    // Google-Konto existiert bereits, der aktuelle anonyme Account hätte aber noch
+    // geteilte Listen zu verlieren -> Rückfrage, bevor er verworfen wird.
+    var conflict by remember { mutableStateOf<Pair<GoogleIdentity, Int>?>(null) }
+
+    /**
+     * Verarbeitet ein Google-ID-Token.
+     *
+     * Wichtig: nach einer Neuinstallation ist der lokale Auth-Token weg, die App
+     * legt einen frischen anonymen Account an – und `linkWithCredential` schlägt
+     * dann zwangsläufig fehl, weil das Google-Konto bereits an den alten Account
+     * gebunden ist. [AuthManager.signInWithGoogle] fängt genau diesen Fall ab und
+     * meldet stattdessen am bestehenden Account an.
+     */
+    suspend fun applyIdentity(identity: GoogleIdentity, discardAnonymousData: Boolean) {
+        when (val result = AuthManager.signInWithGoogle(identity.idToken, discardAnonymousData)) {
+
+            is GoogleAuthResult.ConflictWithData -> {
+                conflict = identity to result.sharedListCount
+            }
+
+            is GoogleAuthResult.Linked -> {
+                isLinked    = true
+                googleEmail = AuthManager.currentUser?.email
+                identity.displayName?.let { DeviceIdManager.setDeviceName(context, it) }
+                haptic.click()
+            }
+
+            is GoogleAuthResult.SwitchedAccount -> {
+                identity.displayName?.let { DeviceIdManager.setDeviceName(context, it) }
+                LocalOwnership.migrate(context, result.previousUid, result.uid, identity.displayName)
+                haptic.click()
+                // Die UID hat gewechselt: Repository und ViewModels müssen mit der
+                // neuen Identität neu aufgebaut werden.
+                (context as? Activity)?.recreate()
+            }
+        }
+    }
+
+    suspend fun startGoogleLink(discardAnonymousData: Boolean = false, reuse: GoogleIdentity? = null) {
         linkError = null
         isLinking = true
         try {
-            val credentialManager = CredentialManager.create(context)
-            val option = GetSignInWithGoogleOption.Builder(context.getString(R.string.google_web_client_id)).build()
-            val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
-            val response = credentialManager.getCredential(context, request)
-            val credential = response.credential
-
-            if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                AuthManager.linkWithGoogleIdToken(googleIdTokenCredential.idToken)
-                isLinked    = true
-                googleEmail = AuthManager.currentUser?.email
-                googleIdTokenCredential.displayName?.let { DeviceIdManager.setDeviceName(context, it) }
-                haptic.click()
+            val identity = reuse ?: requestGoogleIdentity(context)
+            if (identity == null) {
+                linkError = context.getString(R.string.error_link_cancelled)
+                return
             }
+            applyIdentity(identity, discardAnonymousData)
         } catch (e: GetCredentialException) {
             linkError = context.getString(R.string.error_link_cancelled)
         } catch (e: Exception) {
@@ -169,6 +199,24 @@ fun KontoScreen(
                 )
             }
         }
+    }
+
+    conflict?.let { (identity, count) ->
+        AlertDialog(
+            onDismissRequest = { conflict = null },
+            title = { Text(stringResource(R.string.dialog_account_exists_title)) },
+            text  = { Text(stringResource(R.string.dialog_account_exists_message, count)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    haptic.heavy()
+                    conflict = null
+                    scope.launch { startGoogleLink(discardAnonymousData = true, reuse = identity) }
+                }) { Text(stringResource(R.string.action_use_existing_account)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { conflict = null }) { Text(stringResource(R.string.action_cancel)) }
+            }
+        )
     }
 
     if (showSignOutConfirm) {

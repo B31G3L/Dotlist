@@ -296,4 +296,10 @@
 
     <!-- ===================== Repository ===================== -->
     <string name="list_copy_suffix">Kopie</string>
+    <string name="welcome_or">oder</string>
+    <string name="action_continue_with_google">Mit Google anmelden</string>
+    <string name="welcome_google_hint">Schon mal dabei gewesen? Melde dich an und deine geteilten Listen sind sofort wieder da.</string>
+    <string name="dialog_account_exists_title">Konto existiert bereits</string>
+    <string name="dialog_account_exists_message">Dieses Google-Konto wird bereits verwendet. Wenn du fortfährst, bekommst du dessen Listen zurück — die %1$d geteilte(n) Liste(n) auf diesem Gerät sind dann nicht mehr erreichbar.</string>
+    <string name="action_use_existing_account">Bestehendes Konto verwenden</string>
 </resources>

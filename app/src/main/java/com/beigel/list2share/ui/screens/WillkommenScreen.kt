@@ -1,5 +1,6 @@
 package com.beigel.list2share.ui.screens
 
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -24,21 +25,32 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.exceptions.GetCredentialException
 import com.beigel.list2share.R
+import com.beigel.list2share.auth.AuthManager
+import com.beigel.list2share.auth.GoogleAuthResult
+import com.beigel.list2share.auth.requestGoogleIdentity
 import com.beigel.list2share.data.DeviceIdManager
+import com.beigel.list2share.data.local.LocalOwnership
 import com.beigel.list2share.utils.HapticFeedback
+import kotlinx.coroutines.launch
 
 /**
  * Wird einmalig beim allerersten App-Start gezeigt (siehe DeviceIdManager.isNameSet).
- * Fragt nach dem Anzeigenamen, der z. B. in geteilten Listen für andere Mitglieder
- * sichtbar ist (Ersteller, Kommentare, "erledigt von" usw.).
+ *
+ * Zwei Wege:
+ *  - Name eintippen: schneller Einstieg, Daten bleiben zunächst nur auf dem Gerät.
+ *  - Mit Google anmelden: wer die App schon einmal benutzt hat (Gerätewechsel,
+ *    Neuinstallation), bekommt seine geteilten Listen sofort zurück. Der Name
+ *    kommt dann aus dem Google-Profil.
  */
 @Composable
 fun WillkommenScreen(
     haptic : HapticFeedback,
     onDone : (name: String) -> Unit,
 ) {
-    val context          = LocalContext.current
+    val context           = LocalContext.current
+    val scope             = rememberCoroutineScope()
     val focusRequester    = remember { FocusRequester() }
     val focusManager      = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -52,6 +64,8 @@ fun WillkommenScreen(
             } ?: ""
         )
     }
+    var isSigningIn by remember { mutableStateOf(false) }
+    var signInError by remember { mutableStateOf<String?>(null) }
 
     fun confirm() {
         val trimmed = name.trim()
@@ -60,6 +74,55 @@ fun WillkommenScreen(
         DeviceIdManager.setDeviceName(context, trimmed)
         keyboardController?.hide()
         onDone(trimmed)
+    }
+
+    /**
+     * Google-Anmeldung direkt beim Onboarding.
+     *
+     * Der anonyme Account ist hier immer wenige Sekunden alt und kann keine Daten
+     * enthalten – ein [GoogleAuthResult.ConflictWithData] kann also nicht auftreten.
+     * Käme es trotzdem, wird bewusst mit `discardAnonymousData = true` wiederholt.
+     */
+    suspend fun signInWithGoogle() {
+        signInError = null
+        isSigningIn = true
+        keyboardController?.hide()
+        try {
+            val identity = requestGoogleIdentity(context)
+            if (identity == null) {
+                signInError = context.getString(R.string.error_link_cancelled)
+                return
+            }
+
+            var result = AuthManager.signInWithGoogle(identity.idToken)
+            if (result is GoogleAuthResult.ConflictWithData) {
+                result = AuthManager.signInWithGoogle(identity.idToken, discardAnonymousData = true)
+            }
+
+            val displayName = identity.displayName?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?: identity.email?.substringBefore('@')
+                ?: name.trim().ifEmpty { context.getString(R.string.placeholder_your_name) }
+
+            DeviceIdManager.setDeviceName(context, displayName)
+            haptic.click()
+
+            when (result) {
+                is GoogleAuthResult.SwitchedAccount -> {
+                    // UID hat gewechselt: lokale Referenzen umschreiben und mit der
+                    // neuen Identität sauber neu starten.
+                    LocalOwnership.migrate(context, result.previousUid, result.uid, displayName)
+                    (context as? Activity)?.recreate()
+                }
+                else -> onDone(displayName)
+            }
+        } catch (e: GetCredentialException) {
+            signInError = context.getString(R.string.error_link_cancelled)
+        } catch (e: Exception) {
+            signInError = context.getString(R.string.error_link_failed, e.message)
+        } finally {
+            isSigningIn = false
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -123,6 +186,7 @@ fun WillkommenScreen(
                 value         = name,
                 onValueChange = { if (it.length <= 30) name = it },
                 singleLine    = true,
+                enabled       = !isSigningIn,
                 placeholder   = { Text(stringResource(R.string.placeholder_your_name)) },
                 shape         = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -136,7 +200,7 @@ fun WillkommenScreen(
 
             Button(
                 onClick  = { confirm() },
-                enabled  = name.trim().isNotEmpty(),
+                enabled  = name.trim().isNotEmpty() && !isSigningIn,
                 shape    = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -144,6 +208,55 @@ fun WillkommenScreen(
             ) {
                 Text(stringResource(R.string.action_get_started), fontSize = 16.sp, fontWeight = FontWeight.Medium)
             }
+
+            Spacer(Modifier.height(22.dp))
+
+            // ─── Trenner ─────────────────────────────────────────────────────
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                HorizontalDivider(modifier = Modifier.weight(1f))
+                Text(
+                    text     = stringResource(R.string.welcome_or),
+                    fontSize = 12.5.sp,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 14.dp)
+                )
+                HorizontalDivider(modifier = Modifier.weight(1f))
+            }
+
+            Spacer(Modifier.height(22.dp))
+
+            OutlinedButton(
+                onClick  = { haptic.tick(); scope.launch { signInWithGoogle() } },
+                enabled  = !isSigningIn,
+                shape    = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+            ) {
+                if (isSigningIn) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(10.dp))
+                }
+                Text(
+                    stringResource(R.string.action_continue_with_google),
+                    fontSize   = 15.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Text(
+                text      = signInError ?: stringResource(R.string.welcome_google_hint),
+                fontSize  = 12.5.sp,
+                textAlign = TextAlign.Center,
+                color     = if (signInError != null) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier  = Modifier.padding(horizontal = 6.dp)
+            )
 
             Spacer(Modifier.weight(1.4f))
         }

@@ -301,4 +301,11 @@
     <!-- ===================== Repository ===================== -->
     <string name="list_copy_suffix">Copy</string>
 
+    <string name="welcome_or">or</string>
+    <string name="action_continue_with_google">Continue with Google</string>
+    <string name="welcome_google_hint">Used List2Share before? Sign in and your shared lists are back right away.</string>
+    <string name="dialog_account_exists_title">Account already exists</string>
+    <string name="dialog_account_exists_message">This Google account is already in use. If you continue, you\'ll get its lists back — the %1$d shared list(s) on this device will no longer be reachable.</string>
+    <string name="action_use_existing_account">Use existing account</string>
+
 </resources>

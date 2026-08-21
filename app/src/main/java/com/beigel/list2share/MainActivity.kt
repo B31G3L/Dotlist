@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -32,6 +33,7 @@ import com.beigel.list2share.ui.theme.ThemeMode
 import com.beigel.list2share.ui.theme.ThemePreferences
 import com.beigel.list2share.ui.theme.TodoSharedTheme
 import com.beigel.list2share.utils.HapticFeedback
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
@@ -62,16 +64,42 @@ class MainActivity : ComponentActivity() {
 
             // Firebase Auth ist asynchron (Netzwerk-Aufruf beim allerersten Start),
             // daher kurz warten bevor die App mit einer echten UID startet.
-            var uid by remember { mutableStateOf<String?>(null) }
+            var uid by remember { mutableStateOf(AuthManager.currentUid) }
+
+            /*
+             * Die UID kann sich zur Laufzeit ändern: meldet sich der Nutzer mit einem
+             * Google-Konto an, das schon zu einem früheren Account gehört (typisch nach
+             * einer Neuinstallation), wird der frische anonyme Account verworfen und der
+             * alte übernommen. Ohne diesen Listener würde das Repository mit der alten,
+             * toten UID weiterarbeiten.
+             *
+             * Bewusst nur auf nicht-null reagieren: beim Kontowechsel ist currentUser
+             * kurzzeitig null, und ein Wechsel auf den Lade-Spinner würde die gerade
+             * laufende Anmelde-Coroutine aus der Komposition werfen. Echtes Abmelden
+             * löst ohnehin ein recreate() aus.
+             */
+            DisposableEffect(Unit) {
+                val listener = FirebaseAuth.AuthStateListener { auth ->
+                    auth.currentUser?.uid?.let { uid = it }
+                }
+                FirebaseAuth.getInstance().addAuthStateListener(listener)
+                onDispose { FirebaseAuth.getInstance().removeAuthStateListener(listener) }
+            }
+
             LaunchedEffect(Unit) {
                 val id = AuthManager.ensureSignedIn()
                 uid = id
-                // FCM-Token besorgen und in Firestore hinterlegen, damit Cloud
-                // Functions Push-Nachrichten an dieses Gerät schicken können.
+            }
+
+            // FCM-Token bei jeder gültigen UID neu hinterlegen – nach einem
+            // Kontowechsel muss das Token am neuen Account hängen.
+            LaunchedEffect(uid) {
+                val id = uid ?: return@LaunchedEffect
                 try {
                     val token = FirebaseMessaging.getInstance().token.await()
-                    TodoRepository(id, this@MainActivity).saveDeviceToken(token)
-                    TodoRepository(id, this@MainActivity).setPushEnabled(
+                    val repo = TodoRepository(id, this@MainActivity)
+                    repo.saveDeviceToken(token)
+                    repo.setPushEnabled(
                         NotificationPreferences.getPushEnabled(this@MainActivity).first()
                     )
                 } catch (_: Exception) {
