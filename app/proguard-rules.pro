@@ -1,6 +1,18 @@
 # Firebase Firestore
 -keep class com.google.firebase.** { *; }
--keep class com.beigel.dotlist.data.** { *; }
+
+# Datenmodelle: Firestore mappt Dokumentfelder per Reflection auf die
+# Feldnamen. Werden die von R8 umbenannt, liefert toObject() im Release-Build
+# stumm Defaults statt Daten – im Debug-Build faellt das nie auf, weil dort
+# nicht minifiziert wird.
+-keep class com.beigel.list2share.data.** { *; }
+-keepclassmembers class com.beigel.list2share.data.** {
+    <init>();
+    <fields>;
+}
+
+# @PropertyName und @Exclude muessen erhalten bleiben, sonst greifen sie nicht.
+-keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
 
 # Kotlin Coroutines
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}

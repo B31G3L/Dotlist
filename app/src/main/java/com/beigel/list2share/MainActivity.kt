@@ -1,5 +1,6 @@
 package com.beigel.list2share
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,6 +24,7 @@ import androidx.core.view.WindowCompat
 import com.beigel.list2share.auth.AuthManager
 import com.beigel.list2share.data.DeviceIdManager
 import com.beigel.list2share.data.NotificationPreferences
+import com.beigel.list2share.notifications.NotificationRoute
 import com.beigel.list2share.repository.TodoRepository
 import com.beigel.list2share.ui.screens.MainScreen
 import com.beigel.list2share.ui.screens.WillkommenScreen
@@ -39,8 +41,24 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 
 class MainActivity : ComponentActivity() {
+
+    /**
+     * Läuft die App schon, liefert Android den Tap auf eine Benachrichtigung
+     * hier ab statt in onCreate – die Activity ist als singleTop deklariert.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        NotificationRoute.submit(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Wurde die App über eine Benachrichtigung geöffnet, steckt das Ziel
+        // im Start-Intent. MainScreen springt dorthin, sobald die Listen da sind.
+        NotificationRoute.submit(intent)
+
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
 

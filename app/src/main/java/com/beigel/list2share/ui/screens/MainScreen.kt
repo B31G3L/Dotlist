@@ -31,6 +31,7 @@ import com.beigel.list2share.data.NotificationPreferences
 import com.beigel.list2share.data.TodoItem
 import com.beigel.list2share.data.TodoList
 import com.beigel.list2share.notifications.LocalNotifier
+import com.beigel.list2share.notifications.NotificationRoute
 import com.beigel.list2share.repository.TodoRepository
 import com.beigel.list2share.utils.HapticFeedback
 import com.beigel.list2share.viewmodel.ListsViewModel
@@ -147,6 +148,20 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
             if (pushEnabled) LocalNotifier.show(context, notification)
         }
         onDispose { notificationsViewModel.onNewNotification = null }
+    }
+
+    // Angetippte Benachrichtigung: zur betroffenen Liste springen, sobald sie
+    // geladen ist. Ist sie nicht (mehr) dabei – gelöscht, verlassen –, wird das
+    // Ziel nach dem ersten geladenen Listenstand einfach verworfen.
+    val pendingRoute by NotificationRoute.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingRoute, listsUiState.lists, listsUiState.isLoading) {
+        val target = pendingRoute ?: return@LaunchedEffect
+        if (listsUiState.isLoading) return@LaunchedEffect
+        listsUiState.lists.find { it.id == target.listId }?.let { list ->
+            screen = AppScreen.ListenDetail(list)
+            listsViewModel.setLastList(list.id)
+        }
+        NotificationRoute.consume()
     }
 
     // Back-Handler für Sub-Screens

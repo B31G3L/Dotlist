@@ -1,7 +1,6 @@
 package com.beigel.list2share.notifications
 
 import android.Manifest
-import android.R
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -10,6 +9,7 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.beigel.list2share.R
 import com.beigel.list2share.data.AppNotification
 
 /**
@@ -22,6 +22,9 @@ import com.beigel.list2share.data.AppNotification
  */
 object LocalNotifier {
     const val CHANNEL_ID = "dotlist_notifications"
+
+    /** Gruppierungsschlüssel, damit sich Meldungen nicht einzeln stapeln. */
+    const val GROUP_KEY = "com.beigel.list2share.NOTIFICATIONS"
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -44,14 +47,28 @@ object LocalNotifier {
 
         val text = messageFor(notification)
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(notification.actorName)
             .setContentText(text)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setGroup(GROUP_KEY)
+            // Ohne ContentIntent passiert beim Antippen schlicht nichts.
+            .setContentIntent(
+                NotificationRoute.openIntent(
+                    context,
+                    notification.listId,
+                    notification.todoId.takeIf { it.isNotBlank() }
+                )
+            )
+
+        // Eine Benachrichtigung je Liste statt je Ereignis – sonst stapeln sich
+        // in einer aktiven geteilten Liste beliebig viele Einträge.
+        val notificationId = notification.listId.takeIf { it.isNotBlank() }?.hashCode()
+            ?: notification.id.hashCode()
 
         NotificationManagerCompat.from(context)
-            .notify(notification.id.hashCode(), builder.build())
+            .notify(notificationId, builder.build())
     }
 
     private fun messageFor(n: AppNotification): String = when (n.type) {

@@ -1,7 +1,6 @@
 package com.beigel.list2share.notifications
 
 import android.Manifest
-import android.R
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
@@ -9,6 +8,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.beigel.list2share.R
 import com.beigel.list2share.auth.AuthManager
 import com.beigel.list2share.repository.TodoRepository
 import kotlinx.coroutines.CoroutineScope
@@ -54,13 +54,26 @@ class DotlistMessagingService : FirebaseMessagingService() {
         }
         LocalNotifier.ensureChannel(this)
 
+        // Die Cloud Function schickt listId/todoId im data-Teil mit; fehlt er,
+        // bleibt die Benachrichtigung eben nicht antippbar.
+        val listId = message.data["listId"]?.takeIf { it.isNotBlank() }
+        val todoId = message.data["todoId"]?.takeIf { it.isNotBlank() }
+
         val builder = NotificationCompat.Builder(this, LocalNotifier.CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setGroup(LocalNotifier.GROUP_KEY)
+            .apply {
+                listId?.let { setContentIntent(NotificationRoute.openIntent(this@DotlistMessagingService, it, todoId)) }
+            }
 
-        NotificationManagerCompat.from(this).notify(message.hashCode(), builder.build())
+        // Eine Benachrichtigung je Liste; ohne listId bleibt der bisherige
+        // Fallback, bei dem jede Nachricht eine eigene erzeugt.
+        val notificationId = listId?.hashCode() ?: message.hashCode()
+
+        NotificationManagerCompat.from(this).notify(notificationId, builder.build())
     }
 }
