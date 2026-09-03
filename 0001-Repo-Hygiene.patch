@@ -1,0 +1,142 @@
+From 6a997a012ec733382fe4f017f2d12e6231327019 Mon Sep 17 00:00:00 2001
+From: Beigel <dev@example.com>
+Date: Fri, 21 Aug 2026 12:00:00 +0000
+Subject: [PATCH 1/2] Repo-Hygiene
+
+- gradle-wrapper.jar wieder aus der .gitignore ausgenommen, damit ein
+  frischer Clone bauen kann (die JAR selbst muss mit "git add -f"
+  nachgereicht werden, ein Patch kann sie nicht mitbringen)
+- Gradle 9.0-milestone-1 auf 8.13, das Minimum fuer AGP 8.11.1
+- Java 11 auf 17
+- README ergaenzt
+---
+ .gitignore                               |  3 +-
+ README.md                                | 64 ++++++++++++++++++++++++
+ app/build.gradle.kts                     |  6 +--
+ gradle/wrapper/gradle-wrapper.properties |  2 +-
+ 4 files changed, 69 insertions(+), 6 deletions(-)
+ create mode 100644 README.md
+
+diff --git a/.gitignore b/.gitignore
+index ae1c57e..5ae2b27 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -103,6 +103,7 @@ Desktop.ini
+ 
+ # Package Files
+ *.jar
++!gradle/wrapper/gradle-wrapper.jar
+ *.war
+ *.nar
+ *.ear
+@@ -113,8 +114,6 @@ Desktop.ini
+ # virtual machine crash logs
+ hs_err_pid*
+ 
+-# Gradle Wrapper (optional - uncomment if you want to commit wrapper)
+-# !gradle/wrapper/gradle-wrapper.jar
+ 
+ # Signing files
+ release.properties
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..230f552
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,64 @@
++# List2Share
++
++Geteilte To-do-Listen für Android. Listen bleiben standardmäßig lokal auf dem Gerät
++und werden erst dann in die Cloud gehoben, wenn man sie tatsächlich teilen will.
++
++> Die App hieß früher *Dotlist* und wurde im Zuge eines Markenkonflikts umbenannt.
++
++## Features
++
++- Listen mit Farbe, Icon und Fortschrittsanzeige
++- Aufgaben mit Priorität, Fälligkeit, Erinnerung, Unteraufgaben und Kommentaren
++- Zuweisung an Mitglieder, Rollen (Besitzer / Admin / Bearbeiter)
++- Teilen per Einladungscode, Push-Benachrichtigungen
++- Kalenderansicht, Suche, Benachrichtigungs-Center
++- Helles/dunkles Theme mit wählbarer Akzentfarbe
++- Deutsch und Englisch
++
++## Architektur
++
++| Schicht | Umsetzung |
++|---|---|
++| UI | Jetpack Compose, Material 3, eigene Screen-Navigation in `MainScreen.kt` |
++| State | ViewModels (`ListsViewModel`, `TodosViewModel`, `NotificationsViewModel`) |
++| Daten | `TodoRepository` als einzige Datenquelle |
++| Lokal | Room (`local_lists`, `local_todos`) für nicht geteilte Listen |
++| Remote | Firestore (`lists/{id}/todos/{id}`) für geteilte Listen |
++| Auth | Firebase Auth – anonym beim ersten Start, optional mit Google verknüpft |
++| Push | Firebase Cloud Messaging |
++| Preferences | DataStore |
++
++Eine Liste liegt **entweder** in Room **oder** in Firestore, nie an beiden Orten.
++Der Wechsel passiert über `TodoRepository.shareList()` bzw. `unshareList()`.
++
++### Identität
++
++Die Firebase-UID ist die Identität, gegen die die Firestore Security Rules prüfen
++(`request.auth.uid`). Beim ersten Start wird anonym angemeldet; eine spätere
++Google-Anmeldung verknüpft denselben Account, sodass die UID erhalten bleibt.
++Gehört das Google-Konto bereits zu einem früheren Account (Gerätewechsel,
++Neuinstallation), wird der frische anonyme Account verworfen und der bestehende
++übernommen – siehe `AuthManager.signInWithGoogle()`.
++
++## Build
++
++Voraussetzungen: Android Studio, JDK 17, Android SDK 36.
++
++```bash
++git clone https://github.com/B31G3L/List2Share.git
++cd List2Share
++./gradlew assembleDebug
++```
++
++Für einen eigenen Build wird ein eigenes Firebase-Projekt benötigt:
++
++1. Projekt in der Firebase Console anlegen, Android-App mit dem gewünschten
++   Application-ID registrieren
++2. `google-services.json` nach `app/` legen
++3. Firestore, Authentication (Anonym + Google) und Cloud Messaging aktivieren
++4. Web-Client-ID unter `google_web_client_id` in `app/src/main/res/values/strings.xml`
++   eintragen
++
++## Lizenz
++
++_(noch festzulegen)_
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index caba01a..4c01623 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -33,12 +33,12 @@ android {
+     }
+ 
+     compileOptions {
+-        sourceCompatibility = JavaVersion.VERSION_11
+-        targetCompatibility = JavaVersion.VERSION_11
++        sourceCompatibility = JavaVersion.VERSION_17
++        targetCompatibility = JavaVersion.VERSION_17
+     }
+ 
+     kotlinOptions {
+-        jvmTarget = "11"
++        jvmTarget = "17"
+     }
+ 
+     buildFeatures {
+diff --git a/gradle/wrapper/gradle-wrapper.properties b/gradle/wrapper/gradle-wrapper.properties
+index 128196a..37f853b 100644
+--- a/gradle/wrapper/gradle-wrapper.properties
++++ b/gradle/wrapper/gradle-wrapper.properties
+@@ -1,6 +1,6 @@
+ distributionBase=GRADLE_USER_HOME
+ distributionPath=wrapper/dists
+-distributionUrl=https\://services.gradle.org/distributions/gradle-9.0-milestone-1-bin.zip
++distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
+ networkTimeout=10000
+ validateDistributionUrl=true
+ zipStoreBase=GRADLE_USER_HOME

@@ -51,6 +51,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "513118560897-a5jk0mqsmnkgp7jd6j0maqjcm71h5r9h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.beigel.list2share",
+            "certificate_hash": "6b25e24f6aa97cda7c25907a72134f0e450ee475"
+          }
+        },
+        {
+          "client_id": "513118560897-i4c0gdfgoh1rfkgqdetl5q1lk0hoco1g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.beigel.list2share",
+            "certificate_hash": "3064e327aca70df269e27d85cdd7c98969318277"
+          }
+        },
+        {
           "client_id": "513118560897-t0h99gq5uls53l4u73v5gcbat912g7k8.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

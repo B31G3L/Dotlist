@@ -59,8 +59,11 @@ class MainActivity : ComponentActivity() {
         // im Start-Intent. MainScreen springt dorthin, sobald die Listen da sind.
         NotificationRoute.submit(intent)
 
+        // enableEdgeToEdge() setzt decorFitsSystemWindows selbst und macht die
+        // Systemleisten auch auf Geraeten vor Android 15 transparent. Ein
+        // zusaetzliches WindowCompat.setDecorFitsSystemWindows(window, false)
+        // ist redundant und ab API 35 deprecated.
         enableEdgeToEdge()
-        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
             val themeMode   by ThemePreferences.getThemeMode(this).collectAsState(initial = ThemeMode.SYSTEM)

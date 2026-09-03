@@ -1,0 +1,340 @@
+From 42cc2dfe083b7da11e726c849f9f05a35258f3ec Mon Sep 17 00:00:00 2001
+From: Beigel <dev@example.com>
+Date: Fri, 21 Aug 2026 14:00:00 +0000
+Subject: [PATCH] ProGuard-Regel auf das neue Package, Benachrichtigungen
+ antippbar
+
+Die Keep-Regel zeigte noch auf com.beigel.dotlist und lief damit seit dem
+Rebrand ins Leere. Weil isMinifyEnabled im Release aktiv ist, benennt R8
+die Felder der Datenklassen um - Firestore mappt Dokumentfelder aber per
+Reflection ueber genau diese Namen, toObject() liefert dann stumm
+Defaults statt Daten. Im Debug-Build faellt das nie auf, da dort nicht
+minifiziert wird. Zusaetzlich bleiben die Annotationen erhalten, sonst
+greifen @PropertyName und @Exclude nicht.
+
+Benachrichtigungen hatten keinen ContentIntent: ein Tap tat schlicht
+nichts. NotificationRoute erzeugt jetzt einen PendingIntent auf die
+MainActivity und reicht listId/todoId weiter; die Activity nimmt das
+Intent in onCreate bzw. onNewIntent entgegen (singleTop), MainScreen
+springt in die Liste, sobald sie geladen ist. Ist die Liste nicht mehr
+vorhanden, wird das Ziel verworfen.
+
+Ausserdem:
+- notify() nutzt die listId als ID statt message.hashCode(), sonst
+  stapelt eine aktive geteilte Liste beliebig viele Eintraege; dazu
+  setGroup() zum Zusammenfassen
+- eigenes einfarbiges Notification-Icon statt android.R.drawable.ic_dialog_info
+---
+ app/proguard-rules.pro                        | 14 ++++-
+ .../com/beigel/list2share/MainActivity.kt     | 18 ++++++
+ .../notifications/DotlistMessagingService.kt  | 19 +++++-
+ .../list2share/notifications/LocalNotifier.kt | 23 ++++++-
+ .../notifications/NotificationRoute.kt        | 62 +++++++++++++++++++
+ .../list2share/ui/screens/MainScreen.kt       | 15 +++++
+ app/src/main/res/drawable/ic_notification.xml | 16 +++++
+ 7 files changed, 160 insertions(+), 7 deletions(-)
+ create mode 100644 app/src/main/java/com/beigel/list2share/notifications/NotificationRoute.kt
+ create mode 100644 app/src/main/res/drawable/ic_notification.xml
+
+diff --git a/app/proguard-rules.pro b/app/proguard-rules.pro
+index 6644bb7..1229fef 100644
+--- a/app/proguard-rules.pro
++++ b/app/proguard-rules.pro
+@@ -1,6 +1,18 @@
+ # Firebase Firestore
+ -keep class com.google.firebase.** { *; }
+--keep class com.beigel.dotlist.data.** { *; }
++
++# Datenmodelle: Firestore mappt Dokumentfelder per Reflection auf die
++# Feldnamen. Werden die von R8 umbenannt, liefert toObject() im Release-Build
++# stumm Defaults statt Daten – im Debug-Build faellt das nie auf, weil dort
++# nicht minifiziert wird.
++-keep class com.beigel.list2share.data.** { *; }
++-keepclassmembers class com.beigel.list2share.data.** {
++    <init>();
++    <fields>;
++}
++
++# @PropertyName und @Exclude muessen erhalten bleiben, sonst greifen sie nicht.
++-keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
+ 
+ # Kotlin Coroutines
+ -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+diff --git a/app/src/main/java/com/beigel/list2share/MainActivity.kt b/app/src/main/java/com/beigel/list2share/MainActivity.kt
+index cbd083a..3935924 100644
+--- a/app/src/main/java/com/beigel/list2share/MainActivity.kt
++++ b/app/src/main/java/com/beigel/list2share/MainActivity.kt
+@@ -1,5 +1,6 @@
+ package com.beigel.list2share
+ 
++import android.content.Intent
+ import android.os.Bundle
+ import androidx.activity.ComponentActivity
+ import androidx.activity.compose.setContent
+@@ -23,6 +24,7 @@ import androidx.core.view.WindowCompat
+ import com.beigel.list2share.auth.AuthManager
+ import com.beigel.list2share.data.DeviceIdManager
+ import com.beigel.list2share.data.NotificationPreferences
++import com.beigel.list2share.notifications.NotificationRoute
+ import com.beigel.list2share.repository.TodoRepository
+ import com.beigel.list2share.ui.screens.MainScreen
+ import com.beigel.list2share.ui.screens.WillkommenScreen
+@@ -39,8 +41,24 @@ import kotlinx.coroutines.flow.first
+ import kotlinx.coroutines.tasks.await
+ 
+ class MainActivity : ComponentActivity() {
++
++    /**
++     * Läuft die App schon, liefert Android den Tap auf eine Benachrichtigung
++     * hier ab statt in onCreate – die Activity ist als singleTop deklariert.
++     */
++    override fun onNewIntent(intent: Intent) {
++        super.onNewIntent(intent)
++        setIntent(intent)
++        NotificationRoute.submit(intent)
++    }
++
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
++
++        // Wurde die App über eine Benachrichtigung geöffnet, steckt das Ziel
++        // im Start-Intent. MainScreen springt dorthin, sobald die Listen da sind.
++        NotificationRoute.submit(intent)
++
+         enableEdgeToEdge()
+         WindowCompat.setDecorFitsSystemWindows(window, false)
+ 
+diff --git a/app/src/main/java/com/beigel/list2share/notifications/DotlistMessagingService.kt b/app/src/main/java/com/beigel/list2share/notifications/DotlistMessagingService.kt
+index d0d2a32..99ee3f5 100644
+--- a/app/src/main/java/com/beigel/list2share/notifications/DotlistMessagingService.kt
++++ b/app/src/main/java/com/beigel/list2share/notifications/DotlistMessagingService.kt
+@@ -1,7 +1,6 @@
+ package com.beigel.list2share.notifications
+ 
+ import android.Manifest
+-import android.R
+ import android.content.pm.PackageManager
+ import android.os.Build
+ import androidx.core.app.ActivityCompat
+@@ -9,6 +8,7 @@ import androidx.core.app.NotificationCompat
+ import androidx.core.app.NotificationManagerCompat
+ import com.google.firebase.messaging.FirebaseMessagingService
+ import com.google.firebase.messaging.RemoteMessage
++import com.beigel.list2share.R
+ import com.beigel.list2share.auth.AuthManager
+ import com.beigel.list2share.repository.TodoRepository
+ import kotlinx.coroutines.CoroutineScope
+@@ -54,13 +54,26 @@ class DotlistMessagingService : FirebaseMessagingService() {
+         }
+         LocalNotifier.ensureChannel(this)
+ 
++        // Die Cloud Function schickt listId/todoId im data-Teil mit; fehlt er,
++        // bleibt die Benachrichtigung eben nicht antippbar.
++        val listId = message.data["listId"]?.takeIf { it.isNotBlank() }
++        val todoId = message.data["todoId"]?.takeIf { it.isNotBlank() }
++
+         val builder = NotificationCompat.Builder(this, LocalNotifier.CHANNEL_ID)
+-            .setSmallIcon(R.drawable.ic_dialog_info)
++            .setSmallIcon(R.drawable.ic_notification)
+             .setContentTitle(title)
+             .setContentText(body)
+             .setAutoCancel(true)
+             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
++            .setGroup(LocalNotifier.GROUP_KEY)
++            .apply {
++                listId?.let { setContentIntent(NotificationRoute.openIntent(this@DotlistMessagingService, it, todoId)) }
++            }
++
++        // Eine Benachrichtigung je Liste; ohne listId bleibt der bisherige
++        // Fallback, bei dem jede Nachricht eine eigene erzeugt.
++        val notificationId = listId?.hashCode() ?: message.hashCode()
+ 
+-        NotificationManagerCompat.from(this).notify(message.hashCode(), builder.build())
++        NotificationManagerCompat.from(this).notify(notificationId, builder.build())
+     }
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/beigel/list2share/notifications/LocalNotifier.kt b/app/src/main/java/com/beigel/list2share/notifications/LocalNotifier.kt
+index 9c12897..3b4f9f5 100644
+--- a/app/src/main/java/com/beigel/list2share/notifications/LocalNotifier.kt
++++ b/app/src/main/java/com/beigel/list2share/notifications/LocalNotifier.kt
+@@ -1,7 +1,6 @@
+ package com.beigel.list2share.notifications
+ 
+ import android.Manifest
+-import android.R
+ import android.app.NotificationChannel
+ import android.app.NotificationManager
+ import android.content.Context
+@@ -10,6 +9,7 @@ import android.os.Build
+ import androidx.core.app.ActivityCompat
+ import androidx.core.app.NotificationCompat
+ import androidx.core.app.NotificationManagerCompat
++import com.beigel.list2share.R
+ import com.beigel.list2share.data.AppNotification
+ 
+ /**
+@@ -23,6 +23,9 @@ import com.beigel.list2share.data.AppNotification
+ object LocalNotifier {
+     const val CHANNEL_ID = "dotlist_notifications"
+ 
++    /** Gruppierungsschlüssel, damit sich Meldungen nicht einzeln stapeln. */
++    const val GROUP_KEY = "com.beigel.list2share.NOTIFICATIONS"
++
+     fun ensureChannel(context: Context) {
+         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+             val manager = context.getSystemService(NotificationManager::class.java)
+@@ -44,14 +47,28 @@ object LocalNotifier {
+ 
+         val text = messageFor(notification)
+         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+-            .setSmallIcon(R.drawable.ic_dialog_info)
++            .setSmallIcon(R.drawable.ic_notification)
+             .setContentTitle(notification.actorName)
+             .setContentText(text)
+             .setAutoCancel(true)
+             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
++            .setGroup(GROUP_KEY)
++            // Ohne ContentIntent passiert beim Antippen schlicht nichts.
++            .setContentIntent(
++                NotificationRoute.openIntent(
++                    context,
++                    notification.listId,
++                    notification.todoId.takeIf { it.isNotBlank() }
++                )
++            )
++
++        // Eine Benachrichtigung je Liste statt je Ereignis – sonst stapeln sich
++        // in einer aktiven geteilten Liste beliebig viele Einträge.
++        val notificationId = notification.listId.takeIf { it.isNotBlank() }?.hashCode()
++            ?: notification.id.hashCode()
+ 
+         NotificationManagerCompat.from(context)
+-            .notify(notification.id.hashCode(), builder.build())
++            .notify(notificationId, builder.build())
+     }
+ 
+     private fun messageFor(n: AppNotification): String = when (n.type) {
+diff --git a/app/src/main/java/com/beigel/list2share/notifications/NotificationRoute.kt b/app/src/main/java/com/beigel/list2share/notifications/NotificationRoute.kt
+new file mode 100644
+index 0000000..8f5c983
+--- /dev/null
++++ b/app/src/main/java/com/beigel/list2share/notifications/NotificationRoute.kt
+@@ -0,0 +1,62 @@
++package com.beigel.list2share.notifications
++
++import android.app.PendingIntent
++import android.content.Context
++import android.content.Intent
++import com.beigel.list2share.MainActivity
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
++
++/**
++ * Verbindet angetippte Systembenachrichtigungen mit der Navigation.
++ *
++ * Die MainActivity läuft als `singleTop`, ein Tap landet also je nach Zustand
++ * in `onCreate` oder `onNewIntent`. Beide reichen das Intent hier herein;
++ * MainScreen beobachtet [pending] und springt in die passende Liste, sobald
++ * diese geladen ist. Danach wird das Ziel per [consume] entwertet, damit eine
++ * Bildschirmdrehung nicht erneut dorthin springt.
++ */
++object NotificationRoute {
++
++    const val EXTRA_LIST_ID = "com.beigel.list2share.extra.LIST_ID"
++    const val EXTRA_TODO_ID = "com.beigel.list2share.extra.TODO_ID"
++
++    /** Ziel einer angetippten Benachrichtigung. */
++    data class Target(val listId: String, val todoId: String?)
++
++    private val _pending = MutableStateFlow<Target?>(null)
++    val pending: StateFlow<Target?> = _pending.asStateFlow()
++
++    /** Aus einem Start-Intent ein Navigationsziel ableiten, falls eines enthalten ist. */
++    fun submit(intent: Intent?) {
++        val listId = intent?.getStringExtra(EXTRA_LIST_ID)?.takeIf { it.isNotBlank() } ?: return
++        val todoId = intent.getStringExtra(EXTRA_TODO_ID)?.takeIf { it.isNotBlank() }
++        _pending.value = Target(listId, todoId)
++    }
++
++    fun consume() {
++        _pending.value = null
++    }
++
++    /**
++     * PendingIntent, der die App öffnet und zur betroffenen Liste navigiert.
++     *
++     * `FLAG_IMMUTABLE` ist ab Android 12 Pflicht; `FLAG_UPDATE_CURRENT` sorgt
++     * dafür, dass eine erneute Benachrichtigung zur selben Liste die Extras
++     * aktualisiert statt die alten weiterzuverwenden.
++     */
++    fun openIntent(context: Context, listId: String, todoId: String? = null): PendingIntent {
++        val intent = Intent(context, MainActivity::class.java).apply {
++            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
++            putExtra(EXTRA_LIST_ID, listId)
++            todoId?.let { putExtra(EXTRA_TODO_ID, it) }
++        }
++        return PendingIntent.getActivity(
++            context,
++            listId.hashCode(),
++            intent,
++            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
++        )
++    }
++}
+diff --git a/app/src/main/java/com/beigel/list2share/ui/screens/MainScreen.kt b/app/src/main/java/com/beigel/list2share/ui/screens/MainScreen.kt
+index a70e6f2..811808f 100644
+--- a/app/src/main/java/com/beigel/list2share/ui/screens/MainScreen.kt
++++ b/app/src/main/java/com/beigel/list2share/ui/screens/MainScreen.kt
+@@ -31,6 +31,7 @@ import com.beigel.list2share.data.NotificationPreferences
+ import com.beigel.list2share.data.TodoItem
+ import com.beigel.list2share.data.TodoList
+ import com.beigel.list2share.notifications.LocalNotifier
++import com.beigel.list2share.notifications.NotificationRoute
+ import com.beigel.list2share.repository.TodoRepository
+ import com.beigel.list2share.utils.HapticFeedback
+ import com.beigel.list2share.viewmodel.ListsViewModel
+@@ -149,6 +150,20 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
+         onDispose { notificationsViewModel.onNewNotification = null }
+     }
+ 
++    // Angetippte Benachrichtigung: zur betroffenen Liste springen, sobald sie
++    // geladen ist. Ist sie nicht (mehr) dabei – gelöscht, verlassen –, wird das
++    // Ziel nach dem ersten geladenen Listenstand einfach verworfen.
++    val pendingRoute by NotificationRoute.pending.collectAsStateWithLifecycle()
++    LaunchedEffect(pendingRoute, listsUiState.lists, listsUiState.isLoading) {
++        val target = pendingRoute ?: return@LaunchedEffect
++        if (listsUiState.isLoading) return@LaunchedEffect
++        listsUiState.lists.find { it.id == target.listId }?.let { list ->
++            screen = AppScreen.ListenDetail(list)
++            listsViewModel.setLastList(list.id)
++        }
++        NotificationRoute.consume()
++    }
++
+     // Back-Handler für Sub-Screens
+     if (!screen.isTopLevel) {
+         BackHandler {
+diff --git a/app/src/main/res/drawable/ic_notification.xml b/app/src/main/res/drawable/ic_notification.xml
+new file mode 100644
+index 0000000..c571cb8
+--- /dev/null
++++ b/app/src/main/res/drawable/ic_notification.xml
+@@ -0,0 +1,16 @@
++<!--
++  Icon für Systembenachrichtigungen.
++
++  Muss einfarbig sein: Android färbt es selbst ein und wirft alles außer der
++  Silhouette weg. Deshalb bewusst weiß auf transparent statt der Launcher-Grafik.
++-->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24"
++    android:tint="#FFFFFF">
++    <path
++        android:fillColor="#FFFFFF"
++        android:pathData="M22,7h-9v2h9V7zM22,15h-9v2h9V15zM5.54,11L2,7.46l1.41,-1.41l2.12,2.12l4.24,-4.24l1.41,1.41L5.54,11zM5.54,19L2,15.46l1.41,-1.41l2.12,2.12l4.24,-4.24l1.41,1.41L5.54,19z" />
++</vector>
