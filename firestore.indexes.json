@@ -1,0 +1,14 @@
+{
+  "indexes": [
+    {
+      "comment": "sendDueReminders durchsucht alle todos-Subcollections auf einmal.",
+      "collectionGroup": "todos",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "reminderSent", "order": "ASCENDING" },
+        { "fieldPath": "dueDate", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

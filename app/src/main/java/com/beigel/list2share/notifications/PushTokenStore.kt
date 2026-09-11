@@ -7,13 +7,14 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
+import java.util.Locale
 
 /**
  * Verwaltet die FCM-Tokens eines Nutzers in Firestore.
  *
  * Struktur:
  *   deviceTokens/{uid}/tokens/{installationId}
- *       token, platform, pushEnabled, updatedAt
+ *       token, platform, lang, pushEnabled, updatedAt
  *
  * Ein Dokument pro Installation statt eines Tokens pro Nutzer: sobald dieselbe
  * UID auf mehreren Geräten (Handy, Web, Desktop) angemeldet ist, würde sonst
@@ -24,10 +25,17 @@ import kotlinx.coroutines.tasks.await
  *
  * `pushEnabled` hängt ebenfalls an der Installation: wer Pushes am Handy
  * abschaltet, will sie deshalb nicht zwingend am Desktop verlieren.
+ *
+ * `lang` ist die Gerätesprache. Die Cloud Function hat keinen Zugriff auf die
+ * strings.xml und formuliert die Push-Texte selbst – ohne dieses Feld käme die
+ * Nachricht immer auf Englisch an.
  */
 object PushTokenStore {
 
     private const val PLATFORM = "android"
+
+    /** Gerätesprache als ISO-Code ("de", "en", …) für die Texte der Cloud Function. */
+    private fun deviceLanguage(): String = Locale.getDefault().language
 
     private fun db() = FirebaseFirestore.getInstance()
 
@@ -57,7 +65,12 @@ object PushTokenStore {
             .await()
         installationRef(context, uid)
             .set(
-                mapOf("token" to token, "platform" to PLATFORM, "updatedAt" to now),
+                mapOf(
+                    "token" to token,
+                    "platform" to PLATFORM,
+                    "lang" to deviceLanguage(),
+                    "updatedAt" to now,
+                ),
                 SetOptions.merge()
             )
             .await()
