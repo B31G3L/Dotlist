@@ -19,7 +19,8 @@ import kotlinx.coroutines.launch
  * Empfängt Firebase Cloud Messaging Push-Nachrichten.
  *
  * - [onNewToken]: wird bei App-Erststart und bei Token-Rotation aufgerufen,
- *   speichert den aktuellen Geräte-Token in Firestore (`deviceTokens/{uid}`),
+ *   speichert den aktuellen Geräte-Token in Firestore
+ *   (`deviceTokens/{uid}/tokens/{installationId}`, siehe [PushTokenStore]),
  *   damit die Cloud Function weiß, wohin sie pushen soll.
  * - [onMessageReceived]: wird nur aufgerufen, wenn die App im Vordergrund ist
  *   (im Hintergrund zeigt Android "notification"-Payloads automatisch an).

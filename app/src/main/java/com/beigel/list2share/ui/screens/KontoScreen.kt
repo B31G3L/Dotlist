@@ -28,8 +28,11 @@ import com.beigel.list2share.auth.GoogleIdentity
 import com.beigel.list2share.auth.requestGoogleIdentity
 import com.beigel.list2share.data.DeviceIdManager
 import com.beigel.list2share.data.local.LocalOwnership
+import com.beigel.list2share.notifications.PushTokenStore
+import com.beigel.list2share.repository.CloudMigration
 import com.beigel.list2share.utils.HapticFeedback
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
 fun KontoScreen(
@@ -44,6 +47,7 @@ fun KontoScreen(
     var googleEmail   by remember { mutableStateOf(AuthManager.currentUser?.email) }
     var linkError     by remember { mutableStateOf<String?>(null) }
     var showSignOutConfirm by remember { mutableStateOf(false) }
+    var isSigningOut  by remember { mutableStateOf(false) }
     var isLinking     by remember { mutableStateOf(false) }
 
     // Google-Konto existiert bereits, der aktuelle anonyme Account hätte aber noch
@@ -71,6 +75,9 @@ fun KontoScreen(
                 googleEmail = AuthManager.currentUser?.email
                 identity.displayName?.let { DeviceIdManager.setDeviceName(context, it) }
                 haptic.click()
+                // UID bleibt gleich, die Activity wird also nicht neu erzeugt –
+                // die lokalen Listen müssen hier explizit in die Cloud.
+                CloudMigration.start(context, result.uid)
             }
 
             is GoogleAuthResult.SwitchedAccount -> {
@@ -221,18 +228,34 @@ fun KontoScreen(
 
     if (showSignOutConfirm) {
         AlertDialog(
-            onDismissRequest = { showSignOutConfirm = false },
+            onDismissRequest = { if (!isSigningOut) showSignOutConfirm = false },
             title   = { Text(stringResource(R.string.dialog_sign_out_title)) },
             text    = { Text(stringResource(R.string.dialog_sign_out_message)) },
             confirmButton = {
-                TextButton(onClick = {
-                    haptic.heavy()
-                    AuthManager.signOut()
-                    showSignOutConfirm = false
-                    onSignedOut()
-                }) { Text(stringResource(R.string.action_sign_out), color = MaterialTheme.colorScheme.error) }
+                TextButton(
+                    enabled = !isSigningOut,
+                    onClick = {
+                        haptic.heavy()
+                        isSigningOut = true
+                        scope.launch {
+                            // Push-Token dieses Geräts entfernen, solange die Rules den
+                            // Zugriff noch erlauben. Offline nicht ewig blockieren –
+                            // abgemeldet wird in jedem Fall.
+                            AuthManager.currentUid?.let { uid ->
+                                runCatching { withTimeoutOrNull(3_000) { PushTokenStore.remove(context, uid) } }
+                            }
+                            AuthManager.signOut()
+                            showSignOutConfirm = false
+                            onSignedOut()
+                        }
+                    }
+                ) { Text(stringResource(R.string.action_sign_out), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showSignOutConfirm = false }) { Text(stringResource(R.string.action_cancel)) } }
+            dismissButton = {
+                TextButton(enabled = !isSigningOut, onClick = { showSignOutConfirm = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
         )
     }
 }

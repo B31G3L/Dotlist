@@ -32,6 +32,7 @@ import com.beigel.list2share.auth.GoogleAuthResult
 import com.beigel.list2share.auth.requestGoogleIdentity
 import com.beigel.list2share.data.DeviceIdManager
 import com.beigel.list2share.data.local.LocalOwnership
+import com.beigel.list2share.repository.CloudMigration
 import com.beigel.list2share.utils.HapticFeedback
 import kotlinx.coroutines.launch
 
@@ -113,6 +114,13 @@ fun WillkommenScreen(
                     // neuen Identität sauber neu starten.
                     LocalOwnership.migrate(context, result.previousUid, result.uid, displayName)
                     (context as? Activity)?.recreate()
+                }
+                is GoogleAuthResult.Linked -> {
+                    // Beim Onboarding gibt es praktisch nie lokale Listen – der Aufruf
+                    // ist trotzdem da, damit die Regel "mit Google alles in der Cloud"
+                    // nicht von dieser Annahme abhängt.
+                    CloudMigration.start(context, result.uid)
+                    onDone(displayName)
                 }
                 else -> onDone(displayName)
             }

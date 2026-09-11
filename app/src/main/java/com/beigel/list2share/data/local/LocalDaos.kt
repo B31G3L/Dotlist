@@ -17,6 +17,10 @@ interface LocalListDao {
     @Query("SELECT * FROM local_lists WHERE id = :id LIMIT 1")
     suspend fun getList(id: String): LocalListEntity?
 
+    /** Einmaliger Schnappschuss aller lokalen Listen (für die Cloud-Migration). */
+    @Query("SELECT * FROM local_lists ORDER BY createdAt ASC")
+    suspend fun getListsOnce(): List<LocalListEntity>
+
     /**
      * Liegt diese Liste (noch) lokal? Als Flow, damit ein laufender Todo-Stream
      * automatisch von Room auf Firestore umschaltet, sobald die Liste geteilt

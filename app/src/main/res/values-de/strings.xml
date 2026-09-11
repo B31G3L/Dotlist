@@ -171,7 +171,7 @@
     <string name="status_linked">Mit Google verknüpft</string>
     <string name="status_not_linked">Nur auf diesem Gerät gespeichert</string>
     <string name="status_not_linked_hint">Bei Geräteverlust sind deine Listen unwiederbringlich weg</string>
-    <string name="link_google_hint">Verknüpfe dein Google-Konto, damit du auch nach einem Gerätewechsel oder einer Neuinstallation wieder Zugriff auf deine Listen bekommst.</string>
+    <string name="link_google_hint">Verknüpfe dein Google-Konto: Deine Listen werden in der Cloud gesichert und auf all deinen Geräten synchronisiert, auch nach einem Gerätewechsel oder einer Neuinstallation.</string>
     <string name="action_link_google">Mit Google verknüpfen</string>
     <string name="sign_out_hint">Nach dem Abmelden kannst du dich mit demselben Google-Konto wieder anmelden und behältst Zugriff auf deine Listen.</string>
     <string name="dialog_sign_out_title">Abmelden?</string>

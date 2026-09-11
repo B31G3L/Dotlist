@@ -175,7 +175,7 @@
     <string name="status_linked">Linked with Google</string>
     <string name="status_not_linked">Stored on this device only</string>
     <string name="status_not_linked_hint">If you lose this device, your lists are gone for good</string>
-    <string name="link_google_hint">Link your Google account so you can regain access to your lists after switching devices or reinstalling.</string>
+    <string name="link_google_hint">Link your Google account: your lists are backed up to the cloud and stay in sync across all your devices, even after switching phones or reinstalling.</string>
     <string name="action_link_google">Link Google account</string>
     <string name="sign_out_hint">After signing out, you can sign back in with the same Google account and keep access to your lists.</string>
     <string name="dialog_sign_out_title">Sign out?</string>

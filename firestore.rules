@@ -134,8 +134,16 @@ service cloud.firestore {
 
     // ─── FCM-Tokens ──────────────────────────────────────────────────────────
 
-    match /deviceTokens/{deviceId} {
-      allow read, write: if signedIn() && deviceId == uid();
+    // Altes Format: ein Token pro Nutzer. Bleibt, bis die Cloud Function und
+    // alle aktiven App-Versionen auf die Subcollection umgestellt sind.
+    match /deviceTokens/{ownerId} {
+      allow read, write: if signedIn() && ownerId == uid();
+
+      // Ein Dokument pro Installation (Android, Web, Desktop), damit sich
+      // mehrere Geräte desselben Nutzers nicht gegenseitig das Token überschreiben.
+      match /tokens/{installationId} {
+        allow read, write: if signedIn() && ownerId == uid();
+      }
     }
   }
 }

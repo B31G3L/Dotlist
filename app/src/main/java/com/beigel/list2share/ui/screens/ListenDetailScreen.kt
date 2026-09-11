@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.beigel.list2share.R
+import com.beigel.list2share.auth.AuthManager
 import com.beigel.list2share.data.TodoItem
 import com.beigel.list2share.data.TodoList
 import com.beigel.list2share.data.canManageMembers
@@ -76,7 +77,9 @@ fun ListenDetailScreen(
     // Lokaler Stand des Cloud-Teilen-Reglers – wird bei Umschalten sofort aktualisiert,
     // damit die UI reagiert, auch wenn der `list`-Parameter selbst (Navigations-Snapshot)
     // erst beim erneuten Betreten des Screens den echten Stand widerspiegelt.
-    var listIsShared by remember(list.id) { mutableStateOf(list.isShared) }
+    // Auch an isShared gekoppelt: überführt die Cloud-Migration die Liste im
+    // Hintergrund, soll die Ansicht das mitbekommen.
+    var listIsShared by remember(list.id, list.isShared) { mutableStateOf(list.isShared) }
     var isTogglingShare by remember { mutableStateOf(false) }
     var showUnshareConfirm by remember { mutableStateOf(false) }
     var showAdd   by remember { mutableStateOf(false) }
@@ -280,7 +283,9 @@ fun ListenDetailScreen(
                     )
                 }
                 // ── Cloud-Teilen-Regler ────────────────────────────────────
-                if (canManage) {
+                // Mit Google-Konto liegt jede Liste in der Cloud – der Regler
+                // hätte dann nichts mehr umzuschalten.
+                if (canManage && !AuthManager.isSignedInWithGoogle) {
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .padding(horizontal = 24.dp, vertical = 10.dp),

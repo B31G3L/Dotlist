@@ -22,15 +22,18 @@ import com.beigel.list2share.data.TodoItem
 import com.beigel.list2share.data.TodoList
 import com.beigel.list2share.data.local.AppDatabase
 import com.beigel.list2share.data.local.LocalListEntity
+import com.beigel.list2share.data.local.LocalTodoEntity
 import com.beigel.list2share.data.local.toComments
 import com.beigel.list2share.data.local.toJson
 import com.beigel.list2share.data.local.toLocalEntity
 import com.beigel.list2share.data.local.toTodoItem
 import com.beigel.list2share.data.local.toTodoList
 import com.beigel.list2share.data.Priority
+import com.beigel.list2share.auth.AuthManager
+import com.beigel.list2share.notifications.PushTokenStore
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -46,11 +49,17 @@ import java.util.UUID
 /**
  * Alle Daten-Operationen für Listen und Todos.
  *
- * Jede Liste liegt entweder LOKAL (Room-DB, nur dieses Gerät, Standard bei
- * Neuerstellung) oder REMOTE (Firestore, geräteübergreifend teilbar) –
- * niemals an beiden Orten gleichzeitig. Der Wechsel erfolgt über
- * [shareList] ("Teilen"-Regler an) bzw. [unshareList] ("Teilen"-Regler aus,
- * nur für Besitzer/Admin), siehe TodoList.isShared.
+ * Jede Liste liegt entweder LOKAL (Room-DB, nur dieses Gerät) oder REMOTE
+ * (Firestore, geräteübergreifend) – niemals dauerhaft an beiden Orten.
+ *
+ * Wo eine Liste liegt, hängt vom Konto ab:
+ *  - Anonym: neue Listen sind lokal. Der Wechsel erfolgt über [shareList]
+ *    ("Teilen"-Regler an) bzw. [unshareList] ("Teilen"-Regler aus, nur für
+ *    Besitzer/Admin), siehe TodoList.isShared.
+ *  - Mit Google-Konto: alle Listen liegen in Firestore, damit sie auch in der
+ *    Web-/Desktop-Version erscheinen. Neue Listen entstehen direkt remote,
+ *    bestehende lokale Listen überführt [CloudMigration] per
+ *    [migrateLocalListsToCloud].
  *
  * Firestore-Struktur (nur für geteilte Listen):
  *   lists/{listId}
@@ -58,7 +67,16 @@ import java.util.UUID
  *   lists/{listId}/todos/{todoId}
  *       title, isDone, createdBy, createdAt, doneBy, doneAt, position, subtasks, comments
  */
-class TodoRepository(private val deviceId: String, context: Context) {
+class TodoRepository(
+    private val deviceId: String,
+    context: Context,
+    /**
+     * Sollen alle Listen in Firestore liegen? Bewusst als Funktion statt als
+     * Wert: bei einer Verknüpfung mit Google bleibt die UID gleich, das
+     * Repository wird also nicht neu erzeugt, der Status ändert sich aber.
+     */
+    private val syncAllLists: () -> Boolean = { AuthManager.isSignedInWithGoogle },
+) {
 
     private companion object {
         const val TAG = "TodoRepository"
@@ -74,8 +92,12 @@ class TodoRepository(private val deviceId: String, context: Context) {
 
         /** Wie oft bei einer Code-Kollision ein neuer Code probiert wird. */
         const val INVITE_CODE_ATTEMPTS = 5
+
+        /** Maximale Abgleich-Runden beim Hochladen lokaler Todos, siehe [uploadLocalTodos]. */
+        const val SHARE_UPLOAD_ROUNDS = 3
     }
 
+    private val appContext = context.applicationContext
     private val db = FirebaseFirestore.getInstance()
     private val listsRef = db.collection("lists")
     private val invitesRef = db.collection("invites")
@@ -194,12 +216,33 @@ class TodoRepository(private val deviceId: String, context: Context) {
     }
 
     /**
-     * Neue Liste erstellen. Landet standardmäßig NUR lokal auf diesem Gerät
-     * (nicht in Firebase) – erst [shareList] macht sie teilbar. Gibt die neue
-     * Listen-ID zurück.
+     * Neue Liste erstellen. Gibt die neue Listen-ID zurück.
+     *
+     * Anonym landet sie NUR lokal auf diesem Gerät – erst [shareList] macht sie
+     * teilbar. Mit Google-Konto entsteht sie direkt in Firestore.
      */
     suspend fun createList(name: String, color: String, creatorName: String, icon: String = ""): String {
         val id = UUID.randomUUID().toString()
+
+        if (syncAllLists()) {
+            val list = TodoList(
+                name = name,
+                memberIds = listOf(deviceId),
+                memberNames = mapOf(deviceId to creatorName),
+                createdBy = deviceId,
+                createdAt = Timestamp.now(),
+                color = color,
+                icon = icon
+            )
+            // Bewusst ohne await(): der Task wird erst mit der Server-Bestätigung
+            // fertig und hinge offline beliebig lange. Firestore übernimmt den
+            // Schreibvorgang aber sofort in den lokalen Cache (die Liste erscheint
+            // also direkt im Listen-Flow) und reicht ihn nach, sobald wieder Netz da ist.
+            listsRef.document(id).set(list)
+                .addOnFailureListener { Log.w(TAG, "Liste $id konnte nicht angelegt werden", it) }
+            return id
+        }
+
         listDao.insertList(
             LocalListEntity(
                 id = id,
@@ -247,8 +290,6 @@ class TodoRepository(private val deviceId: String, context: Context) {
      * Geisterliste in Firestore zurückbleibt, wird im Fehlerfall aufgeräumt.
      */
     suspend fun shareList(list: TodoList, creatorName: String): TodoList {
-        val localTodos = todoDao.getTodosOnce(list.id)
-
         val remoteList = TodoList(
             id = list.id,
             name = list.name,
@@ -264,12 +305,12 @@ class TodoRepository(private val deviceId: String, context: Context) {
         listsRef.document(list.id).set(remoteList).await()
 
         try {
-            setInChunks(
-                localTodos.map { entity ->
-                    val todo = entity.toTodoItem()
-                    todosRef(list.id).document(todo.id) to todo
-                }
-            )
+            uploadLocalTodos(list.id)
+        } catch (e: CancellationException) {
+            // Kein Rollback: im abgebrochenen Kontext würde er sofort scheitern.
+            // Die lokale Kopie ist noch vollständig da, und ein erneuter Aufruf
+            // überschreibt den halb hochgeladenen Stand (gleiche Dokument-IDs).
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "Upload der Todos fehlgeschlagen, Rollback", e)
             runCatching { deleteRemoteListCompletely(list.id) }
@@ -283,6 +324,65 @@ class TodoRepository(private val deviceId: String, context: Context) {
     }
 
     /**
+     * Lädt die lokalen Todos einer Liste hoch – und wiederholt das, bis sich
+     * zwischen zwei Durchläufen lokal nichts mehr geändert hat (höchstens
+     * [SHARE_UPLOAD_ROUNDS] Runden).
+     *
+     * Hintergrund: bei der Migration im Hintergrund kann der Upload offline
+     * lange dauern. Hakt der Nutzer in dieser Zeit ein Todo ab oder löscht es,
+     * ginge die Änderung sonst beim anschließenden Entfernen der lokalen Kopie
+     * verloren. Ab der zweiten Runde werden nur geänderte bzw. gelöschte Todos
+     * übertragen.
+     */
+    private suspend fun uploadLocalTodos(listId: String) {
+        var uploaded: List<LocalTodoEntity>? = null
+        repeat(SHARE_UPLOAD_ROUNDS) {
+            val current = todoDao.getTodosOnce(listId)
+            if (current == uploaded) return
+
+            val previous = uploaded.orEmpty()
+            val alreadyUploaded = previous.toHashSet()
+            val currentIds = current.mapTo(HashSet()) { it.id }
+
+            setInChunks(
+                current.filterNot { it in alreadyUploaded }.map { entity ->
+                    todosRef(listId).document(entity.id) to entity.toTodoItem()
+                }
+            )
+            deleteInChunks(
+                previous.filterNot { it.id in currentIds }.map { todosRef(listId).document(it.id) }
+            )
+            uploaded = current
+        }
+    }
+
+    /**
+     * Überführt alle lokalen Listen in Firestore (nur mit Google-Konto).
+     *
+     * Jede Liste einzeln über [shareList]: schlägt eine fehl, bleibt sie lokal
+     * erhalten und wird beim nächsten Aufruf erneut versucht, die übrigen
+     * werden trotzdem migriert.
+     *
+     * @return Anzahl der erfolgreich überführten Listen.
+     */
+    suspend fun migrateLocalListsToCloud(creatorName: String): Int {
+        var migrated = 0
+        for (entity in listDao.getListsOnce()) {
+            // Abmeldung oder Kontowechsel während der Migration: sofort aufhören.
+            if (!syncAllLists()) break
+            try {
+                shareList(entity.toTodoList(), creatorName)
+                migrated++
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Liste ${entity.id} nicht migriert, bleibt vorerst lokal", e)
+            }
+        }
+        return migrated
+    }
+
+    /**
      * Liste aus Firestore entfernen und wieder rein lokal machen
      * ("Teilen"-Regler aus). Nur für Besitzer/Admin gedacht (siehe
      * TodoList.canManageMembers in der UI). Entfernt damit auch den Zugriff
@@ -290,6 +390,10 @@ class TodoRepository(private val deviceId: String, context: Context) {
      * diesem Gerät erhalten.
      */
     suspend fun unshareList(list: TodoList) {
+        // Mit Google-Konto liegen alle Listen in der Cloud. Eine zurückgeholte
+        // Liste würde beim nächsten Start ohnehin wieder migriert.
+        check(!syncAllLists()) { "unshareList ist mit Google-Konto nicht vorgesehen" }
+
         // Einmal lesen und für beides verwenden: lokale Kopie UND Löschliste.
         val todosSnapshot = todosRef(list.id).get().await()
         val todos = todosSnapshot.documents.mapNotNull { doc ->
@@ -326,10 +430,12 @@ class TodoRepository(private val deviceId: String, context: Context) {
     /**
      * Liste duplizieren (neue Liste mit "Kopie"-Zusatz, alle Todos werden mitkopiert).
      * Die Kopie bleibt im selben Modus (lokal/geteilt) wie das Original und
-     * gehört nur dem aktuellen Gerät (keine geteilten Mitglieder).
+     * gehört nur dem aktuellen Gerät (keine geteilten Mitglieder). Mit
+     * Google-Konto landet sie immer in Firestore – auch wenn das Original
+     * wegen einer noch laufenden Migration gerade lokal liegt.
      */
     suspend fun duplicateList(list: TodoList, creatorName: String, copySuffix: String = "Copy"): String {
-        if (!list.isShared) {
+        if (!list.isShared && !syncAllLists()) {
             val newId = UUID.randomUUID().toString()
             listDao.insertList(
                 LocalListEntity(
@@ -357,15 +463,17 @@ class TodoRepository(private val deviceId: String, context: Context) {
             color = list.color,
             icon = list.icon
         )
-        val newDoc = listsRef.add(newList).await()
+        // Quelle vor dem Anlegen lesen, damit bei einem Lesefehler keine leere
+        // Kopie zurückbleibt. Die `id` ist @Exclude und wird nicht mitgeschrieben,
+        // jedes kopierte Todo bekommt unten eine neue Dokument-ID.
+        val sourceTodos: List<TodoItem> = if (list.isShared) {
+            todosRef(list.id).get().await().documents.mapNotNull { it.toObject(TodoItem::class.java) }
+        } else {
+            todoDao.getTodosOnce(list.id).map { it.toTodoItem() }
+        }
 
-        val todos = todosRef(list.id).get().await()
-        setInChunks(
-            todos.documents.mapNotNull { doc ->
-                val todo = doc.toObject(TodoItem::class.java) ?: return@mapNotNull null
-                todosRef(newDoc.id).document() to todo
-            }
-        )
+        val newDoc = listsRef.add(newList).await()
+        setInChunks(sourceTodos.map { todo -> todosRef(newDoc.id).document() to todo })
         return newDoc.id
     }
 
@@ -871,30 +979,24 @@ class TodoRepository(private val deviceId: String, context: Context) {
     // ─── Benachrichtigungen ──────────────────────────────────────────────────
 
     private val notificationsRef = db.collection("notifications")
-    private val deviceTokensRef  = db.collection("deviceTokens")
 
     // ─── Push-Benachrichtigungen (FCM) ─────────────────────────────────────────
 
     /**
-     * Aktuellen FCM-Geräte-Token in Firestore hinterlegen, damit die Cloud
-     * Function weiß, an welches Gerät sie Pushes schicken soll.
+     * Aktuellen FCM-Token dieser Installation in Firestore hinterlegen, damit
+     * die Cloud Function weiß, an welche Geräte sie Pushes schicken soll.
+     * Details zur Struktur siehe [PushTokenStore].
      */
-    suspend fun saveDeviceToken(token: String) {
-        deviceTokensRef.document(deviceId)
-            .set(mapOf("token" to token, "updatedAt" to Timestamp.now()), SetOptions.merge())
-            .await()
-    }
+    suspend fun saveDeviceToken(token: String) =
+        PushTokenStore.save(appContext, deviceId, token)
 
     /**
      * Globaler Push-Schalter (Profil-Einstellung) – wird zusätzlich zur
      * lokalen Einstellung nach Firestore gespiegelt, da die Cloud Function
      * nur von dort aus lesen kann.
      */
-    suspend fun setPushEnabled(enabled: Boolean) {
-        deviceTokensRef.document(deviceId)
-            .set(mapOf("pushEnabled" to enabled), SetOptions.merge())
-            .await()
-    }
+    suspend fun setPushEnabled(enabled: Boolean) =
+        PushTokenStore.setPushEnabled(appContext, deviceId, enabled)
 
     /**
      * Push-Benachrichtigungen für eine bestimmte Liste stummschalten/wieder aktivieren.

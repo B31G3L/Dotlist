@@ -25,6 +25,7 @@ import com.beigel.list2share.auth.AuthManager
 import com.beigel.list2share.data.DeviceIdManager
 import com.beigel.list2share.data.NotificationPreferences
 import com.beigel.list2share.notifications.NotificationRoute
+import com.beigel.list2share.repository.CloudMigration
 import com.beigel.list2share.repository.TodoRepository
 import com.beigel.list2share.ui.screens.MainScreen
 import com.beigel.list2share.ui.screens.WillkommenScreen
@@ -149,6 +150,11 @@ class MainActivity : ComponentActivity() {
                             remember(currentUid) { TodoRepository(currentUid, this@MainActivity) }
                         LaunchedEffect(Unit) {
                             ReviewManager.maybeRequestReview(this@MainActivity)
+                        }
+                        // Mit Google-Konto: noch lokal liegende Listen in die Cloud
+                        // übernehmen. Setzt auch eine unterbrochene Migration fort.
+                        LaunchedEffect(currentUid) {
+                            CloudMigration.start(this@MainActivity, currentUid)
                         }
                         MainScreen(repository = repository, deviceId = currentUid)
                     }
