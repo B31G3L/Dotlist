@@ -7,43 +7,6 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:513118560897:android:1336128e48edccee7e6380",
-        "android_client_info": {
-          "package_name": "com.beigel.dotlist"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "513118560897-fb07jh8nsm30524orbrtbj2qchfpbj0b.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.beigel.dotlist",
-            "certificate_hash": "f94a52bf09207c6e48c9af275cae943b0184a078"
-          }
-        },
-        {
-          "client_id": "513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyA0gidNejiuPEBPeTNjsiU6x4yhH2QTSG8"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "513118560897-0mi1gr9j454opqagijmqv9mo106dk6bu.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
         "mobilesdk_app_id": "1:513118560897:android:b0c4ebf0a18a9e957e6380",
         "android_client_info": {
           "package_name": "com.beigel.list2share"
@@ -51,27 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "513118560897-a5jk0mqsmnkgp7jd6j0maqjcm71h5r9h.apps.googleusercontent.com",
+          "client_id": "513118560897-h15jr1d7rngtu815vjokt94kq72rb41e.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.beigel.list2share",
-            "certificate_hash": "6b25e24f6aa97cda7c25907a72134f0e450ee475"
-          }
-        },
-        {
-          "client_id": "513118560897-i4c0gdfgoh1rfkgqdetl5q1lk0hoco1g.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.beigel.list2share",
-            "certificate_hash": "3064e327aca70df269e27d85cdd7c98969318277"
-          }
-        },
-        {
-          "client_id": "513118560897-t0h99gq5uls53l4u73v5gcbat912g7k8.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.beigel.list2share",
-            "certificate_hash": "f94a52bf09207c6e48c9af275cae943b0184a078"
+            "certificate_hash": "bfa6bed1867ee7681058b240cfae16b4cc0e4d9e"
           }
         },
         {
