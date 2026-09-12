@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { authState } from "$lib/auth.svelte";
+  import PushToggle from "$lib/PushToggle.svelte";
   import { ListsQuery, createList } from "$lib/lists.svelte";
 
   const auth = authState();
@@ -87,6 +88,8 @@
       {/each}
     </ul>
   {/if}
+
+  <PushToggle uid={auth.uid!} />
 {/if}
 
 <style>

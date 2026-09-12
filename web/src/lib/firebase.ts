@@ -23,11 +23,11 @@ import {
  * direkt initialisiert, scheitert schon das Prerendering.
  */
 
-let app: FirebaseApp | undefined;
+let instance: FirebaseApp | undefined;
 let firestore: Firestore | undefined;
 
-function getApp(): FirebaseApp {
-  app ??= initializeApp({
+export function app(): FirebaseApp {
+  instance ??= initializeApp({
     apiKey: PUBLIC_FIREBASE_API_KEY,
     authDomain: PUBLIC_FIREBASE_AUTH_DOMAIN,
     projectId: PUBLIC_FIREBASE_PROJECT_ID,
@@ -35,11 +35,11 @@ function getApp(): FirebaseApp {
     messagingSenderId: PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     appId: PUBLIC_FIREBASE_APP_ID,
   });
-  return app;
+  return instance;
 }
 
 export function auth(): Auth {
-  return getAuth(getApp());
+  return getAuth(app());
 }
 
 /**
@@ -51,7 +51,7 @@ export function auth(): Auth {
  * bekommt nur der erste Tab den Cache und die übrigen laufen ohne.
  */
 export function db(): Firestore {
-  firestore ??= initializeFirestore(getApp(), {
+  firestore ??= initializeFirestore(app(), {
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
   });
   return firestore;

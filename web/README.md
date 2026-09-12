@@ -17,6 +17,17 @@ Gleiche Firestore-Daten wie die Android-App, gleiche Security Rules.
     npm run build      # nach web/build
     firebase deploy --only hosting
 
+## Web-Push einrichten
+
+In der Firebase Console unter *Projekteinstellungen → Cloud Messaging →
+Web Push certificates* ein Schlüsselpaar erzeugen und den öffentlichen
+Schlüssel als `PUBLIC_FIREBASE_VAPID_KEY` in die `.env` eintragen. Ohne
+diesen Wert blendet die App den Schalter aus.
+
+Der Service Worker wird nur im Produktions-Build registriert. Push lässt
+sich deshalb mit `npm run dev` nicht testen – dafür `npm run build` und
+`npm run preview` verwenden oder deployen.
+
 ## Vor dem ersten Deploy
 
 Die Domain muss in Firebase Auth unter *Authentifizierung → Einstellungen →
@@ -36,9 +47,13 @@ gehören ersetzt).
 Mitglieder werden angezeigt, Einladungscodes lassen sich erzeugen und als
 Link `/join/{code}` teilen, Beitreten und Verlassen funktionieren.
 
+Web-Push funktioniert: Schalter auf der Startseite, Token landet in
+`deviceTokens/{uid}/tokens/{installationId}` wie bei Android. Der Service
+Worker legt zusätzlich die App-Shell in den Cache, die installierte PWA
+startet also auch offline.
+
 Fehlt noch: Mitglieder entfernen und zu Admins machen (nur in der App),
-Web-Push empfangen (Service Worker plus VAPID-Key), Offline-Anzeige,
-Sortieren per Drag & Drop.
+Offline-Anzeige, Sortieren per Drag & Drop.
 
 Verlässt die letzte Person eine Liste, bleibt sie im Web als verwaistes
 Dokument zurück. Die App löscht sie in diesem Fall; vom Web aus ist das
