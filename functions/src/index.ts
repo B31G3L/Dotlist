@@ -2,11 +2,12 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 
 import { notificationContent } from "./messages";
 import { MAX_LEAD_MINUTES, reminderDecision } from "./reminders";
+import { nextAssignee, nextDueTimestamp, parseRecurrence } from "./recurrence";
 import { pushToUser } from "./push";
 
 initializeApp();
@@ -172,6 +173,82 @@ export const sendDueReminders = onSchedule(
       gefunden: snapshot.size,
       benachrichtigt: notified,
       uebersprungen: skipped,
+    });
+  }
+);
+
+// ─── Wiederkehrende Aufgaben ────────────────────────────────────────────────
+
+/**
+ * Legt beim Abhaken einer wiederkehrenden Aufgabe die nächste Instanz an.
+ *
+ * Bewusst hier und nicht in den Clients: Monatsenden, Zeitumstellung und zwei
+ * Geräte, die gleichzeitig abhaken, wären sonst dreimal zu lösen. So genügt es,
+ * dass App und Web das Muster setzen können – die nächste Aufgabe erscheint
+ * überall, auch in App-Versionen, die Wiederholungen noch gar nicht kennen.
+ *
+ * Ausgelöst wird nur beim Übergang offen -> erledigt. Das Anlegen der neuen
+ * Aufgabe ist ein create und löst diesen Trigger deshalb nicht erneut aus.
+ */
+export const onTodoCompleted = onDocumentUpdated(
+  { document: "lists/{listId}/todos/{todoId}" },
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+
+    // Nur der Übergang zählt: ein erneutes Speichern einer erledigten Aufgabe
+    // darf keine zweite Instanz erzeugen.
+    if (before.isDone === true || after.isDone !== true) return;
+    // Schutz gegen einen zweiten Lauf derselben Änderung (Retry der Function).
+    if (after.recurrenceSpawned === true) return;
+
+    const recurrence = parseRecurrence(after.recurrence);
+    if (!recurrence) return;
+
+    const completedAt = after.doneAt instanceof Timestamp ? after.doneAt : Timestamp.now();
+    const dueDate = after.dueDate instanceof Timestamp ? after.dueDate : null;
+
+    const rotateAmong: string[] = Array.isArray(after.rotateAmong)
+      ? after.rotateAmong.filter((id: unknown): id is string => typeof id === "string")
+      : [];
+    const assignedTo = typeof after.assignedTo === "string" ? after.assignedTo : null;
+
+    const db = getFirestore();
+    const todosRef = db.collection("lists").doc(event.params.listId).collection("todos");
+
+    const batch = db.batch();
+    batch.update(event.data!.after.ref, { recurrenceSpawned: true });
+    batch.set(todosRef.doc(), {
+      title: after.title ?? "",
+      description: after.description ?? "",
+      isDone: false,
+      priority: after.priority ?? "MITTEL",
+      dueDate: nextDueTimestamp(dueDate, completedAt, recurrence),
+      assignedTo: nextAssignee(rotateAmong, assignedTo),
+      reminderMinutes: typeof after.reminderMinutes === "number" ? after.reminderMinutes : null,
+      reminderSent: false,
+      createdBy: after.createdBy ?? "",
+      createdAt: Timestamp.now(),
+      doneBy: null,
+      doneAt: null,
+      // Gleiche Stelle in der Liste wie die abgehakte Aufgabe.
+      position: typeof after.position === "number" ? after.position : 0,
+      // Unteraufgaben wandern mit, aber wieder offen. Kommentare nicht: die
+      // gehören zum vergangenen Durchgang.
+      subtasks: Array.isArray(after.subtasks)
+        ? after.subtasks.map((s: Record<string, unknown>) => ({ ...s, isDone: false }))
+        : [],
+      comments: [],
+      recurrence: after.recurrence,
+      rotateAmong,
+    });
+
+    await batch.commit();
+    logger.info("Wiederkehrende Aufgabe fortgeschrieben", {
+      listId: event.params.listId,
+      unit: recurrence.unit,
+      interval: recurrence.interval,
     });
   }
 );

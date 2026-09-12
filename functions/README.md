@@ -6,10 +6,15 @@
 |-------------------------|-----------------------------------|---------|
 | `onNotificationCreated` | neues Dokument in `notifications` | Push an alle Geräte des Empfängers |
 | `sendDueReminders`      | alle 5 Minuten                    | fällige Erinnerungen finden und als Benachrichtigung anlegen |
+| `onTodoCompleted`       | Aufgabe wird abgehakt             | bei Wiederholung die nächste Instanz anlegen, Zuständigkeit weiterdrehen |
 
 Der Versand hängt allein an `onNotificationCreated`. Wer eine Push-Nachricht
 auslösen will – App, Web-Client oder der Erinnerungs-Job – legt einfach ein
 Dokument in `notifications` an.
+
+Wiederholungen liegen bewusst im Backend: Monatsenden, Zeitumstellung und
+zwei Geräte, die gleichzeitig abhaken, wären sonst in App und Web getrennt
+zu lösen. Die Clients setzen nur das Muster.
 
 ## Datenmodell
 
