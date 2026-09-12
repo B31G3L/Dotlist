@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.util.Log
+import android.widget.Toast
 import com.beigel.list2share.R
 import com.beigel.list2share.auth.AuthManager
 import com.beigel.list2share.data.TodoItem
@@ -87,7 +89,9 @@ fun ListenDetailScreen(
     val focusReq  = remember { FocusRequester() }
     val scope     = rememberCoroutineScope()
     val copySuffix = stringResource(R.string.list_copy_suffix)
-    val shareMessage = stringResource(R.string.share_list_message, list.name, list.id)
+    val shareTemplate = stringResource(R.string.share_list_message)
+    val shareFailed = stringResource(R.string.share_list_failed)
+    var isSharing by remember { mutableStateOf(false) }
 
     var showOptionsSheet  by remember { mutableStateOf(false) }
     var showRenameDialog  by remember { mutableStateOf(false) }
@@ -355,11 +359,35 @@ fun ListenDetailScreen(
                         onClick = {
                             showOptionsSheet = false
                             haptic.click()
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, shareMessage)
+                            if (isSharing) return@OptionRow
+                            isSharing = true
+                            scope.launch {
+                                // Der Einladungscode muss aus Firestore kommen: er steht
+                                // nicht in der Liste selbst, und ohne gültigen Code kann
+                                // niemand beitreten. Gibt es keinen, wird einer erzeugt.
+                                val code = try {
+                                    (repository.activeInvite(list.id)
+                                        ?: repository.createInvite(list)).code
+                                } catch (e: Exception) {
+                                    Log.w("ListenDetailScreen", "Einladung für ${list.id} nicht verfügbar", e)
+                                    null
+                                } finally {
+                                    isSharing = false
+                                }
+
+                                if (code == null) {
+                                    Toast.makeText(context, shareFailed, Toast.LENGTH_SHORT).show()
+                                    return@launch
+                                }
+
+                                val link = context.getString(R.string.invite_link, code)
+                                val message = shareTemplate.format(list.name, code, link)
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, message)
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, null))
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, null))
                         }
                     )
                 }

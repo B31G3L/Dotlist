@@ -237,7 +237,6 @@
     <string name="dialog_rename_list_title">Liste umbenennen</string>
     <string name="dialog_delete_list_title">Liste löschen?</string>
     <string name="dialog_delete_list_message">"„%1$s“ und alle enthaltenen Aufgaben werden endgültig gelöscht."</string>
-    <string name="share_list_message">"Tritt meiner Liste „%1$s“ in List2Share bei! Öffne die App, tippe auf „Mit Code beitreten“ und gib diesen Code ein:\n\n%2$s"</string>
     <string name="label_share_toggle">Über die Cloud teilen</string>
     <string name="hint_share_toggle_on">Online sichtbar, kann mit anderen geteilt werden</string>
     <string name="hint_share_toggle_off">Nur auf diesem Gerät gespeichert</string>
@@ -329,4 +328,8 @@
     <string name="recurrence_unit_months">Monate</string>
     <string name="recurrence_unit_years">Jahre</string>
     <string name="recurrence_every">Alle %1$d %2$s</string>
+
+    <!-- Einladung teilen -->
+    <string name="share_list_message">"Tritt meiner Liste „%1$s“ in List2Share bei!\n\n%3$s\n\nKeine App? Der Link funktioniert auch im Browser. Oder öffne die App, tippe auf „Mit Code beitreten“ und gib ein:\n\n%2$s"</string>
+    <string name="share_list_failed">Einladung konnte nicht erstellt werden</string>
 </resources>

@@ -241,7 +241,6 @@
     <string name="dialog_rename_list_title">Rename list</string>
     <string name="dialog_delete_list_title">Delete list?</string>
     <string name="dialog_delete_list_message">"\u201C%1$s\u201D and all its tasks will be permanently deleted."</string>
-    <string name="share_list_message">"Join my list \u201C%1$s\u201D in List2Share! Open the app, tap \u201CJoin with code\u201D and enter this code:\n\n%2$s"</string>
     <string name="label_share_toggle">Share via cloud</string>
     <string name="hint_share_toggle_on">Visible online, can be shared with others</string>
     <string name="hint_share_toggle_off">Stored only on this device</string>
@@ -334,4 +333,9 @@
     <string name="recurrence_unit_months">months</string>
     <string name="recurrence_unit_years">years</string>
     <string name="recurrence_every">Every %1$d %2$s</string>
+
+    <!-- Einladung teilen -->
+    <string name="share_list_message">"Join my list \u201C%1$s\u201D in List2Share!\n\n%3$s\n\nNo app? The link works in the browser too. Or open the app, tap \u201CJoin with code\u201D and enter:\n\n%2$s"</string>
+    <string name="share_list_failed">Invite could not be created</string>
+    <string name="invite_link" translatable="false">https://dotlist-83d5c.web.app/join/%1$s</string>
 </resources>
