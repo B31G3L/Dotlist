@@ -312,4 +312,21 @@
     <string name="dialog_account_exists_title">Konto existiert bereits</string>
     <string name="dialog_account_exists_message">Dieses Google-Konto wird bereits verwendet. Wenn du fortfährst, bekommst du dessen Listen zurück — die %1$d geteilte(n) Liste(n) auf diesem Gerät sind dann nicht mehr erreichbar.</string>
     <string name="action_use_existing_account">Bestehendes Konto verwenden</string>
+
+    <!-- Wiederholungen -->
+    <string name="label_recurrence">Wiederholung</string>
+    <string name="label_rotate">Zuständigkeit reihum</string>
+    <string name="rotate_on">An</string>
+    <string name="rotate_off">Aus</string>
+    <string name="recurrence_none">Nie</string>
+    <string name="recurrence_daily">Täglich</string>
+    <string name="recurrence_weekly">Wöchentlich</string>
+    <string name="recurrence_biweekly">Alle 2 Wochen</string>
+    <string name="recurrence_monthly">Monatlich</string>
+    <string name="recurrence_yearly">Jährlich</string>
+    <string name="recurrence_unit_days">Tage</string>
+    <string name="recurrence_unit_weeks">Wochen</string>
+    <string name="recurrence_unit_months">Monate</string>
+    <string name="recurrence_unit_years">Jahre</string>
+    <string name="recurrence_every">Alle %1$d %2$s</string>
 </resources>

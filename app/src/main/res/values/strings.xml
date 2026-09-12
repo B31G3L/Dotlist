@@ -318,4 +318,20 @@
     <string name="dialog_account_exists_message">This Google account is already in use. If you continue, you\'ll get its lists back — the %1$d shared list(s) on this device will no longer be reachable.</string>
     <string name="action_use_existing_account">Use existing account</string>
 
+    <!-- Wiederholungen -->
+    <string name="label_recurrence">Repeat</string>
+    <string name="label_rotate">Rotate assignee</string>
+    <string name="rotate_on">On</string>
+    <string name="rotate_off">Off</string>
+    <string name="recurrence_none">Never</string>
+    <string name="recurrence_daily">Daily</string>
+    <string name="recurrence_weekly">Weekly</string>
+    <string name="recurrence_biweekly">Every 2 weeks</string>
+    <string name="recurrence_monthly">Monthly</string>
+    <string name="recurrence_yearly">Yearly</string>
+    <string name="recurrence_unit_days">days</string>
+    <string name="recurrence_unit_weeks">weeks</string>
+    <string name="recurrence_unit_months">months</string>
+    <string name="recurrence_unit_years">years</string>
+    <string name="recurrence_every">Every %1$d %2$s</string>
 </resources>

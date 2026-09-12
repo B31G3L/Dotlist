@@ -139,6 +139,9 @@ data class Comment(
  * @param position          Sortierreihenfolge
  * @param subtasks          Liste von Unteraufgaben
  * @param comments          Liste von Kommentaren
+ * @param recurrence        Wiederholungsmuster (null = einmalige Aufgabe)
+ * @param rotateAmong       Geräte-IDs, unter denen die Zuständigkeit reihum wechselt
+ * @param recurrenceSpawned Von der Cloud Function gesetzt, sobald die Folgeaufgabe existiert
  */
 data class TodoItem(
     @get:Exclude val id: String = "",
@@ -157,12 +160,48 @@ data class TodoItem(
     val doneAt: Timestamp? = null,
     val position: Long = 0L,
     val subtasks: List<Subtask> = emptyList(),
-    val comments: List<Comment> = emptyList()
+    val comments: List<Comment> = emptyList(),
+    val recurrence: Recurrence? = null,
+    val rotateAmong: List<String> = emptyList(),
+    @get:PropertyName("recurrenceSpawned") @set:PropertyName("recurrenceSpawned")
+    var recurrenceSpawned: Boolean = false,
 ) {
     constructor() : this(
         "", "", "", false, Priority.MITTEL.name, null, null, null, false,
-        "", Timestamp.now(), null, null, 0L, emptyList(), emptyList()
+        "", Timestamp.now(), null, null, 0L, emptyList(), emptyList(),
+        null, emptyList(), false
     )
+}
+
+/** Einheit einer Wiederholung. */
+enum class RecurrenceUnit { TAG, WOCHE, MONAT, JAHR }
+
+/**
+ * Woran der nächste Termin hängt.
+ *
+ * FAELLIG rechnet vom bisherigen Fälligkeitsdatum – für Termine, die
+ * feststehen (Miete, Müllabfuhr). ERLEDIGT rechnet ab dem Abhaken – für
+ * Aufgaben, bei denen der Abstand zählt (Blumen gießen).
+ */
+enum class RecurrenceAnchor { FAELLIG, ERLEDIGT }
+
+/**
+ * Wiederholungsmuster einer Aufgabe.
+ *
+ * Ausgewertet wird es NICHT in der App, sondern von der Cloud Function
+ * `onTodoCompleted`: sie legt beim Abhaken die nächste Instanz an und dreht
+ * die Zuständigkeit weiter. Damit rechnen App, Web und Desktop nicht jeweils
+ * eigene Monatsenden und Zeitumstellungen aus.
+ *
+ * Nur für geteilte Listen – lokale Listen liegen nicht in Firestore, dort
+ * käme die Function nie zum Zug.
+ */
+data class Recurrence(
+    val unit: String = RecurrenceUnit.WOCHE.name,
+    val interval: Int = 1,
+    val anchor: String = RecurrenceAnchor.FAELLIG.name,
+) {
+    constructor() : this(RecurrenceUnit.WOCHE.name, 1, RecurrenceAnchor.FAELLIG.name)
 }
 
 /**

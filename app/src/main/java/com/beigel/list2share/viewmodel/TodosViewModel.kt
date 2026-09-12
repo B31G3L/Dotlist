@@ -11,6 +11,7 @@ import com.beigel.list2share.data.TodoItem
 import com.beigel.list2share.data.TodoList
 import com.beigel.list2share.repository.TodoRepository
 import com.beigel.list2share.data.Priority
+import com.beigel.list2share.data.Recurrence
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -136,6 +137,8 @@ class TodosViewModel(
         dueDate            : Timestamp?,
         assignedTo         : String?,
         reminderMinutes    : Int?,
+        recurrence         : Recurrence? = null,
+        rotateAmong        : List<String> = emptyList(),
         previousAssignedTo : String? = null,
         actorName          : String = "",
         onDone             : () -> Unit = {},
@@ -143,7 +146,10 @@ class TodosViewModel(
         if (title.isBlank()) return
         viewModelScope.launch {
             try {
-                repository.updateTodo(listId, todoId, title, description, priority, dueDate, assignedTo, reminderMinutes)
+                repository.updateTodo(
+                    listId, todoId, title, description, priority, dueDate,
+                    assignedTo, reminderMinutes, recurrence, rotateAmong
+                )
                 if (assignedTo != null && assignedTo != previousAssignedTo) {
                     repository.notifyAssigned(assignedTo, actorName, title, listId, todoId)
                 }

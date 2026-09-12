@@ -29,6 +29,7 @@ import com.beigel.list2share.data.local.toLocalEntity
 import com.beigel.list2share.data.local.toTodoItem
 import com.beigel.list2share.data.local.toTodoList
 import com.beigel.list2share.data.Priority
+import com.beigel.list2share.data.Recurrence
 import com.beigel.list2share.auth.AuthManager
 import com.beigel.list2share.notifications.PushTokenStore
 import com.google.firebase.Timestamp
@@ -887,6 +888,12 @@ class TodoRepository(
     /**
      * Todo vollständig aktualisieren (aus der Detailansicht).
      */
+    /**
+     * @param recurrence  Wiederholungsmuster; nur für geteilte Listen wirksam,
+     *                    weil die Folgeaufgabe von der Cloud Function angelegt
+     *                    wird und die lokale Room-Tabelle das Feld nicht kennt.
+     * @param rotateAmong Runde für die Zuständigkeit, leer = unverändert lassen.
+     */
     suspend fun updateTodo(
         listId          : String,
         todoId          : String,
@@ -896,6 +903,8 @@ class TodoRepository(
         dueDate         : Timestamp?,
         assignedTo      : String?,
         reminderMinutes : Int?,
+        recurrence      : Recurrence? = null,
+        rotateAmong     : List<String> = emptyList(),
     ) {
         if (isLocalList(listId)) {
             val entity = todoDao.getTodo(todoId) ?: return
@@ -920,6 +929,8 @@ class TodoRepository(
             "reminderMinutes" to reminderMinutes,
             // Neue Fälligkeit bedeutet: die Erinnerung muss erneut ausgelöst werden.
             "reminderSent"    to false,
+            "recurrence"      to recurrence,
+            "rotateAmong"     to rotateAmong,
         )
         todosRef(listId).document(todoId).update(updates).await()
     }

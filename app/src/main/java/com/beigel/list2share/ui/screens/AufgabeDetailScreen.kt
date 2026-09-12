@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.List as ListIcon
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Segment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -55,10 +56,49 @@ import com.beigel.list2share.ui.theme.priorityColor
 import com.beigel.list2share.utils.HapticFeedback
 import com.beigel.list2share.viewmodel.TodosViewModel
 import com.beigel.list2share.data.DeviceIdManager
+import com.beigel.list2share.data.Recurrence
+import com.beigel.list2share.data.RecurrenceAnchor
+import com.beigel.list2share.data.RecurrenceUnit
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlin.collections.find
+
+/**
+ * Voreingestellte Wiederholungen.
+ *
+ * Bewusst nur diese fünf statt einer freien Eingabe aus Intervall und Einheit:
+ * alles darüber hinaus lässt sich im Web einstellen, und in der App deckt die
+ * Auswahl praktisch jeden Alltagsfall ab.
+ */
+@Composable
+private fun detailRecurrenceOptions(): List<Pair<String, Recurrence?>> = listOf(
+    stringResource(R.string.recurrence_none)     to null,
+    stringResource(R.string.recurrence_daily)    to Recurrence(RecurrenceUnit.TAG.name, 1, RecurrenceAnchor.FAELLIG.name),
+    stringResource(R.string.recurrence_weekly)   to Recurrence(RecurrenceUnit.WOCHE.name, 1, RecurrenceAnchor.FAELLIG.name),
+    stringResource(R.string.recurrence_biweekly) to Recurrence(RecurrenceUnit.WOCHE.name, 2, RecurrenceAnchor.FAELLIG.name),
+    stringResource(R.string.recurrence_monthly)  to Recurrence(RecurrenceUnit.MONAT.name, 1, RecurrenceAnchor.FAELLIG.name),
+    stringResource(R.string.recurrence_yearly)   to Recurrence(RecurrenceUnit.JAHR.name, 1, RecurrenceAnchor.FAELLIG.name),
+)
+
+/**
+ * Zeigt ein gespeichertes Muster an – auch eines, das so nicht in der Auswahl
+ * steht, etwa "alle 3 Monate" aus der Web-Version.
+ */
+@Composable
+private fun recurrenceLabel(recurrence: Recurrence?): String {
+    if (recurrence == null) return stringResource(R.string.recurrence_none)
+    detailRecurrenceOptions().forEach { (label, option) ->
+        if (option == recurrence) return label
+    }
+    val unit = when (recurrence.unit) {
+        RecurrenceUnit.TAG.name   -> stringResource(R.string.recurrence_unit_days)
+        RecurrenceUnit.WOCHE.name -> stringResource(R.string.recurrence_unit_weeks)
+        RecurrenceUnit.MONAT.name -> stringResource(R.string.recurrence_unit_months)
+        else                      -> stringResource(R.string.recurrence_unit_years)
+    }
+    return stringResource(R.string.recurrence_every, recurrence.interval, unit)
+}
 
 /** Voreingestellte Erinnerungs-Optionen (Anzeigename zu Minuten-Vorlauf). */
 @Composable
@@ -89,6 +129,7 @@ fun AufgabeDetailScreen(
     val uiState by todoVm.uiState.collectAsStateWithLifecycle()
     val actorName = remember { DeviceIdManager.getDeviceName(context) }
     val DetailReminderOptions = detailReminderOptions()
+    val DetailRecurrenceOptions = detailRecurrenceOptions()
 
     // Immer die aktuelle Version aus dem Live-Stream nehmen, Fallback auf den übergebenen Stand
     val liveTodo = uiState.todos.find { it.id == todo.id } ?: todo
@@ -102,6 +143,8 @@ fun AufgabeDetailScreen(
     }
     var assignedTo      by remember(liveTodo.id) { mutableStateOf(liveTodo.assignedTo) }
     var reminderMinutes by remember(liveTodo.id) { mutableStateOf(liveTodo.reminderMinutes) }
+    var recurrence      by remember(liveTodo.id) { mutableStateOf(liveTodo.recurrence) }
+    var rotateAmong     by remember(liveTodo.id) { mutableStateOf(liveTodo.rotateAmong) }
 
     var showNewSubtaskField by remember { mutableStateOf(false) }
     var newSubtaskText      by remember { mutableStateOf("") }
@@ -113,6 +156,7 @@ fun AufgabeDetailScreen(
     var showTimePicker    by remember { mutableStateOf(false) }
     var showAssignMenu    by remember { mutableStateOf(false) }
     var showReminderMenu  by remember { mutableStateOf(false) }
+    var showRecurrenceMenu by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     val members = list.memberIds
@@ -127,6 +171,9 @@ fun AufgabeDetailScreen(
             dueDate            = ts,
             assignedTo         = assignedTo,
             reminderMinutes    = reminderMinutes,
+            recurrence         = recurrence,
+            // Ohne Wiederholung ergibt eine Runde keinen Sinn.
+            rotateAmong        = if (recurrence != null) rotateAmong else emptyList(),
             previousAssignedTo = liveTodo.assignedTo,
             actorName          = actorName,
         )
@@ -298,6 +345,32 @@ fun AufgabeDetailScreen(
                         value   = DetailReminderOptions.firstOrNull { it.second == reminderMinutes }?.first ?: stringResource(R.string.reminder_none),
                         onClick = { showReminderMenu = true }
                     )
+                    // Wiederholungen erzeugt die Cloud Function – für rein lokale
+                    // Listen gäbe es also niemanden, der die Folgeaufgabe anlegt.
+                    if (list.isShared) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        DetailClickRow(
+                            icon    = Icons.Default.Refresh,
+                            label   = stringResource(R.string.label_recurrence),
+                            value   = recurrenceLabel(recurrence),
+                            onClick = { showRecurrenceMenu = true }
+                        )
+                        if (recurrence != null && members.size > 1) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            DetailClickRow(
+                                icon    = Icons.Default.Person,
+                                label   = stringResource(R.string.label_rotate),
+                                value   = stringResource(
+                                    if (rotateAmong.isEmpty()) R.string.rotate_off else R.string.rotate_on
+                                ),
+                                onClick = {
+                                    haptic.tick()
+                                    rotateAmong = if (rotateAmong.isEmpty()) members else emptyList()
+                                    save()
+                                }
+                            )
+                        }
+                    }
                 }
             }
 
@@ -476,6 +549,23 @@ fun AufgabeDetailScreen(
                 DetailChoiceRow(
                     label   = if (memberId == currentDeviceId) stringResource(R.string.label_me) else list.displayNameFor(memberId),
                     onClick = { assignedTo = memberId; showAssignMenu = false; save() }
+                )
+            }
+        }
+    }
+
+    // ── Wiederholung wählen ──────────────────────────────────────────────
+    if (showRecurrenceMenu) {
+        DetailChoiceDialog(title = stringResource(R.string.label_recurrence), onDismiss = { showRecurrenceMenu = false }) {
+            DetailRecurrenceOptions.forEach { (label, option) ->
+                DetailChoiceRow(
+                    label = label,
+                    onClick = {
+                        recurrence = option
+                        if (option == null) rotateAmong = emptyList()
+                        showRecurrenceMenu = false
+                        save()
+                    }
                 )
             }
         }
