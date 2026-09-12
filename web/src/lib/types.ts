@@ -16,6 +16,16 @@ import type { Timestamp } from "firebase/firestore";
 
 export type Priority = "NIEDRIG" | "MITTEL" | "HOCH";
 
+/**
+ * Art der Liste.
+ *
+ * AUFGABEN ist der Standard und der Rückfall für alles, was das Feld noch
+ * nicht kennt. EINKAUFEN blendet Priorität, Zuständigkeit, Fälligkeit und
+ * Erinnerung aus und zeigt stattdessen Mengen und eine Gliederung nach
+ * Abteilungen.
+ */
+export type ListMode = "AUFGABEN" | "EINKAUFEN";
+
 export type RecurrenceUnit = "TAG" | "WOCHE" | "MONAT" | "JAHR";
 
 /**
@@ -49,6 +59,7 @@ export interface TodoList {
   icon: string;
   /** UIDs, die für diese Liste keine Benachrichtigungen wollen. */
   mutedBy: string[];
+  mode: ListMode;
 }
 
 /** Eine Unteraufgabe, eingebettet im Todo-Dokument. */
@@ -84,6 +95,11 @@ export interface TodoItem {
   doneAt: Timestamp | null;
   /** Sortierreihenfolge, aufsteigend. */
   position: number;
+  /**
+   * Freitext für die Menge im Einkaufsmodus, z. B. „2 kg" oder „1 Packung".
+   * Absichtlich ein Feld statt Zahl plus Einheit – so tippt man es auch.
+   */
+  quantity: string;
   /** Wiederholung; null = einmalige Aufgabe. */
   recurrence: Recurrence | null;
   /**

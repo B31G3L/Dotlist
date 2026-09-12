@@ -73,10 +73,20 @@
   let anchor = $state(initial.recurrence?.anchor ?? "FAELLIG");
   let rotate = $state(initial.rotateAmong.length > 0);
 
+  let quantity = $state(initial.quantity);
+
   let newSubtask = $state("");
   let newComment = $state("");
   let saving = $state(false);
   let error = $state<string | null>(null);
+
+  /**
+   * Im Einkaufsmodus bleiben Priorität, Zuständigkeit, Fälligkeit, Erinnerung
+   * und Wiederholung aus der Ansicht. Bereits gesetzte Werte werden dabei
+   * nicht gelöscht – sie stehen weiter im Dokument, falls die Liste wieder
+   * auf Aufgaben umgestellt wird.
+   */
+  const shopping = $derived(list.mode === "EINKAUFEN");
 
   const members = $derived(
     list.memberIds.map((id) => ({ id, name: list.memberNames[id] ?? "Unbekannt" }))
@@ -106,6 +116,7 @@
         // geht, ändert daran nichts – die Cloud Function fängt bei einer
         // unbekannten Zuständigkeit wieder vorn an.
         rotateAmong: repeats && rotate ? list.memberIds : [],
+        quantity: quantity.trim(),
       };
       await updateTodo(list.id, todo, edit, uid, actorName);
       onClose();
@@ -149,11 +160,19 @@
     <input class="text-field" bind:value={title} />
   </label>
 
+  {#if shopping}
+    <label class="field">
+      <span>Menge</span>
+      <input class="text-field" bind:value={quantity} placeholder="z. B. 2 kg" />
+    </label>
+  {/if}
+
   <label class="field">
     <span>Beschreibung</span>
     <textarea class="text-field" rows="3" bind:value={description}></textarea>
   </label>
 
+  {#if !shopping}
   <div class="row">
     <label class="field">
       <span>Priorität</span>
@@ -236,6 +255,7 @@
       {/if}
     {/if}
   </section>
+  {/if}
 
   <section>
     <h3>Unteraufgaben</h3>

@@ -3,11 +3,13 @@
   import { authState } from "$lib/auth.svelte";
   import PushToggle from "$lib/PushToggle.svelte";
   import { ListsQuery, createList } from "$lib/lists.svelte";
+  import type { ListMode } from "$lib/types";
 
   const auth = authState();
 
   let lists = $state<ListsQuery | null>(null);
   let newListName = $state("");
+  let newListMode = $state<ListMode>("AUFGABEN");
   let creating = $state(false);
 
   // Listener nur solange jemand angemeldet ist. $effect räumt beim Abmelden
@@ -31,8 +33,9 @@
 
     creating = true;
     try {
-      const id = await createList(uid, name, auth.user?.displayName ?? "Ich");
+      const id = await createList(uid, name, auth.user?.displayName ?? "Ich", newListMode);
       newListName = "";
+      newListMode = "AUFGABEN";
       await goto(`/lists/${id}`);
     } finally {
       creating = false;
@@ -64,6 +67,10 @@
       placeholder="Neue Liste"
       aria-label="Name der neuen Liste"
     />
+    <select class="text-field mode" bind:value={newListMode} aria-label="Art der Liste">
+      <option value="AUFGABEN">Aufgaben</option>
+      <option value="EINKAUFEN">Einkaufen</option>
+    </select>
     <button class="filled-button" disabled={!newListName.trim() || creating}>Anlegen</button>
   </form>
 
@@ -80,6 +87,9 @@
           <a href={`/lists/${list.id}`} style={`--accent: ${list.color}`}>
             <span class="dot"></span>
             <span class="name">{list.name}</span>
+            {#if list.mode === "EINKAUFEN"}
+              <span class="members">Einkaufen</span>
+            {/if}
             {#if list.memberIds.length > 1}
               <span class="members">{list.memberIds.length} Mitglieder</span>
             {/if}
@@ -107,6 +117,17 @@
     display: flex;
     gap: 0.75rem;
     margin: 1.5rem 0;
+  }
+
+  .mode {
+    flex: none;
+    width: auto;
+  }
+
+  @media (max-width: 30rem) {
+    form {
+      flex-wrap: wrap;
+    }
   }
 
   ul {

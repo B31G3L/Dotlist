@@ -3,7 +3,15 @@
   import { authState } from "$lib/auth.svelte";
   import ListMembers from "$lib/ListMembers.svelte";
   import TodoDetail from "$lib/TodoDetail.svelte";
-  import { ListsQuery, TodosQuery, createTodo, reorderTodos, setTodoDone } from "$lib/lists.svelte";
+  import {
+    ListsQuery,
+    TodosQuery,
+    createTodo,
+    deleteDoneTodos,
+    reorderTodos,
+    setTodoDone,
+  } from "$lib/lists.svelte";
+  import { DEPARTMENT_LABELS, DEPARTMENT_ORDER, departmentFor } from "$lib/departments";
   import type { TodoItem } from "$lib/types";
 
   const auth = authState();
@@ -44,7 +52,20 @@
   // Änderung neue Objekte, und die geöffnete Aufgabe soll dabei aktuell bleiben.
   const selected = $derived(todos?.items.find((t) => t.id === selectedId) ?? null);
   const actorName = $derived(list && auth.uid ? (list.memberNames[auth.uid] ?? "") : "");
+  const shopping = $derived(list?.mode === "EINKAUFEN");
   const open = $derived(todos?.items.filter((t) => !t.isDone) ?? []);
+
+  /**
+   * Im Einkaufsmodus nach Abteilungen gruppiert statt nach Position: im Laden
+   * will man alles aus einem Gang beieinander haben. Leere Abteilungen fallen
+   * weg, „Sonstiges" steht deshalb nur da, wenn wirklich etwas drin ist.
+   */
+  const byDepartment = $derived(
+    DEPARTMENT_ORDER.map((department) => ({
+      department,
+      items: open.filter((todo) => departmentFor(todo.title) === department),
+    })).filter((group) => group.items.length > 0)
+  );
   const done = $derived(todos?.items.filter((t) => t.isDone) ?? []);
 
   async function addTodo(event: SubmitEvent) {
@@ -86,6 +107,14 @@
     const [moved] = items.splice(from, 1);
     items.splice(to, 0, moved);
     return reorderTodos(listId, items);
+  }
+
+  async function clearDone() {
+    if (!todos) return;
+    const count = todos.items.filter((t) => t.isDone).length;
+    if (count === 0) return;
+    if (!confirm(`${count} erledigte ${count === 1 ? "Zeile" : "Zeilen"} löschen?`)) return;
+    await deleteDoneTodos(listId, todos.items);
   }
 
   function formatDue(todo: TodoItem): string | null {
@@ -132,10 +161,31 @@
     <p class="muted">Aufgaben werden geladen …</p>
   {:else if todos && todos.items.length === 0}
     <p class="muted">Diese Liste ist leer.</p>
+  {:else if shopping}
+    {#each byDepartment as group (group.department)}
+      <h2 class="department">{DEPARTMENT_LABELS[group.department]}</h2>
+      <ul>
+        {#each group.items as todo (todo.id)}
+          {@render row(todo, false)}
+        {/each}
+      </ul>
+    {/each}
+
+    {#if done.length > 0}
+      <div class="done-header">
+        <h2>Erledigt</h2>
+        <button class="text-button" onclick={clearDone}>Erledigte löschen</button>
+      </div>
+      <ul class="done-list">
+        {#each done as todo (todo.id)}
+          {@render row(todo, false)}
+        {/each}
+      </ul>
+    {/if}
   {:else}
     <ul>
       {#each open as todo (todo.id)}
-        {@render row(todo, true)}
+        {@render row(todo, !shopping)}
       {/each}
     </ul>
 
@@ -171,21 +221,24 @@
       <input type="checkbox" checked={todo.isDone} onchange={() => toggle(todo)} />
       <span class="title">{todo.title}</span>
     </label>
-    {#if formatDue(todo)}
+    {#if todo.quantity}
+      <span class="quantity">{todo.quantity}</span>
+    {/if}
+    {#if !shopping && formatDue(todo)}
       <span class="due">{formatDue(todo)}</span>
     {/if}
-    {#if todo.recurrence}
+    {#if !shopping && todo.recurrence}
       <span class="repeat" title="Wiederholt sich">↻</span>
     {/if}
-    {#if todo.priority === "HOCH"}
+    {#if !shopping && todo.priority === "HOCH"}
       <span class="priority">Hoch</span>
     {/if}
-    {#if todo.subtasks.length > 0}
+    {#if !shopping && todo.subtasks.length > 0}
       <span class="subtasks">
         {todo.subtasks.filter((s) => s.isDone).length}/{todo.subtasks.length}
       </span>
     {/if}
-    {#if todo.assignedTo}
+    {#if !shopping && todo.assignedTo}
       <span class="assignee">{list?.memberNames[todo.assignedTo] ?? "?"}</span>
     {/if}
     <button
@@ -259,6 +312,7 @@
   .subtasks,
   .assignee,
   .repeat,
+  .quantity,
   .priority {
     flex: none;
     font-size: 0.8125rem;
@@ -269,6 +323,35 @@
   .assignee,
   .repeat {
     color: var(--on-surface-variant);
+  }
+
+  .quantity {
+    background: var(--surface-container-high);
+    border-radius: var(--radius-full);
+    padding: 0.125rem 0.625rem;
+  }
+
+  .department {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    margin: 1.5rem 0 0.5rem;
+    text-transform: uppercase;
+  }
+
+  .department:first-of-type {
+    margin-top: 0;
+  }
+
+  .done-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin: 2rem 0 0.75rem;
+  }
+
+  .done-header h2 {
+    margin: 0;
   }
 
   .priority {

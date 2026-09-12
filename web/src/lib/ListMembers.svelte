@@ -2,8 +2,9 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { activeInvite, createInvite, leaveList, type Invite } from "./invites";
+  import { setListMode } from "./lists.svelte";
   import { demoteAdmin, promoteToAdmin, removeMember, transferOwnership } from "./members";
-  import { canManageMembers, roleOf, type TodoList } from "./types";
+  import { canManageMembers, roleOf, type ListMode, type TodoList } from "./types";
 
   interface Props {
     list: TodoList;
@@ -95,7 +96,25 @@
 </script>
 
 <section class="members">
-  <h2>Mitglieder</h2>
+  {#if canManage}
+    <h2>Art der Liste</h2>
+    <label class="field">
+      <select
+        class="text-field"
+        value={list.mode}
+        onchange={(event) => setListMode(list.id, event.currentTarget.value as ListMode)}
+      >
+        <option value="AUFGABEN">Aufgaben</option>
+        <option value="EINKAUFEN">Einkaufen</option>
+      </select>
+    </label>
+    <p class="muted">
+      Einkaufen blendet Priorität, Zuständigkeit und Termine aus und sortiert nach Abteilungen.
+      Bereits gesetzte Werte bleiben erhalten.
+    </p>
+  {/if}
+
+  <h2 class="spaced">Mitglieder</h2>
 
   <ul>
     {#each list.memberIds as memberId (memberId)}
@@ -169,6 +188,16 @@
 
   h2 {
     font-size: 1.125rem;
+  }
+
+  .spaced {
+    margin-top: 2rem;
+  }
+
+  .field {
+    display: block;
+    margin: 0.75rem 0 0.5rem;
+    max-width: 18rem;
   }
 
   h3 {

@@ -16,7 +16,15 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { notify } from "./notifications";
-import type { Comment, Priority, Recurrence, Subtask, TodoItem, TodoList } from "./types";
+import type {
+  Comment,
+  ListMode,
+  Priority,
+  Recurrence,
+  Subtask,
+  TodoItem,
+  TodoList,
+} from "./types";
 
 /**
  * Live-Abfragen auf Firestore, als Runes gekapselt.
@@ -42,6 +50,18 @@ function normalizeTodo(id: string, data: Record<string, unknown>): TodoItem {
     comments: Array.isArray(data.comments) ? (data.comments as Comment[]) : [],
     recurrence: (data.recurrence as TodoItem["recurrence"]) ?? null,
     rotateAmong: Array.isArray(data.rotateAmong) ? (data.rotateAmong as string[]) : [],
+    quantity: typeof data.quantity === "string" ? data.quantity : "",
+  };
+}
+
+/** Gegenstück für Listen: `mode` fehlt in allem, was vor dem Einkaufsmodus entstand. */
+function normalizeList(id: string, data: Record<string, unknown>): TodoList {
+  return {
+    ...(data as Omit<TodoList, "id">),
+    id,
+    adminIds: Array.isArray(data.adminIds) ? (data.adminIds as string[]) : [],
+    mutedBy: Array.isArray(data.mutedBy) ? (data.mutedBy as string[]) : [],
+    mode: data.mode === "EINKAUFEN" ? "EINKAUFEN" : "AUFGABEN",
   };
 }
 
@@ -63,7 +83,7 @@ export class ListsQuery {
       q,
       (snapshot) => {
         this.items = snapshot.docs
-          .map((d) => ({ id: d.id, ...d.data() }) as TodoList)
+          .map((d) => normalizeList(d.id, d.data()))
           .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
         this.loading = false;
       },
@@ -116,7 +136,12 @@ export class TodosQuery {
 // Promise wird erst mit der Server-Bestätigung fertig und hinge offline
 // beliebig lange.
 
-export async function createList(uid: string, name: string, displayName: string): Promise<string> {
+export async function createList(
+  uid: string,
+  name: string,
+  displayName: string,
+  mode: ListMode = "AUFGABEN"
+): Promise<string> {
   const ref = await addDoc(collection(db(), "lists"), {
     name,
     memberIds: [uid],
@@ -127,6 +152,7 @@ export async function createList(uid: string, name: string, displayName: string)
     color: "#6750A4",
     icon: "",
     mutedBy: [],
+    mode,
   });
   return ref.id;
 }
@@ -155,6 +181,7 @@ export async function createTodo(
     comments: [],
     recurrence: null,
     rotateAmong: [],
+    quantity: "",
   });
 }
 
@@ -195,6 +222,7 @@ export interface TodoEdit {
   reminderMinutes: number | null;
   recurrence: Recurrence | null;
   rotateAmong: string[];
+  quantity: string;
 }
 
 export async function updateTodo(
@@ -314,4 +342,32 @@ export async function reorderTodos(listId: string, ordered: TodoItem[]): Promise
   });
 
   if (changed > 0) await batch.commit();
+}
+
+/** Menge im Einkaufsmodus setzen, ohne den Rest der Aufgabe anzufassen. */
+export async function setQuantity(listId: string, todoId: string, quantity: string): Promise<void> {
+  await updateDoc(doc(db(), "lists", listId, "todos", todoId), { quantity: quantity.trim() });
+}
+
+/**
+ * Alle erledigten Aufgaben einer Liste löschen.
+ *
+ * Vor allem für den Einkaufsmodus: nach dem Einkauf soll die Liste leer sein.
+ * In Blöcken, weil ein Batch höchstens 500 Schreibvorgänge fasst.
+ */
+export async function deleteDoneTodos(listId: string, todos: TodoItem[]): Promise<number> {
+  const done = todos.filter((t) => t.isDone);
+  for (let i = 0; i < done.length; i += 400) {
+    const batch = writeBatch(db());
+    for (const todo of done.slice(i, i + 400)) {
+      batch.delete(doc(db(), "lists", listId, "todos", todo.id));
+    }
+    await batch.commit();
+  }
+  return done.length;
+}
+
+/** Modus einer bestehenden Liste umstellen. */
+export async function setListMode(listId: string, mode: ListMode): Promise<void> {
+  await updateDoc(doc(db(), "lists", listId), { mode });
 }
