@@ -55,6 +55,10 @@ startet also auch offline.
 Mitglieder lassen sich zu Admins machen, entfernen, und der Besitz ist
 übertragbar. Offene Aufgaben sind per Drag & Drop sortierbar.
 
+Wiederholungen lassen sich einstellen: Intervall, Einheit, ob der nächste
+Termin am geplanten Datum oder am Abhaken hängt, und optional Rotation der
+Zuständigkeit. Die Folgeaufgabe legt die Cloud Function an.
+
 Fehlt noch: Anzeige, wenn gerade offline gearbeitet wird. Sortieren geht
 nur mit Maus oder Touch, nicht per Tastatur.
 

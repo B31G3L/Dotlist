@@ -10,7 +10,7 @@
     updateTodo,
     type TodoEdit,
   } from "./lists.svelte";
-  import type { Priority, TodoItem, TodoList } from "./types";
+  import type { Priority, Recurrence, RecurrenceUnit, TodoItem, TodoList } from "./types";
 
   interface Props {
     list: TodoList;
@@ -37,6 +37,13 @@
 
   const priorities: Priority[] = ["NIEDRIG", "MITTEL", "HOCH"];
 
+  const units: { value: RecurrenceUnit; label: string }[] = [
+    { value: "TAG", label: "Tage" },
+    { value: "WOCHE", label: "Wochen" },
+    { value: "MONAT", label: "Monate" },
+    { value: "JAHR", label: "Jahre" },
+  ];
+
   /** Timestamp -> Wert für <input type="datetime-local"> in lokaler Zeit. */
   function toInputValue(ts: Timestamp | null): string {
     if (!ts) return "";
@@ -60,6 +67,12 @@
   let dueInput = $state(initial.dueInput);
   let reminderMinutes = $state<number | null>(initial.reminderMinutes);
   let assignedTo = $state<string>(initial.assignedTo ?? "");
+  let repeats = $state(initial.recurrence !== null);
+  let unit = $state<RecurrenceUnit>(initial.recurrence?.unit ?? "WOCHE");
+  let interval = $state(initial.recurrence?.interval ?? 1);
+  let anchor = $state(initial.recurrence?.anchor ?? "FAELLIG");
+  let rotate = $state(initial.rotateAmong.length > 0);
+
   let newSubtask = $state("");
   let newComment = $state("");
   let saving = $state(false);
@@ -86,6 +99,13 @@
         assignedTo: assignedTo || null,
         // Ohne Fälligkeit ergibt eine Vorlaufzeit keinen Sinn.
         reminderMinutes: dueInput ? reminderMinutes : null,
+        recurrence: repeats
+          ? ({ unit, interval: Math.max(1, Math.round(interval)), anchor } satisfies Recurrence)
+          : null,
+        // Die Runde sind die aktuellen Mitglieder. Wer später dazukommt oder
+        // geht, ändert daran nichts – die Cloud Function fängt bei einer
+        // unbekannten Zuständigkeit wieder vorn an.
+        rotateAmong: repeats && rotate ? list.memberIds : [],
       };
       await updateTodo(list.id, todo, edit, uid, actorName);
       onClose();
@@ -170,6 +190,52 @@
       </select>
     </label>
   </div>
+
+  <section>
+    <h3>Wiederholung</h3>
+    <label class="check">
+      <input type="checkbox" bind:checked={repeats} />
+      <span>Aufgabe wiederholt sich</span>
+    </label>
+
+    {#if repeats}
+      <div class="row">
+        <label class="field">
+          <span>Alle</span>
+          <input class="text-field" type="number" min="1" max="99" bind:value={interval} />
+        </label>
+        <label class="field">
+          <span>Einheit</span>
+          <select class="text-field" bind:value={unit}>
+            {#each units as option (option.value)}
+              <option value={option.value}>{option.label}</option>
+            {/each}
+          </select>
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Nächster Termin</span>
+        <select class="text-field" bind:value={anchor}>
+          <option value="FAELLIG">nach dem geplanten Termin</option>
+          <option value="ERLEDIGT">nach dem Abhaken</option>
+        </select>
+      </label>
+
+      {#if list.memberIds.length > 1}
+        <label class="check">
+          <input type="checkbox" bind:checked={rotate} />
+          <span>Zuständigkeit reihum wechseln</span>
+        </label>
+      {/if}
+
+      {#if !dueInput && anchor === "FAELLIG"}
+        <p class="hint">
+          Ohne Fälligkeit wird ab dem Abhaken gerechnet.
+        </p>
+      {/if}
+    {/if}
+  </section>
 
   <section>
     <h3>Unteraufgaben</h3>
@@ -332,6 +398,18 @@
 
   .danger {
     color: var(--error);
+  }
+
+  .check {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .hint {
+    color: var(--on-surface-variant);
+    font-size: 0.8125rem;
+    margin: 0.5rem 0 0;
   }
 
   .error {

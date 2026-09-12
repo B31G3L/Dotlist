@@ -16,7 +16,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { notify } from "./notifications";
-import type { Comment, Priority, Subtask, TodoItem, TodoList } from "./types";
+import type { Comment, Priority, Recurrence, Subtask, TodoItem, TodoList } from "./types";
 
 /**
  * Live-Abfragen auf Firestore, als Runes gekapselt.
@@ -25,6 +25,25 @@ import type { Comment, Priority, Subtask, TodoItem, TodoList } from "./types";
  * am Ende `stop()` aufrufen – in Komponenten am einfachsten über $effect, das
  * seine Aufräumfunktion beim Verlassen selbst ausführt.
  */
+
+/**
+ * Ein Todo-Dokument in eine vollständige TodoItem-Form bringen.
+ *
+ * Aufgaben, die ältere App-Versionen angelegt haben, kennen `recurrence`,
+ * `rotateAmong`, `subtasks` und `comments` nicht. Ohne diese Normalisierung
+ * wäre `recurrence` dann `undefined` – und `undefined !== null` hätte die
+ * Wiederholung in der Oberfläche fälschlich als aktiv angezeigt.
+ */
+function normalizeTodo(id: string, data: Record<string, unknown>): TodoItem {
+  return {
+    ...(data as Omit<TodoItem, "id">),
+    id,
+    subtasks: Array.isArray(data.subtasks) ? (data.subtasks as Subtask[]) : [],
+    comments: Array.isArray(data.comments) ? (data.comments as Comment[]) : [],
+    recurrence: (data.recurrence as TodoItem["recurrence"]) ?? null,
+    rotateAmong: Array.isArray(data.rotateAmong) ? (data.rotateAmong as string[]) : [],
+  };
+}
 
 /** Alle Listen, in denen die angemeldete Person Mitglied ist. */
 export class ListsQuery {
@@ -75,7 +94,7 @@ export class TodosQuery {
     this.#unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        this.items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as TodoItem);
+        this.items = snapshot.docs.map((d) => normalizeTodo(d.id, d.data()));
         this.loading = false;
       },
       (e) => {
@@ -134,6 +153,8 @@ export async function createTodo(
     position,
     subtasks: [],
     comments: [],
+    recurrence: null,
+    rotateAmong: [],
   });
 }
 
@@ -172,6 +193,8 @@ export interface TodoEdit {
   dueDate: Timestamp | null;
   assignedTo: string | null;
   reminderMinutes: number | null;
+  recurrence: Recurrence | null;
+  rotateAmong: string[];
 }
 
 export async function updateTodo(

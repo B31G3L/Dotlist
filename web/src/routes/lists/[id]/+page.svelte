@@ -174,6 +174,9 @@
     {#if formatDue(todo)}
       <span class="due">{formatDue(todo)}</span>
     {/if}
+    {#if todo.recurrence}
+      <span class="repeat" title="Wiederholt sich">↻</span>
+    {/if}
     {#if todo.priority === "HOCH"}
       <span class="priority">Hoch</span>
     {/if}
@@ -255,6 +258,7 @@
   .due,
   .subtasks,
   .assignee,
+  .repeat,
   .priority {
     flex: none;
     font-size: 0.8125rem;
@@ -262,7 +266,8 @@
 
   .due,
   .subtasks,
-  .assignee {
+  .assignee,
+  .repeat {
     color: var(--on-surface-variant);
   }
 

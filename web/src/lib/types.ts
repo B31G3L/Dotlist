@@ -16,6 +16,21 @@ import type { Timestamp } from "firebase/firestore";
 
 export type Priority = "NIEDRIG" | "MITTEL" | "HOCH";
 
+export type RecurrenceUnit = "TAG" | "WOCHE" | "MONAT" | "JAHR";
+
+/**
+ * Woran der nächste Termin hängt:
+ *  - FAELLIG:  am bisherigen Fälligkeitsdatum (Miete, Müllabfuhr)
+ *  - ERLEDIGT: am Zeitpunkt des Abhakens (Blumen gießen)
+ */
+export type RecurrenceAnchor = "FAELLIG" | "ERLEDIGT";
+
+export interface Recurrence {
+  unit: RecurrenceUnit;
+  interval: number;
+  anchor: RecurrenceAnchor;
+}
+
 /** Eine Liste. Dokument in der Collection `lists`. */
 export interface TodoList {
   /** Dokument-ID, nicht Teil der gespeicherten Felder. */
@@ -69,6 +84,15 @@ export interface TodoItem {
   doneAt: Timestamp | null;
   /** Sortierreihenfolge, aufsteigend. */
   position: number;
+  /** Wiederholung; null = einmalige Aufgabe. */
+  recurrence: Recurrence | null;
+  /**
+   * UIDs, unter denen die Zuständigkeit reihum wechselt. Leer = bleibt, wie
+   * sie ist. Die Cloud Function dreht beim Abhaken weiter.
+   */
+  rotateAmong: string[];
+  /** Von der Cloud Function gesetzt, sobald die Folgeaufgabe angelegt wurde. */
+  recurrenceSpawned?: boolean;
   subtasks: Subtask[];
   comments: Comment[];
 }
