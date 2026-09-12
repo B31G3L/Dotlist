@@ -33,5 +33,14 @@ auch bei Web-Aktionen die Cloud Function. Installierbar als PWA (Manifest
 liegt bei, die Icons in `static/icons/` sind einfarbige Platzhalter und
 gehören ersetzt).
 
-Fehlt noch: Mitglieder verwalten, Einladungslinks, Web-Push empfangen
-(Service Worker plus VAPID-Key), Offline-Anzeige, Sortieren per Drag & Drop.
+Mitglieder werden angezeigt, Einladungscodes lassen sich erzeugen und als
+Link `/join/{code}` teilen, Beitreten und Verlassen funktionieren.
+
+Fehlt noch: Mitglieder entfernen und zu Admins machen (nur in der App),
+Web-Push empfangen (Service Worker plus VAPID-Key), Offline-Anzeige,
+Sortieren per Drag & Drop.
+
+Verlässt die letzte Person eine Liste, bleibt sie im Web als verwaistes
+Dokument zurück. Die App löscht sie in diesem Fall; vom Web aus ist das
+nicht sicher erkennbar, weil nach dem Austritt kein Lesezugriff mehr
+besteht.

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { authState } from "$lib/auth.svelte";
+  import ListMembers from "$lib/ListMembers.svelte";
   import TodoDetail from "$lib/TodoDetail.svelte";
   import { ListsQuery, TodosQuery, createTodo, setTodoDone } from "$lib/lists.svelte";
   import type { TodoItem } from "$lib/types";
@@ -122,6 +123,10 @@
         {/each}
       </ul>
     {/if}
+  {/if}
+
+  {#if list && auth.uid}
+    <ListMembers {list} uid={auth.uid} />
   {/if}
 {/if}
 
