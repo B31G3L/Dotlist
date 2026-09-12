@@ -86,3 +86,20 @@ export function roleOf(list: TodoList, uid: string): MemberRole {
 export function canManageMembers(list: TodoList, uid: string): boolean {
   return list.createdBy === uid || list.adminIds.includes(uid);
 }
+
+/** Eine Benachrichtigung. Dokument in der Collection `notifications`. */
+export type NotificationType = "ZUGEWIESEN" | "ERLEDIGT" | "KOMMENTAR" | "EINLADUNG" | "ERINNERUNG";
+
+export interface AppNotification {
+  id: string;
+  recipientId: string;
+  actorId: string;
+  actorName: string;
+  type: NotificationType;
+  /** Bei EINLADUNG steht hier der Listenname, sonst der Titel der Aufgabe. */
+  todoTitle: string;
+  listId: string;
+  todoId: string;
+  isRead: boolean;
+  createdAt: Timestamp | null;
+}

@@ -1,13 +1,8 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { authState } from "$lib/auth.svelte";
-  import {
-    ListsQuery,
-    TodosQuery,
-    createTodo,
-    deleteTodo,
-    setTodoDone,
-  } from "$lib/lists.svelte";
+  import TodoDetail from "$lib/TodoDetail.svelte";
+  import { ListsQuery, TodosQuery, createTodo, setTodoDone } from "$lib/lists.svelte";
   import type { TodoItem } from "$lib/types";
 
   const auth = authState();
@@ -16,6 +11,7 @@
   let lists = $state<ListsQuery | null>(null);
   let todos = $state<TodosQuery | null>(null);
   let newTitle = $state("");
+  let selectedId = $state<string | null>(null);
 
   // Die Liste selbst kommt aus derselben Abfrage wie die Übersicht: ein
   // direkter Zugriff auf lists/{id} wäre eine zweite Verbindung für Daten,
@@ -42,6 +38,10 @@
   });
 
   const list = $derived(lists?.items.find((l) => l.id === listId) ?? null);
+  // Bewusst über die ID statt über das Objekt: der Listener liefert bei jeder
+  // Änderung neue Objekte, und die geöffnete Aufgabe soll dabei aktuell bleiben.
+  const selected = $derived(todos?.items.find((t) => t.id === selectedId) ?? null);
+  const actorName = $derived(list && auth.uid ? (list.memberNames[auth.uid] ?? "") : "");
   const open = $derived(todos?.items.filter((t) => !t.isDone) ?? []);
   const done = $derived(todos?.items.filter((t) => t.isDone) ?? []);
 
@@ -60,7 +60,7 @@
   function toggle(todo: TodoItem) {
     const uid = auth.uid;
     if (!uid) return;
-    return setTodoDone(listId, todo, uid, !todo.isDone);
+    return setTodoDone(listId, todo, uid, actorName, !todo.isDone);
   }
 
   function formatDue(todo: TodoItem): string | null {
@@ -88,6 +88,18 @@
     />
     <button class="filled-button" disabled={!newTitle.trim()}>Hinzufügen</button>
   </form>
+
+  {#if list && selected && auth.uid}
+    {#key selected.id}
+      <TodoDetail
+        {list}
+        todo={selected}
+        uid={auth.uid}
+        {actorName}
+        onClose={() => (selectedId = null)}
+      />
+    {/key}
+  {/if}
 
   {#if todos?.error}
     <p class="error">{todos.error}</p>
@@ -125,10 +137,18 @@
     {#if todo.priority === "HOCH"}
       <span class="priority">Hoch</span>
     {/if}
+    {#if todo.subtasks.length > 0}
+      <span class="subtasks">
+        {todo.subtasks.filter((s) => s.isDone).length}/{todo.subtasks.length}
+      </span>
+    {/if}
+    {#if todo.assignedTo}
+      <span class="assignee">{list?.memberNames[todo.assignedTo] ?? "?"}</span>
+    {/if}
     <button
       class="text-button"
-      onclick={() => deleteTodo(listId, todo.id)}
-      aria-label={`${todo.title} löschen`}>Löschen</button
+      onclick={() => (selectedId = todo.id)}
+      aria-label={`${todo.title} bearbeiten`}>Details</button
     >
   </li>
 {/snippet}
@@ -185,12 +205,16 @@
   }
 
   .due,
+  .subtasks,
+  .assignee,
   .priority {
     flex: none;
     font-size: 0.8125rem;
   }
 
-  .due {
+  .due,
+  .subtasks,
+  .assignee {
     color: var(--on-surface-variant);
   }
 

@@ -26,14 +26,12 @@ Autorisierte Domains* eingetragen sein, sonst schlägt der Google-Login fehl.
 ## Stand
 
 Fertig: Google-Login, Listenübersicht, Aufgaben in Echtzeit, anlegen,
-abhaken, löschen. Installierbar als PWA (Manifest liegt bei, die Icons in
-`static/icons/` sind einfarbige Platzhalter und gehören ersetzt).
+abhaken, löschen. Detailansicht mit Titel, Beschreibung, Priorität,
+Zuständigkeit, Fälligkeit, Erinnerung, Unteraufgaben und Kommentaren.
+Benachrichtigungen werden erzeugt wie in der App, Pushes verschickt also
+auch bei Web-Aktionen die Cloud Function. Installierbar als PWA (Manifest
+liegt bei, die Icons in `static/icons/` sind einfarbige Platzhalter und
+gehören ersetzt).
 
-Fehlt noch: Kommentare, Unteraufgaben, Fälligkeit und Erinnerung setzen,
-Mitglieder einladen, Einladungslinks, Web-Push (Service Worker plus
-VAPID-Key), Offline-Anzeige.
-
-Wichtig: Änderungen aus dem Web erzeugen noch keine Einträge in
-`notifications`. Die Android-App legt die selbst an, wenn jemand etwas
-zuweist, abhakt oder kommentiert. Solange das hier fehlt, lösen Web-Aktionen
-keine Push-Nachrichten bei den anderen Mitgliedern aus.
+Fehlt noch: Mitglieder verwalten, Einladungslinks, Web-Push empfangen
+(Service Worker plus VAPID-Key), Offline-Anzeige, Sortieren per Drag & Drop.
