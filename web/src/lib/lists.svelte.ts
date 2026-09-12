@@ -11,6 +11,7 @@ import {
   query,
   updateDoc,
   where,
+  writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -267,4 +268,27 @@ export async function addComment(
     listId,
     todoId: todo.id,
   });
+}
+
+/**
+ * Reihenfolge nach dem Verschieben speichern.
+ *
+ * Die Positionen werden komplett neu durchnummeriert (0, 1, 2 …) statt einen
+ * Zwischenwert zu berechnen. Bei den Listengrößen dieser App ist ein Batch
+ * billiger als eine Bruchzahl-Strategie, und die Werte bleiben ganzzahlig –
+ * was wichtig ist, weil die App `position` als Long liest.
+ *
+ * Nur geänderte Dokumente werden geschrieben.
+ */
+export async function reorderTodos(listId: string, ordered: TodoItem[]): Promise<void> {
+  const batch = writeBatch(db());
+  let changed = 0;
+
+  ordered.forEach((todo, index) => {
+    if (todo.position === index) return;
+    batch.update(doc(db(), "lists", listId, "todos", todo.id), { position: index });
+    changed++;
+  });
+
+  if (changed > 0) await batch.commit();
 }

@@ -3,7 +3,7 @@
   import { authState } from "$lib/auth.svelte";
   import ListMembers from "$lib/ListMembers.svelte";
   import TodoDetail from "$lib/TodoDetail.svelte";
-  import { ListsQuery, TodosQuery, createTodo, setTodoDone } from "$lib/lists.svelte";
+  import { ListsQuery, TodosQuery, createTodo, reorderTodos, setTodoDone } from "$lib/lists.svelte";
   import type { TodoItem } from "$lib/types";
 
   const auth = authState();
@@ -13,6 +13,7 @@
   let todos = $state<TodosQuery | null>(null);
   let newTitle = $state("");
   let selectedId = $state<string | null>(null);
+  let draggedId = $state<string | null>(null);
 
   // Die Liste selbst kommt aus derselben Abfrage wie die Übersicht: ein
   // direkter Zugriff auf lists/{id} wäre eine zweite Verbindung für Daten,
@@ -64,6 +65,29 @@
     return setTodoDone(listId, todo, uid, actorName, !todo.isDone);
   }
 
+  /*
+   * Verschieben per Drag & Drop, nur in der Liste der offenen Aufgaben.
+   * Erledigte bleiben außen vor: sie stehen ohnehin in einem eigenen Block,
+   * und ihre Position spielt für die Anzeige keine Rolle mehr.
+   *
+   * Gespeichert wird erst beim Loslassen. Während des Ziehens die Positionen
+   * zu schreiben würde bei jedem Pixel einen Batch auslösen.
+   */
+  function onDrop(targetId: string) {
+    const sourceId = draggedId;
+    draggedId = null;
+    if (!sourceId || sourceId === targetId) return;
+
+    const items = [...open];
+    const from = items.findIndex((t) => t.id === sourceId);
+    const to = items.findIndex((t) => t.id === targetId);
+    if (from < 0 || to < 0) return;
+
+    const [moved] = items.splice(from, 1);
+    items.splice(to, 0, moved);
+    return reorderTodos(listId, items);
+  }
+
   function formatDue(todo: TodoItem): string | null {
     if (!todo.dueDate) return null;
     return todo.dueDate.toDate().toLocaleString("de-DE", {
@@ -111,7 +135,7 @@
   {:else}
     <ul>
       {#each open as todo (todo.id)}
-        {@render row(todo)}
+        {@render row(todo, true)}
       {/each}
     </ul>
 
@@ -119,7 +143,7 @@
       <h2>Erledigt</h2>
       <ul class="done-list">
         {#each done as todo (todo.id)}
-          {@render row(todo)}
+          {@render row(todo, false)}
         {/each}
       </ul>
     {/if}
@@ -130,8 +154,19 @@
   {/if}
 {/if}
 
-{#snippet row(todo: TodoItem)}
-  <li class:done={todo.isDone}>
+{#snippet row(todo: TodoItem, draggable: boolean)}
+  <li
+    class:done={todo.isDone}
+    class:dragging={draggedId === todo.id}
+    {draggable}
+    ondragstart={() => (draggedId = todo.id)}
+    ondragend={() => (draggedId = null)}
+    ondragover={(event) => draggable && event.preventDefault()}
+    ondrop={(event) => {
+      event.preventDefault();
+      onDrop(todo.id);
+    }}
+  >
     <label>
       <input type="checkbox" checked={todo.isDone} onchange={() => toggle(todo)} />
       <span class="title">{todo.title}</span>
@@ -202,6 +237,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  li[draggable="true"] {
+    cursor: grab;
+  }
+
+  li.dragging {
+    opacity: 0.5;
   }
 
   li.done .title {

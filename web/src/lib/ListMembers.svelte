@@ -2,6 +2,7 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { activeInvite, createInvite, leaveList, type Invite } from "./invites";
+  import { demoteAdmin, promoteToAdmin, removeMember, transferOwnership } from "./members";
   import { canManageMembers, roleOf, type TodoList } from "./types";
 
   interface Props {
@@ -17,6 +18,8 @@
   let copied = $state(false);
 
   const canManage = $derived(canManageMembers(list, uid));
+  // Besitz abgeben und die Liste löschen kann nur der Besitzer, nicht jeder Admin.
+  const isOwner = $derived(list.createdBy === uid);
   const inviteUrl = $derived(invite ? `${page.url.origin}/join/${invite.code}` : "");
 
   $effect(() => {
@@ -75,6 +78,20 @@
     if (role === "ADMIN") return "Admin";
     return "";
   }
+
+  function nameOf(memberId: string): string {
+    return list.memberNames[memberId] ?? "Unbekannt";
+  }
+
+  async function remove(memberId: string) {
+    if (!confirm(`${nameOf(memberId)} aus „${list.name}" entfernen?`)) return;
+    await removeMember(list.id, memberId);
+  }
+
+  async function handOver(memberId: string) {
+    if (!confirm(`${nameOf(memberId)} zum Besitzer machen? Du bleibst Admin.`)) return;
+    await transferOwnership(list, uid, memberId);
+  }
 </script>
 
 <section class="members">
@@ -83,12 +100,30 @@
   <ul>
     {#each list.memberIds as memberId (memberId)}
       <li>
-        <span class="name">{list.memberNames[memberId] ?? "Unbekannt"}</span>
+        <span class="name">{nameOf(memberId)}</span>
         {#if memberId === uid}
           <span class="tag">Du</span>
         {/if}
         {#if labelFor(memberId)}
           <span class="tag">{labelFor(memberId)}</span>
+        {/if}
+
+        {#if canManage && memberId !== uid && roleOf(list, memberId) !== "BESITZER"}
+          <span class="actions">
+            {#if roleOf(list, memberId) === "ADMIN"}
+              <button class="text-button" onclick={() => demoteAdmin(list.id, memberId)}>
+                Admin entziehen
+              </button>
+            {:else}
+              <button class="text-button" onclick={() => promoteToAdmin(list.id, memberId)}>
+                Zu Admin
+              </button>
+            {/if}
+            {#if isOwner}
+              <button class="text-button" onclick={() => handOver(memberId)}>Besitz abgeben</button>
+            {/if}
+            <button class="text-button danger" onclick={() => remove(memberId)}>Entfernen</button>
+          </span>
         {/if}
       </li>
     {/each}
@@ -154,7 +189,20 @@
   li {
     align-items: center;
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
+  }
+
+  .name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.25rem;
+    margin-left: auto;
   }
 
   .tag {

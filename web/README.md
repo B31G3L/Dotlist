@@ -52,8 +52,11 @@ Web-Push funktioniert: Schalter auf der Startseite, Token landet in
 Worker legt zusätzlich die App-Shell in den Cache, die installierte PWA
 startet also auch offline.
 
-Fehlt noch: Mitglieder entfernen und zu Admins machen (nur in der App),
-Offline-Anzeige, Sortieren per Drag & Drop.
+Mitglieder lassen sich zu Admins machen, entfernen, und der Besitz ist
+übertragbar. Offene Aufgaben sind per Drag & Drop sortierbar.
+
+Fehlt noch: Anzeige, wenn gerade offline gearbeitet wird. Sortieren geht
+nur mit Maus oder Touch, nicht per Tastatur.
 
 Verlässt die letzte Person eine Liste, bleibt sie im Web als verwaistes
 Dokument zurück. Die App löscht sie in diesem Fall; vom Web aus ist das
