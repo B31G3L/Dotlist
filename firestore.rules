@@ -35,10 +35,6 @@ service cloud.firestore {
       return signedIn() && listData().createdBy == uid();
     }
 
-    function isAdmin() {
-      return isOwner() || (signedIn() && uid() in listData().adminIds);
-    }
-
     /*
      * Beitritt per Einladung: erlaubt ist ausschließlich, sich selbst zur
      * Mitgliederliste hinzuzufügen – und nur, wenn der mitgeschickte Code auf

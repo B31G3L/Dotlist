@@ -34,6 +34,7 @@ import com.beigel.list2share.notifications.PushTokenStore
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -43,6 +44,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.UUID
 
@@ -133,8 +135,16 @@ class TodoRepository(
         }
     }
 
-    /** Listendokument samt aller Todos entfernen. */
-    private suspend fun deleteRemoteListCompletely(listId: String) {
+    /**
+     * Listendokument samt aller Todos entfernen.
+     *
+     * Als Ganzes in [NonCancellable]: der Aufruf hängt oft am Scope eines
+     * Screens, und der wird beim Zurücknavigieren sofort abgebrochen. Ohne
+     * diesen Schutz bliebe die Liste halb gelöscht zurück – Todos weg, das
+     * Listendokument noch da – oder ein bereits verschickter Einladungscode
+     * würde weiter auf eine gelöschte Liste zeigen.
+     */
+    private suspend fun deleteRemoteListCompletely(listId: String) = withContext(NonCancellable) {
         // Erst die Einladungen entwerten – sonst zeigt ein noch kursierender Code
         // auf eine Liste, die es nicht mehr gibt.
         runCatching { revokeInvitesFor(listId) }
@@ -417,11 +427,15 @@ class TodoRepository(
             todoDao.insertTodos(todos.map { it.toLocalEntity(list.id) })
         }
 
-        // Erst jetzt remote löschen – schlägt das fehl, sind die Daten lokal schon sicher.
-        runCatching { revokeInvitesFor(list.id) }
-            .onFailure { Log.w(TAG, "Einladungen zu ${list.id} nicht widerrufen", it) }
-        deleteInChunks(todosSnapshot.documents.map { it.reference })
-        listsRef.document(list.id).delete().await()
+        // Erst jetzt remote löschen – schlägt das fehl, sind die Daten lokal schon
+        // sicher. NonCancellable, weil ein Abbruch mitten im Löschen die Liste in
+        // einem halben Zustand zurückließe (siehe deleteRemoteListCompletely).
+        withContext(NonCancellable) {
+            runCatching { revokeInvitesFor(list.id) }
+                .onFailure { Log.w(TAG, "Einladungen zu ${list.id} nicht widerrufen", it) }
+            deleteInChunks(todosSnapshot.documents.map { it.reference })
+            listsRef.document(list.id).delete().await()
+        }
     }
 
     private fun TodoList.displayNameForOrFallback(memberId: String): String =
@@ -489,7 +503,9 @@ class TodoRepository(
      * Liste selbst also nie.
      */
     suspend fun createInvite(list: TodoList, validDays: Int = DEFAULT_INVITE_DAYS): Invite {
-        revokeInvitesFor(list.id)
+        // Alte Codes entwerten, auch wenn der Screen inzwischen zu ist: sonst
+        // bleiben nach einem "neuen Code erzeugen" zwei gültige Codes im Umlauf.
+        withContext(NonCancellable) { revokeInvitesFor(list.id) }
 
         val expiresAt = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_YEAR, validDays)
