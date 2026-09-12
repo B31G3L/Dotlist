@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -438,6 +439,28 @@ fun ListenDetailScreen(
                         }
                     )
                 }
+                OptionRow(
+                    icon  = if (shopping) Icons.AutoMirrored.Filled.List else Icons.Default.ShoppingCart,
+                    label = stringResource(
+                        if (shopping) R.string.action_mode_to_tasks else R.string.action_mode_to_shopping
+                    ),
+                    onClick = {
+                        showOptionsSheet = false
+                        haptic.click()
+                        scope.launch {
+                            // Nichts geht verloren: Prioritäten und Termine bleiben
+                            // im Dokument stehen, der Modus blendet sie nur aus.
+                            try {
+                                repository.setListMode(
+                                    list.id,
+                                    if (shopping) ListMode.AUFGABEN else ListMode.EINKAUFEN
+                                )
+                            } catch (e: Exception) {
+                                Log.w("ListenDetailScreen", "Modus für ${list.id} nicht geändert", e)
+                            }
+                        }
+                    }
+                )
                 run {
                     val isMuted = list.mutedBy.contains(deviceId)
                     OptionRow(

@@ -334,6 +334,8 @@
     <string name="share_list_failed">Einladung konnte nicht erstellt werden</string>
 
     <!-- Einkaufsmodus -->
+    <string name="action_mode_to_shopping">Als Einkaufsliste verwenden</string>
+    <string name="action_mode_to_tasks">Als Aufgabenliste verwenden</string>
     <string name="section_list_mode">Art der Liste</string>
     <string name="list_mode_tasks">Aufgaben</string>
     <string name="list_mode_shopping">Einkaufen</string>
