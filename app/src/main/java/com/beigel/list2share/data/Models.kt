@@ -35,11 +35,29 @@ data class TodoList(
     val color: String = "#6750A4",
     val icon: String = "",
     val mutedBy: List<String> = emptyList(),
+    val mode: String = ListMode.AUFGABEN.name,
     @get:Exclude val isShared: Boolean = false
 ) {
     // Parameterloser Konstruktor für Firestore-Deserialisierung
-    constructor() : this("", "", emptyList(), emptyMap(), emptyList(), "", Timestamp.now(), "#6750A4", "", emptyList(), false)
+    constructor() : this("", "", emptyList(), emptyMap(), emptyList(), "", Timestamp.now(), "#6750A4", "", emptyList(), ListMode.AUFGABEN.name, false)
 }
+
+/**
+ * Art einer Liste.
+ *
+ * AUFGABEN ist der Standard und der Rückfall für alles, was das Feld noch
+ * nicht kennt – ältere Listen haben es schlicht nicht.
+ *
+ * EINKAUFEN blendet Priorität, Zuständigkeit, Fälligkeit, Erinnerung und
+ * Wiederholung aus und zeigt stattdessen eine Mengenangabe sowie eine
+ * Gliederung nach Abteilungen. Gesetzte Werte bleiben im Dokument stehen,
+ * ein Umschalten verliert also nichts.
+ */
+enum class ListMode { AUFGABEN, EINKAUFEN }
+
+/** Modus einer Liste, unbekannte oder fehlende Werte gelten als AUFGABEN. */
+val TodoList.listMode: ListMode
+    get() = runCatching { ListMode.valueOf(mode) }.getOrDefault(ListMode.AUFGABEN)
 
 /**
  * Rolle eines Mitglieds innerhalb einer Liste.
@@ -139,6 +157,7 @@ data class Comment(
  * @param position          Sortierreihenfolge
  * @param subtasks          Liste von Unteraufgaben
  * @param comments          Liste von Kommentaren
+ * @param quantity          Mengenangabe als Freitext, nur im Einkaufsmodus genutzt
  * @param recurrence        Wiederholungsmuster (null = einmalige Aufgabe)
  * @param rotateAmong       Geräte-IDs, unter denen die Zuständigkeit reihum wechselt
  * @param recurrenceSpawned Von der Cloud Function gesetzt, sobald die Folgeaufgabe existiert
@@ -161,6 +180,7 @@ data class TodoItem(
     val position: Long = 0L,
     val subtasks: List<Subtask> = emptyList(),
     val comments: List<Comment> = emptyList(),
+    val quantity: String = "",
     val recurrence: Recurrence? = null,
     val rotateAmong: List<String> = emptyList(),
     @get:PropertyName("recurrenceSpawned") @set:PropertyName("recurrenceSpawned")
@@ -169,7 +189,7 @@ data class TodoItem(
     constructor() : this(
         "", "", "", false, Priority.MITTEL.name, null, null, null, false,
         "", Timestamp.now(), null, null, 0L, emptyList(), emptyList(),
-        null, emptyList(), false
+        "", null, emptyList(), false
     )
 }
 

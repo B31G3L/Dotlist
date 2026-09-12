@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.beigel.list2share.data.DeviceIdManager
+import com.beigel.list2share.data.ListMode
 import com.beigel.list2share.data.Invite
 import com.beigel.list2share.data.ListCounts
 import com.beigel.list2share.data.SelectedListsPreferences
@@ -110,12 +111,12 @@ class ListsViewModel(
         _uiState.update { it.copy(lastListId = listId) }
     }
 
-    fun createList(name: String, color: String, icon: String = "") {
+    fun createList(name: String, color: String, icon: String = "", mode: ListMode = ListMode.AUFGABEN) {
         if (name.isBlank()) return
         viewModelScope.launch {
             try {
                 val creatorName = DeviceIdManager.getDeviceName(context)
-                val newId   = repository.createList(name.trim(), color, creatorName, icon)
+                val newId   = repository.createList(name.trim(), color, creatorName, icon, mode)
                 val updated = _uiState.value.selectedListIds + newId
                 SelectedListsPreferences.setSelectedIds(context, updated)
                 _uiState.update { it.copy(lastListId = newId, selectedListIds = updated) }

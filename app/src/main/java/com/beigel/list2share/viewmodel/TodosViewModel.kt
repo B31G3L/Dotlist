@@ -139,6 +139,7 @@ class TodosViewModel(
         reminderMinutes    : Int?,
         recurrence         : Recurrence? = null,
         rotateAmong        : List<String> = emptyList(),
+        quantity           : String = "",
         previousAssignedTo : String? = null,
         actorName          : String = "",
         onDone             : () -> Unit = {},
@@ -148,7 +149,7 @@ class TodosViewModel(
             try {
                 repository.updateTodo(
                     listId, todoId, title, description, priority, dueDate,
-                    assignedTo, reminderMinutes, recurrence, rotateAmong
+                    assignedTo, reminderMinutes, recurrence, rotateAmong, quantity
                 )
                 if (assignedTo != null && assignedTo != previousAssignedTo) {
                     repository.notifyAssigned(assignedTo, actorName, title, listId, todoId)

@@ -338,4 +338,22 @@
     <string name="share_list_message">"Join my list \u201C%1$s\u201D in List2Share!\n\n%3$s\n\nNo app? The link works in the browser too. Or open the app, tap \u201CJoin with code\u201D and enter:\n\n%2$s"</string>
     <string name="share_list_failed">Invite could not be created</string>
     <string name="invite_link" translatable="false">https://dotlist-83d5c.web.app/join/%1$s</string>
+
+    <!-- Einkaufsmodus -->
+    <string name="section_list_mode">List type</string>
+    <string name="list_mode_tasks">Tasks</string>
+    <string name="list_mode_shopping">Shopping</string>
+    <string name="list_mode_hint">Shopping hides priority, assignee and dates and groups items by aisle.</string>
+    <string name="label_quantity">Amount</string>
+    <string name="hint_quantity">e.g. 2 kg</string>
+    <string name="action_clear_done">Clear done</string>
+    <string name="department_produce">Fruit &amp; vegetables</string>
+    <string name="department_bakery">Bakery</string>
+    <string name="department_dairy">Dairy &amp; eggs</string>
+    <string name="department_meat">Meat &amp; fish</string>
+    <string name="department_frozen">Frozen</string>
+    <string name="department_pantry">Pantry</string>
+    <string name="department_drinks">Drinks</string>
+    <string name="department_household">Household &amp; toiletries</string>
+    <string name="department_other">Other</string>
 </resources>

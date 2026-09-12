@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.beigel.list2share.R
+import com.beigel.list2share.data.ListMode
 import com.beigel.list2share.ui.theme.ALL_LIST_ICONS
 import com.beigel.list2share.ui.theme.DEFAULT_LIST_ICON_NAME
 import com.beigel.list2share.ui.theme.ICONS_BY_CATEGORY
@@ -40,13 +41,14 @@ import kotlin.collections.get
 @Composable
 fun ListeErstellenScreen(
     onBack  : () -> Unit,
-    onCreate: (name: String, color: String, icon: String) -> Unit,
+    onCreate: (name: String, color: String, icon: String, mode: ListMode) -> Unit,
 ) {
     var name          by remember { mutableStateOf("") }
     var selectedColor by remember { mutableStateOf(ListColors.first()) }
     var selectedIcon  by remember { mutableStateOf(DEFAULT_LIST_ICON_NAME) }
     var showColorPicker by remember { mutableStateOf(false) }
     var showIconSheet    by remember { mutableStateOf(false) }
+    var selectedMode     by remember { mutableStateOf(ListMode.AUFGABEN) }
 
     val previewColor = listColor(selectedColor)
     val previewIcon  = listIconByName(selectedIcon)
@@ -172,10 +174,39 @@ fun ListeErstellenScreen(
             )
         }
 
+        // Art der Liste
+        SectionLabel(stringResource(R.string.section_list_mode), modifier = Modifier.padding(top = 20.dp))
+        Row(
+            modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ListMode.entries.forEach { mode ->
+                val selected = selectedMode == mode
+                FilterChip(
+                    selected = selected,
+                    onClick  = { selectedMode = mode },
+                    label    = {
+                        Text(
+                            stringResource(
+                                if (mode == ListMode.AUFGABEN) R.string.list_mode_tasks
+                                else R.string.list_mode_shopping
+                            )
+                        )
+                    }
+                )
+            }
+        }
+        Text(
+            text     = stringResource(R.string.list_mode_hint),
+            fontSize = 13.sp,
+            color    = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 22.dp)
+        )
+
         // Erstellen-Button
         Spacer(Modifier.height(30.dp))
         Button(
-            onClick  = { if (name.isNotBlank()) onCreate(name, selectedColor, selectedIcon) },
+            onClick  = { if (name.isNotBlank()) onCreate(name, selectedColor, selectedIcon, selectedMode) },
             enabled  = name.isNotBlank(),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(54.dp),
             shape    = RoundedCornerShape(16.dp)

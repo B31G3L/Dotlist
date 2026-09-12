@@ -345,8 +345,8 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
             )
             is AppScreen.ListeErstellen -> ListeErstellenScreen(
                 onBack   = { nav.goListen() },
-                onCreate = { name, color, icon ->
-                    listsViewModel.createList(name, color, icon)
+                onCreate = { name, color, icon, mode ->
+                    listsViewModel.createList(name, color, icon, mode)
                     nav.goListen()
                 }
             )

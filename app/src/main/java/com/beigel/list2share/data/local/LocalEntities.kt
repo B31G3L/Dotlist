@@ -20,6 +20,8 @@ data class LocalListEntity(
     val createdAt: Long,
     val color: String,
     val icon: String,
+    /** Art der Liste, siehe ListMode. Leer/unbekannt gilt als AUFGABEN. */
+    val mode: String = "AUFGABEN",
 )
 
 /**
@@ -46,4 +48,6 @@ data class LocalTodoEntity(
     val position: Long,
     val subtasksJson: String = "[]",
     val commentsJson: String = "[]",
+    /** Mengenangabe als Freitext, nur im Einkaufsmodus genutzt. */
+    val quantity: String = "",
 )

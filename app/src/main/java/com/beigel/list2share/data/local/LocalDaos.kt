@@ -35,6 +35,9 @@ interface LocalListDao {
     @Query("UPDATE local_lists SET name = :name WHERE id = :id")
     suspend fun renameList(id: String, name: String)
 
+    @Query("UPDATE local_lists SET mode = :mode WHERE id = :id")
+    suspend fun setListMode(id: String, mode: String)
+
     @Query("DELETE FROM local_lists WHERE id = :id")
     suspend fun deleteList(id: String)
 

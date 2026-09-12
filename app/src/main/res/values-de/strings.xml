@@ -332,4 +332,22 @@
     <!-- Einladung teilen -->
     <string name="share_list_message">"Tritt meiner Liste „%1$s“ in List2Share bei!\n\n%3$s\n\nKeine App? Der Link funktioniert auch im Browser. Oder öffne die App, tippe auf „Mit Code beitreten“ und gib ein:\n\n%2$s"</string>
     <string name="share_list_failed">Einladung konnte nicht erstellt werden</string>
+
+    <!-- Einkaufsmodus -->
+    <string name="section_list_mode">Art der Liste</string>
+    <string name="list_mode_tasks">Aufgaben</string>
+    <string name="list_mode_shopping">Einkaufen</string>
+    <string name="list_mode_hint">Einkaufen blendet Priorität, Zuständigkeit und Termine aus und sortiert nach Abteilungen.</string>
+    <string name="label_quantity">Menge</string>
+    <string name="hint_quantity">z. B. 2 kg</string>
+    <string name="action_clear_done">Erledigte löschen</string>
+    <string name="department_produce">Obst &amp; Gemüse</string>
+    <string name="department_bakery">Backwaren</string>
+    <string name="department_dairy">Molkerei &amp; Eier</string>
+    <string name="department_meat">Fleisch &amp; Fisch</string>
+    <string name="department_frozen">Tiefkühl</string>
+    <string name="department_pantry">Vorrat</string>
+    <string name="department_drinks">Getränke</string>
+    <string name="department_household">Haushalt &amp; Drogerie</string>
+    <string name="department_other">Sonstiges</string>
 </resources>

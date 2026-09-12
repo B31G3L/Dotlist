@@ -37,6 +37,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import android.util.Log
 import android.widget.Toast
 import com.beigel.list2share.R
+import com.beigel.list2share.data.ListMode
+import com.beigel.list2share.data.departmentFor
+import com.beigel.list2share.data.listMode
 import com.beigel.list2share.auth.AuthManager
 import com.beigel.list2share.data.TodoItem
 import com.beigel.list2share.data.TodoList
@@ -68,6 +71,7 @@ fun ListenDetailScreen(
     )
     val uiState by todoVm.uiState.collectAsStateWithLifecycle()
 
+    val shopping  = list.listMode == ListMode.EINKAUFEN
     val openTodos = remember(uiState.todos) { uiState.todos.filter { !it.isDone } }
     val doneTodos = remember(uiState.todos) { uiState.todos.filter { it.isDone } }
     val total     = uiState.todos.size
@@ -215,21 +219,64 @@ fun ListenDetailScreen(
                     }
                 }
             }
-            items(openTodos, key = { it.id }) { todo ->
-                DetailTaskRow(
-                    todo      = todo,
-                    listColor = listColor,
-                    onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
-                    onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() },
-                    onClick   = { haptic.tick(); onOpenTask(todo) }
-                )
+            if (shopping) {
+                // Im Laden will man alles aus einem Gang beieinander haben.
+                // Leere Abteilungen fallen weg, "Sonstiges" erscheint also nur,
+                // wenn wirklich etwas drin ist.
+                val grouped = remember(openTodos) {
+                    openTodos.groupBy { departmentFor(it.title) }
+                        .toSortedMap(compareBy { it.ordinal })
+                }
+                grouped.forEach { (department, todos) ->
+                    item(key = "dep_${department.name}") {
+                        SectionLabel(stringResource(department.labelRes), modifier = Modifier.padding(top = 8.dp))
+                    }
+                    items(todos, key = { it.id }) { todo ->
+                        DetailTaskRow(
+                            todo      = todo,
+                            listColor = listColor,
+                            shopping  = true,
+                            onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
+                            onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() },
+                            onClick   = { haptic.tick(); onOpenTask(todo) }
+                        )
+                    }
+                }
+            } else {
+                items(openTodos, key = { it.id }) { todo ->
+                    DetailTaskRow(
+                        todo      = todo,
+                        listColor = listColor,
+                        shopping  = false,
+                        onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
+                        onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() },
+                        onClick   = { haptic.tick(); onOpenTask(todo) }
+                    )
+                }
             }
             if (doneTodos.isNotEmpty()) {
-                item { SectionLabel(stringResource(R.string.section_done_count, doneTodos.size), modifier = Modifier.padding(top = 8.dp)) }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        SectionLabel(stringResource(R.string.section_done_count, doneTodos.size))
+                        TextButton(onClick = {
+                            haptic.click()
+                            scope.launch {
+                                try { repository.deleteDoneTodos(list.id) } catch (_: Exception) {}
+                            }
+                        }) {
+                            Text(stringResource(R.string.action_clear_done), fontSize = 13.sp)
+                        }
+                    }
+                }
                 items(doneTodos, key = { "done_${it.id}" }) { todo ->
                     DetailTaskRow(
                         todo      = todo,
                         listColor = listColor,
+                        shopping  = shopping,
                         onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
                         onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() },
                         onClick   = { haptic.tick(); onOpenTask(todo) }
@@ -592,6 +639,7 @@ private fun MemberAvatarStack(memberIds: List<String>, listColor: Color) {
 private fun DetailTaskRow(
     todo     : TodoItem,
     listColor: Color,
+    shopping : Boolean = false,
     onToggle : () -> Unit,
     onDelete : () -> Unit,
     onClick  : () -> Unit = {},
@@ -633,10 +681,20 @@ private fun DetailTaskRow(
                 lineHeight     = 20.sp
             )
         }
-        // Prioritätspunkt
-        Box(Modifier.size(8.dp).clip(CircleShape).background(
-            if (todo.isDone) Color.Transparent else priorityColor(Priority.fromString(todo.priority))
-        ))
+        if (shopping) {
+            if (todo.quantity.isNotBlank()) {
+                Text(
+                    text     = todo.quantity,
+                    fontSize = 13.sp,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            // Prioritätspunkt
+            Box(Modifier.size(8.dp).clip(CircleShape).background(
+                if (todo.isDone) Color.Transparent else priorityColor(Priority.fromString(todo.priority))
+            ))
+        }
         // Mehr-Menü
         Box {
             IconButton(onClick = { showMenu = true }, modifier = Modifier.size(24.dp)) {

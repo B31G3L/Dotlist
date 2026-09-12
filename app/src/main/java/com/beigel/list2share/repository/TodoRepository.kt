@@ -29,6 +29,7 @@ import com.beigel.list2share.data.local.toLocalEntity
 import com.beigel.list2share.data.local.toTodoItem
 import com.beigel.list2share.data.local.toTodoList
 import com.beigel.list2share.data.Priority
+import com.beigel.list2share.data.ListMode
 import com.beigel.list2share.data.Recurrence
 import com.beigel.list2share.auth.AuthManager
 import com.beigel.list2share.notifications.PushTokenStore
@@ -232,7 +233,13 @@ class TodoRepository(
      * Anonym landet sie NUR lokal auf diesem Gerät – erst [shareList] macht sie
      * teilbar. Mit Google-Konto entsteht sie direkt in Firestore.
      */
-    suspend fun createList(name: String, color: String, creatorName: String, icon: String = ""): String {
+    suspend fun createList(
+        name: String,
+        color: String,
+        creatorName: String,
+        icon: String = "",
+        mode: ListMode = ListMode.AUFGABEN,
+    ): String {
         val id = UUID.randomUUID().toString()
 
         if (syncAllLists()) {
@@ -243,7 +250,8 @@ class TodoRepository(
                 createdBy = deviceId,
                 createdAt = Timestamp.now(),
                 color = color,
-                icon = icon
+                icon = icon,
+                mode = mode.name
             )
             // Bewusst ohne await(): der Task wird erst mit der Server-Bestätigung
             // fertig und hinge offline beliebig lange. Firestore übernimmt den
@@ -262,7 +270,8 @@ class TodoRepository(
                 creatorName = creatorName,
                 createdAt = System.currentTimeMillis(),
                 color = color,
-                icon = icon
+                icon = icon,
+                mode = mode.name
             )
         )
         return id
@@ -820,6 +829,35 @@ class TodoRepository(
     }
 
     /**
+     * Art der Liste umstellen. Gesetzte Werte an den Aufgaben bleiben
+     * erhalten – ein Wechsel blendet sie nur aus.
+     */
+    suspend fun setListMode(listId: String, mode: ListMode) {
+        if (isLocalList(listId)) {
+            listDao.setListMode(listId, mode.name)
+            return
+        }
+        listsRef.document(listId).update("mode", mode.name).await()
+    }
+
+    /**
+     * Alle erledigten Todos einer Liste löschen.
+     *
+     * Vor allem für den Einkaufsmodus: nach dem Einkauf soll die Liste leer
+     * sein. Gibt die Anzahl der gelöschten Einträge zurück.
+     */
+    suspend fun deleteDoneTodos(listId: String): Int {
+        if (isLocalList(listId)) {
+            val done = todoDao.getTodosOnce(listId).filter { it.isDone }
+            done.forEach { todoDao.deleteTodo(it.id) }
+            return done.size
+        }
+        val snapshot = todosRef(listId).whereEqualTo("isDone", true).get().await()
+        deleteInChunks(snapshot.documents.map { it.reference })
+        return snapshot.size()
+    }
+
+    /**
      * Todo als erledigt/offen markieren.
      */
     suspend fun toggleTodo(listId: String, todo: TodoItem) {
@@ -905,6 +943,7 @@ class TodoRepository(
         reminderMinutes : Int?,
         recurrence      : Recurrence? = null,
         rotateAmong     : List<String> = emptyList(),
+        quantity        : String = "",
     ) {
         if (isLocalList(listId)) {
             val entity = todoDao.getTodo(todoId) ?: return
@@ -915,7 +954,8 @@ class TodoRepository(
                     priority        = priority.name,
                     dueDate         = dueDate?.toDate()?.time,
                     assignedTo      = assignedTo,
-                    reminderMinutes = reminderMinutes
+                    reminderMinutes = reminderMinutes,
+                    quantity        = quantity.trim()
                 )
             )
             return
@@ -931,6 +971,7 @@ class TodoRepository(
             "reminderSent"    to false,
             "recurrence"      to recurrence,
             "rotateAmong"     to rotateAmong,
+            "quantity"        to quantity.trim(),
         )
         todosRef(listId).document(todoId).update(updates).await()
     }
@@ -1112,3 +1153,4 @@ class TodoRepository(
         }
     }
 }
+

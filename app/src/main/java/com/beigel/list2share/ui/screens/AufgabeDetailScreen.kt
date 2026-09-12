@@ -56,7 +56,9 @@ import com.beigel.list2share.ui.theme.priorityColor
 import com.beigel.list2share.utils.HapticFeedback
 import com.beigel.list2share.viewmodel.TodosViewModel
 import com.beigel.list2share.data.DeviceIdManager
+import com.beigel.list2share.data.ListMode
 import com.beigel.list2share.data.Recurrence
+import com.beigel.list2share.data.listMode
 import com.beigel.list2share.data.RecurrenceAnchor
 import com.beigel.list2share.data.RecurrenceUnit
 import java.text.SimpleDateFormat
@@ -110,6 +112,43 @@ private fun detailReminderOptions(): List<Pair<String, Int?>> = listOf(
     stringResource(R.string.reminder_1_day)   to 1440,
 )
 
+/**
+ * Zeile mit freiem Text, im Stil der DetailClickRow. Für die Mengenangabe im
+ * Einkaufsmodus: „2 kg" tippt man als Ganzes, getrennte Felder für Zahl und
+ * Einheit wären nur im Weg.
+ */
+@Composable
+private fun DetailTextRow(
+    label        : String,
+    value        : String,
+    placeholder  : String,
+    onValueChange: (String) -> Unit,
+    onDone       : () -> Unit,
+) {
+    Row(
+        modifier          = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(
+            Icons.Default.Segment,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
+        Text(label, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+        OutlinedTextField(
+            value         = value,
+            onValueChange = onValueChange,
+            placeholder   = { Text(placeholder) },
+            singleLine    = true,
+            modifier      = Modifier.weight(1f),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { onDone() })
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AufgabeDetailScreen(
@@ -144,6 +183,11 @@ fun AufgabeDetailScreen(
     var assignedTo      by remember(liveTodo.id) { mutableStateOf(liveTodo.assignedTo) }
     var reminderMinutes by remember(liveTodo.id) { mutableStateOf(liveTodo.reminderMinutes) }
     var recurrence      by remember(liveTodo.id) { mutableStateOf(liveTodo.recurrence) }
+    var quantity        by remember(liveTodo.id) { mutableStateOf(liveTodo.quantity) }
+    // Im Einkaufsmodus bleiben Priorität, Zuständigkeit, Termine und
+    // Wiederholung aus der Ansicht. Gesetzte Werte werden nicht gelöscht –
+    // sie stehen weiter im Dokument, falls die Liste wieder umgestellt wird.
+    val shopping = list.listMode == ListMode.EINKAUFEN
     var rotateAmong     by remember(liveTodo.id) { mutableStateOf(liveTodo.rotateAmong) }
 
     var showNewSubtaskField by remember { mutableStateOf(false) }
@@ -172,6 +216,7 @@ fun AufgabeDetailScreen(
             assignedTo         = assignedTo,
             reminderMinutes    = reminderMinutes,
             recurrence         = recurrence,
+            quantity           = quantity,
             // Ohne Wiederholung ergibt eine Runde keinen Sinn.
             rotateAmong        = if (recurrence != null) rotateAmong else emptyList(),
             previousAssignedTo = liveTodo.assignedTo,
@@ -325,6 +370,7 @@ fun AufgabeDetailScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
             ) {
                 Column {
+                    if (!shopping) {
                     DetailClickRow(
                         icon    = Icons.Default.DateRange,
                         label   = stringResource(R.string.label_due),
@@ -347,7 +393,7 @@ fun AufgabeDetailScreen(
                     )
                     // Wiederholungen erzeugt die Cloud Function – für rein lokale
                     // Listen gäbe es also niemanden, der die Folgeaufgabe anlegt.
-                    if (list.isShared) {
+                    if (list.isShared && !shopping) {
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                         DetailClickRow(
                             icon    = Icons.Default.Refresh,
@@ -370,6 +416,16 @@ fun AufgabeDetailScreen(
                                 }
                             )
                         }
+                    }
+                    } else {
+                        // Einkaufsmodus: nur die Menge, alles andere wäre hier Ballast.
+                        DetailTextRow(
+                            label       = stringResource(R.string.label_quantity),
+                            value       = quantity,
+                            placeholder = stringResource(R.string.hint_quantity),
+                            onValueChange = { quantity = it },
+                            onDone      = { save() }
+                        )
                     }
                 }
             }

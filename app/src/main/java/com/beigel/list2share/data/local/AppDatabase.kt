@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * Lokale Datenbank für Listen, die (noch) nicht geteilt sind.
@@ -11,7 +13,7 @@ import androidx.room.RoomDatabase
  */
 @Database(
     entities = [LocalListEntity::class, LocalTodoEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -23,13 +25,27 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        /**
+         * Einkaufsmodus: `mode` an der Liste, `quantity` am Todo.
+         *
+         * Als echte Migration und nicht destruktiv – lokale Listen liegen nur
+         * auf dem Gerät, ein Zurücksetzen der Datenbank würde sie ersatzlos
+         * löschen.
+         */
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE local_lists ADD COLUMN mode TEXT NOT NULL DEFAULT 'AUFGABEN'")
+                db.execSQL("ALTER TABLE local_todos ADD COLUMN quantity TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "dotlist_local.db"
-                ).build().also { INSTANCE = it }
+                ).addMigrations(MIGRATION_1_2).build().also { INSTANCE = it }
             }
     }
 }

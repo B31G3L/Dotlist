@@ -22,6 +22,7 @@ fun LocalListEntity.toTodoList(): TodoList = TodoList(
     color = color,
     icon = icon,
     mutedBy = emptyList(),
+    mode = mode,
     isShared = false
 )
 
@@ -43,7 +44,8 @@ fun LocalTodoEntity.toTodoItem(): TodoItem = TodoItem(
     doneAt = doneAt?.let { Timestamp(Date(it)) },
     position = position,
     subtasks = subtasksJson.toSubtasks(),
-    comments = commentsJson.toComments()
+    comments = commentsJson.toComments(),
+    quantity = quantity
 )
 
 fun TodoItem.toLocalEntity(listId: String): LocalTodoEntity = LocalTodoEntity(
@@ -63,7 +65,8 @@ fun TodoItem.toLocalEntity(listId: String): LocalTodoEntity = LocalTodoEntity(
     doneAt          = doneAt?.toDate()?.time,
     position        = position,
     subtasksJson    = subtasks.toJson(),
-    commentsJson    = comments.toJson()
+    commentsJson    = comments.toJson(),
+    quantity        = quantity
 )
 
 // ─── Subtasks/Comments als JSON (kein Untertabellen-Aufwand nötig) ──────────
