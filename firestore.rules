@@ -98,8 +98,16 @@ service cloud.firestore {
        */
       allow get: if signedIn();
       // Kein list(): sonst könnte man sich alle Codes auf einmal holen.
-      allow list: if false;
-
+ /*
+       * Auflisten nur für eigene Einladungen bzw. Listen, die man verwaltet.
+       * Firestore prüft jedes Treffer-Dokument einzeln: eine Abfrage ohne
+       * passenden Filter erwischt ein fremdes Dokument und scheitert komplett.
+       * Damit bleibt das Enumerieren aller Codes ausgeschlossen.
+       */
+      allow list: if signedIn()
+        && (resource.data.createdBy == uid()
+            || uid() in get(/databases/$(database)/documents/lists/$(resource.data.listId)).data.adminIds
+            || get(/databases/$(database)/documents/lists/$(resource.data.listId)).data.createdBy == uid());
       function ownsTargetList() {
         let list = get(/databases/$(database)/documents/lists/$(request.resource.data.listId)).data;
         return list.createdBy == uid() || uid() in list.adminIds;
