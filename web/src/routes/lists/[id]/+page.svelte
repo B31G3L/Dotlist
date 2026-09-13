@@ -13,6 +13,7 @@
     setTodoDone,
   } from "$lib/lists.svelte";
   import { DEPARTMENT_LABELS, DEPARTMENT_ORDER, departmentFor } from "$lib/departments";
+  import { activityOf, formatWhen } from "$lib/activity";
   import type { TodoItem } from "$lib/types";
 
   const auth = authState();
@@ -84,6 +85,20 @@
   const withoutPrice = $derived(open.filter((t) => t.price === null).length);
 
   const euro = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+
+  const activity = $derived(list && todos ? activityOf(list, todos.items) : []);
+  let showActivity = $state(false);
+
+  /**
+   * Tickt einmal pro Minute, damit „vor 2 Minuten" nicht stehen bleibt,
+   * solange die Seite offen ist. Nur wenn der Verlauf auch sichtbar ist.
+   */
+  let now = $state(new Date());
+  $effect(() => {
+    if (!showActivity) return;
+    const timer = setInterval(() => (now = new Date()), 60_000);
+    return () => clearInterval(timer);
+  });
 
   /**
    * Im Einkaufsmodus nach Abteilungen gruppiert statt nach Position: im Laden
@@ -254,6 +269,26 @@
     {/if}
   {/if}
 
+  {#if activity.length > 0}
+    <section class="activity">
+      <button class="text-button" onclick={() => (showActivity = !showActivity)}>
+        {showActivity ? "Verlauf ausblenden" : "Verlauf anzeigen"}
+      </button>
+      {#if showActivity}
+        <ul>
+          {#each activity as entry (entry.todoId)}
+            <li>
+              <span class="what">
+                {#if entry.who}{entry.who} hat {entry.title} abgehakt{:else}{entry.title} abgehakt{/if}
+              </span>
+              <span class="when">{formatWhen(entry.at, now)}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
+  {/if}
+
   {#if list && auth.uid}
     <ListMembers {list} uid={auth.uid} />
   {/if}
@@ -406,6 +441,36 @@
   .total {
     color: var(--on-surface-variant);
     margin: 0 0 1.5rem;
+  }
+
+  .activity {
+    margin-top: 2.5rem;
+  }
+
+  .activity ul {
+    gap: 0.375rem;
+    margin-top: 0.75rem;
+  }
+
+  .activity li {
+    background: none;
+    display: flex;
+    font-size: 0.875rem;
+    gap: 0.75rem;
+    justify-content: space-between;
+    padding: 0.125rem 0;
+  }
+
+  .activity .what {
+    color: var(--on-surface-variant);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .activity .when {
+    color: var(--on-surface-variant);
+    flex: none;
   }
 
   .total strong {

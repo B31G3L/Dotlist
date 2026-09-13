@@ -44,6 +44,11 @@ auch bei Web-Aktionen die Cloud Function. Installierbar als PWA (Manifest
 liegt bei, die Icons in `static/icons/` sind einfarbige Platzhalter und
 gehören ersetzt).
 
+Unter jeder Liste lässt sich ein Verlauf aufklappen: wer zuletzt was
+abgehakt hat. Abgeleitet aus `doneBy`/`doneAt`, also ohne zusätzliche
+Schreibvorgänge – dafür taucht nur das Abhaken auf und immer nur der
+letzte Stand.
+
 Mitglieder werden angezeigt, Einladungscodes lassen sich erzeugen und als
 Link `/join/{code}` teilen, Beitreten und Verlassen funktionieren.
 
