@@ -37,6 +37,7 @@ import com.beigel.list2share.notifications.PushTokenStore
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
@@ -46,6 +47,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -104,6 +107,10 @@ class TodoRepository(
          * wird, bevor er als „offline eingereiht" gilt.
          */
         const val WRITE_TIMEOUT_MS = 4_000L
+
+        /** Wartezeit zwischen zwei Versuchen, einen Listener neu aufzubauen. */
+        const val LISTENER_RETRY_STEP_MS = 2_000L
+        const val LISTENER_RETRY_MAX_MS = 30_000L
 
         /** Maximale Abgleich-Runden beim Hochladen lokaler Todos, siehe [uploadLocalTodos]. */
         const val SHARE_UPLOAD_ROUNDS = 3
@@ -212,36 +219,49 @@ class TodoRepository(
     }
 
     /**
-     * Ein Fehler darf diesen Flow NICHT schließen: `observeLists` kombiniert ihn
-     * mit den lokalen Listen, und ein geschlossener Flow würde das combine
-     * beenden – die rein lokalen Listen wären dann ebenfalls verschwunden,
-     * obwohl sie mit Firestore nichts zu tun haben.
+     * Geteilte Listen als Flow – mit automatischem Neuaufbau nach einem Fehler.
      *
-     * Stattdessen wird der bisherige Stand beibehalten. Nur wenn noch nie Daten
-     * ankamen (z.B. fehlender Composite-Index oder Permission-Denied), wird
-     * einmalig eine leere Liste gemeldet, damit das combine nicht ewig wartet.
+     * Firestore entfernt einen Snapshot-Listener endgültig, sobald er einen
+     * Fehler meldet. Genau das passiert beim Anmelden mit einem bestehenden
+     * Google-Konto: für einen Moment passt die alte Abfrage nicht mehr zur
+     * neuen UID, der Listener stirbt – und ohne diesen Neuaufbau bliebe die
+     * Liste bis zum nächsten App-Start stehen, obwohl in Firestore längst
+     * alles da ist.
+     *
+     * Der zuletzt erhaltene Stand wird beim Neuaufbau sofort wieder gemeldet.
+     * Ohne das würde die Liste bei jedem Versuch kurz leer aufblitzen, und das
+     * combine in [observeLists] käme erst mit dem ersten Snapshot in Gang.
      */
-    private fun observeRemoteLists(): Flow<List<TodoList>> = callbackFlow {
-        var received = false
-        val registration: ListenerRegistration = listsRef
-            .whereArrayContains("memberIds", deviceId)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    Log.w(TAG, "Listen-Listener fehlgeschlagen", error)
-                    if (!received) {
-                        received = true
-                        trySend(emptyList())
+    private fun observeRemoteLists(): Flow<List<TodoList>> {
+        var last: List<TodoList> = emptyList()
+
+        return callbackFlow {
+            val registration: ListenerRegistration = listsRef
+                .whereArrayContains("memberIds", deviceId)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        // Schließen statt schlucken: nur so greift das retryWhen
+                        // unten und baut den Listener neu auf.
+                        close(error)
+                        return@addSnapshotListener
                     }
-                    return@addSnapshotListener
+                    val lists = snapshot?.documents?.mapNotNull { doc ->
+                        doc.toObject(TodoList::class.java)?.copy(id = doc.id, isShared = true)
+                    } ?: emptyList()
+                    last = lists
+                    trySend(lists)
                 }
-                received = true
-                val lists = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(TodoList::class.java)?.copy(id = doc.id, isShared = true)
-                } ?: emptyList()
-                trySend(lists)
+            awaitClose { registration.remove() }
+        }
+            .onStart { emit(last) }
+            .retryWhen { cause, attempt ->
+                Log.w(TAG, "Listen-Listener fehlgeschlagen, neuer Versuch", cause)
+                // Ansteigend, aber gedeckelt: ein dauerhaft abgelehnter Zugriff
+                // soll nicht im Sekundentakt gegen Firestore laufen.
+                delay(minOf(LISTENER_RETRY_MAX_MS, LISTENER_RETRY_STEP_MS * (attempt + 1)))
+                true
             }
-        awaitClose { registration.remove() }
     }
 
     /**
@@ -792,26 +812,32 @@ class TodoRepository(
                 }
             }
 
-    private fun observeRemoteTodos(listId: String): Flow<List<TodoItem>> = callbackFlow {
-        var received = false
-        val registration: ListenerRegistration = todosRef(listId)
-            .orderBy("position", Query.Direction.ASCENDING)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    Log.w(TAG, "Todo-Listener für $listId fehlgeschlagen", error)
-                    if (!received) {
-                        received = true
-                        trySend(emptyList())
+    /** Wie [observeRemoteLists]: nach einem Fehler wird der Listener neu aufgebaut. */
+    private fun observeRemoteTodos(listId: String): Flow<List<TodoItem>> {
+        var last: List<TodoItem> = emptyList()
+
+        return callbackFlow {
+            val registration: ListenerRegistration = todosRef(listId)
+                .orderBy("position", Query.Direction.ASCENDING)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        close(error)
+                        return@addSnapshotListener
                     }
-                    return@addSnapshotListener
+                    val todos = snapshot?.documents?.mapNotNull { doc ->
+                        doc.toObject(TodoItem::class.java)?.copy(id = doc.id)
+                    } ?: emptyList()
+                    last = todos
+                    trySend(todos)
                 }
-                received = true
-                val todos = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(TodoItem::class.java)?.copy(id = doc.id)
-                } ?: emptyList()
-                trySend(todos)
+            awaitClose { registration.remove() }
+        }
+            .onStart { emit(last) }
+            .retryWhen { cause, attempt ->
+                Log.w(TAG, "Todo-Listener für $listId fehlgeschlagen, neuer Versuch", cause)
+                delay(minOf(LISTENER_RETRY_MAX_MS, LISTENER_RETRY_STEP_MS * (attempt + 1)))
+                true
             }
-        awaitClose { registration.remove() }
     }
 
     /**

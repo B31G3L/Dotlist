@@ -141,12 +141,20 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
         }
     }
 
+    /*
+     * Schlüssel auf die UID: ViewModels überleben ein recreate() der Activity.
+     * Meldet sich jemand mit einem bestehenden Google-Konto an, wechselt die
+     * UID – ohne den Schlüssel behielte das ViewModel das Repository der alten
+     * UID und beobachtete weiterhin fremde Listen.
+     */
     val listsViewModel: ListsViewModel = viewModel(
+        key = "lists_$deviceId",
         factory = ListsViewModel.Factory(repository, context)
     )
     val listsUiState by listsViewModel.uiState.collectAsStateWithLifecycle()
 
     val notificationsViewModel: NotificationsViewModel = viewModel(
+        key = "notifications_$deviceId",
         factory = NotificationsViewModel.Factory(repository)
     )
     val notificationsUiState by notificationsViewModel.uiState.collectAsStateWithLifecycle()
