@@ -107,12 +107,13 @@
         <option value="AUFGABEN">Aufgaben</option>
         <option value="EINKAUFEN">Einkaufen</option>
         <option value="CHECKLISTE">Checkliste</option>
+        <option value="ANSCHAFFUNG">Anschaffungen</option>
       </select>
     </label>
     <p class="muted">
       Einkaufen sortiert nach Abteilungen und zeigt Mengen, Checkliste lässt sich nach dem
-      Abarbeiten komplett zurücksetzen. Beide blenden Priorität, Zuständigkeit und Termine
-      aus; bereits gesetzte Werte bleiben erhalten.
+      Abarbeiten komplett zurücksetzen, Anschaffungen zeigen Preis, Link und die Summe der
+      offenen Posten. Bereits gesetzte Werte bleiben beim Umschalten erhalten.
     </p>
   {/if}
 

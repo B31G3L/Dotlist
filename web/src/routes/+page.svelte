@@ -7,6 +7,17 @@
 
   const auth = authState();
 
+  const MODE_LABELS: Record<ListMode, string> = {
+    AUFGABEN: "Aufgaben",
+    EINKAUFEN: "Einkaufen",
+    CHECKLISTE: "Checkliste",
+    ANSCHAFFUNG: "Anschaffungen",
+  };
+
+  function modeLabel(mode: ListMode): string {
+    return MODE_LABELS[mode];
+  }
+
   let lists = $state<ListsQuery | null>(null);
   let newListName = $state("");
   let newListMode = $state<ListMode>("AUFGABEN");
@@ -71,6 +82,7 @@
       <option value="AUFGABEN">Aufgaben</option>
       <option value="EINKAUFEN">Einkaufen</option>
       <option value="CHECKLISTE">Checkliste</option>
+      <option value="ANSCHAFFUNG">Anschaffungen</option>
     </select>
     <button class="filled-button" disabled={!newListName.trim() || creating}>Anlegen</button>
   </form>
@@ -89,9 +101,7 @@
             <span class="dot"></span>
             <span class="name">{list.name}</span>
             {#if list.mode !== "AUFGABEN"}
-              <span class="members">
-                {list.mode === "EINKAUFEN" ? "Einkaufen" : "Checkliste"}
-              </span>
+              <span class="members">{modeLabel(list.mode)}</span>
             {/if}
             {#if list.memberIds.length > 1}
               <span class="members">{list.memberIds.length} Mitglieder</span>

@@ -51,6 +51,8 @@ function normalizeTodo(id: string, data: Record<string, unknown>): TodoItem {
     recurrence: (data.recurrence as TodoItem["recurrence"]) ?? null,
     rotateAmong: Array.isArray(data.rotateAmong) ? (data.rotateAmong as string[]) : [],
     quantity: typeof data.quantity === "string" ? data.quantity : "",
+    price: typeof data.price === "number" ? data.price : null,
+    link: typeof data.link === "string" ? data.link : "",
   };
 }
 
@@ -62,7 +64,7 @@ function normalizeList(id: string, data: Record<string, unknown>): TodoList {
     adminIds: Array.isArray(data.adminIds) ? (data.adminIds as string[]) : [],
     mutedBy: Array.isArray(data.mutedBy) ? (data.mutedBy as string[]) : [],
     mode:
-      data.mode === "EINKAUFEN" || data.mode === "CHECKLISTE"
+      data.mode === "EINKAUFEN" || data.mode === "CHECKLISTE" || data.mode === "ANSCHAFFUNG"
         ? (data.mode as ListMode)
         : "AUFGABEN",
   };
@@ -185,6 +187,8 @@ export async function createTodo(
     recurrence: null,
     rotateAmong: [],
     quantity: "",
+    price: null,
+    link: "",
   });
 }
 
@@ -226,6 +230,8 @@ export interface TodoEdit {
   recurrence: Recurrence | null;
   rotateAmong: string[];
   quantity: string;
+  price: number | null;
+  link: string;
 }
 
 export async function updateTodo(

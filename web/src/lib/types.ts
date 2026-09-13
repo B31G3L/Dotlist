@@ -28,12 +28,21 @@ export type Priority = "NIEDRIG" | "MITTEL" | "HOCH";
  * CHECKLISTE ist für Listen, die immer wieder abgearbeitet werden – Packliste,
  * Putzplan. Wie EINKAUFEN ohne Termine und Prioritäten, aber in fester
  * Reihenfolge und mit „Alle zurücksetzen" statt „Erledigte löschen".
+ *
+ * ANSCHAFFUNG ist für größere Käufe, über die man länger nachdenkt:
+ * Waschmaschine, Fahrrad. Behält Priorität und Fälligkeit, ergänzt Preis und
+ * Link und zeigt die Summe der offenen Einträge.
  */
-export type ListMode = "AUFGABEN" | "EINKAUFEN" | "CHECKLISTE";
+export type ListMode = "AUFGABEN" | "EINKAUFEN" | "CHECKLISTE" | "ANSCHAFFUNG";
 
-/** Modi ohne Priorität, Zuständigkeit, Termine und Wiederholung. */
+/**
+ * Modi ohne Priorität, Zuständigkeit, Termine und Wiederholung.
+ *
+ * ANSCHAFFUNG gehört ausdrücklich nicht dazu: dort bedeutet die Priorität
+ * tatsächlich etwas („brauchen wir bald" gegen „irgendwann mal").
+ */
 export function isSimpleMode(mode: ListMode): boolean {
-  return mode !== "AUFGABEN";
+  return mode === "EINKAUFEN" || mode === "CHECKLISTE";
 }
 
 export type RecurrenceUnit = "TAG" | "WOCHE" | "MONAT" | "JAHR";
@@ -110,6 +119,14 @@ export interface TodoItem {
    * Absichtlich ein Feld statt Zahl plus Einheit – so tippt man es auch.
    */
   quantity: string;
+  /**
+   * Geschätzter Preis im Anschaffungsmodus, in der Währung des Haushalts.
+   * null bedeutet „noch kein Preis", nicht „kostenlos" – die Unterscheidung
+   * zählt für die Summe.
+   */
+  price: number | null;
+  /** Link zum Angebot im Anschaffungsmodus. */
+  link: string;
   /** Wiederholung; null = einmalige Aufgabe. */
   recurrence: Recurrence | null;
   /**

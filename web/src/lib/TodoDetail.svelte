@@ -81,6 +81,10 @@
   let rotate = $state(initial.rotateAmong.length > 0);
 
   let quantity = $state(initial.quantity);
+  // Als Text, nicht als Zahl: ein leeres Feld ist „kein Preis" und nicht 0,
+  // und beim Tippen von „12," darf der Wert nicht zwischendurch verschwinden.
+  let priceInput = $state(initial.price === null ? "" : String(initial.price));
+  let link = $state(initial.link);
 
   let newSubtask = $state("");
   let newComment = $state("");
@@ -99,10 +103,22 @@
    * Wiederholung aus. Die Mengenangabe gibt es nur beim Einkaufen.
    */
   const simple = $derived(isSimpleMode(list.mode));
+  /** Anschaffungen: Preis und Link statt Menge, Priorität bleibt sinnvoll. */
+  const purchase = $derived(list.mode === "ANSCHAFFUNG");
 
   const members = $derived(
     list.memberIds.map((id) => ({ id, name: list.memberNames[id] ?? "Unbekannt" }))
   );
+
+  /**
+   * „12,50" und „12.50" sollen beide funktionieren; alles Unbrauchbare wird zu
+   * null, also „kein Preis". Negative Beträge ergeben hier keinen Sinn.
+   */
+  function parsePrice(raw: string): number | null {
+    const value = Number(raw.replace(",", ".").trim());
+    if (!raw.trim() || Number.isNaN(value) || value < 0) return null;
+    return Math.round(value * 100) / 100;
+  }
 
   function nameOf(id: string): string {
     return list.memberNames[id] ?? "Unbekannt";
@@ -129,6 +145,8 @@
         // unbekannten Zuständigkeit wieder vorn an.
         rotateAmong: repeats && rotate ? list.memberIds : [],
         quantity: quantity.trim(),
+        price: parsePrice(priceInput),
+        link: link.trim(),
       };
       await updateTodo(list.id, todo, edit, uid, actorName);
       onClose();
@@ -177,6 +195,19 @@
       <span>Menge</span>
       <input class="text-field" bind:value={quantity} placeholder="z. B. 2 kg" />
     </label>
+  {/if}
+
+  {#if purchase}
+    <div class="row">
+      <label class="field">
+        <span>Preis</span>
+        <input class="text-field" bind:value={priceInput} inputmode="decimal" placeholder="z. B. 649" />
+      </label>
+      <label class="field">
+        <span>Link</span>
+        <input class="text-field" bind:value={link} type="url" placeholder="https://…" />
+      </label>
+    </div>
   {/if}
 
   <label class="field">

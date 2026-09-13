@@ -55,9 +55,35 @@
   const actorName = $derived(list && auth.uid ? (list.memberNames[auth.uid] ?? "") : "");
   const shopping = $derived(list?.mode === "EINKAUFEN");
   const checklist = $derived(list?.mode === "CHECKLISTE");
+  const purchase = $derived(list?.mode === "ANSCHAFFUNG");
   /** Modi ohne Priorität, Zuständigkeit, Termine und Wiederholung. */
   const simple = $derived(shopping || checklist);
-  const open = $derived(todos?.items.filter((t) => !t.isDone) ?? []);
+  const unsorted = $derived(todos?.items.filter((t) => !t.isDone) ?? []);
+
+  /**
+   * Anschaffungen nach Priorität statt nach Eingabereihenfolge: was dringend
+   * gebraucht wird, gehört nach oben. Bei gleicher Priorität bleibt die
+   * manuelle Reihenfolge erhalten.
+   */
+  const priorityRank: Record<string, number> = { HOCH: 0, MITTEL: 1, NIEDRIG: 2 };
+  const open = $derived(
+    purchase
+      ? [...unsorted].sort(
+          (a, b) =>
+            (priorityRank[a.priority] ?? 1) - (priorityRank[b.priority] ?? 1) ||
+            a.position - b.position
+        )
+      : unsorted
+  );
+
+  /**
+   * Summe der offenen Anschaffungen. Einträge ohne Preis zählen nicht mit –
+   * deshalb steht daneben, wie viele davon noch keinen haben.
+   */
+  const openTotal = $derived(open.reduce((sum, t) => sum + (t.price ?? 0), 0));
+  const withoutPrice = $derived(open.filter((t) => t.price === null).length);
+
+  const euro = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
 
   /**
    * Im Einkaufsmodus nach Abteilungen gruppiert statt nach Position: im Laden
@@ -155,6 +181,15 @@
     <button class="filled-button" disabled={!newTitle.trim()}>Hinzufügen</button>
   </form>
 
+  {#if purchase && open.length > 0}
+    <p class="total">
+      <strong>{euro.format(openTotal)}</strong> offen
+      {#if withoutPrice > 0}
+        <span class="muted">· {withoutPrice} ohne Preis</span>
+      {/if}
+    </p>
+  {/if}
+
   {#if list && selected && auth.uid}
     {#key selected.id}
       <TodoDetail
@@ -241,6 +276,12 @@
       <input type="checkbox" checked={todo.isDone} onchange={() => toggle(todo)} />
       <span class="title">{todo.title}</span>
     </label>
+    {#if purchase && todo.price !== null}
+      <span class="price">{euro.format(todo.price)}</span>
+    {/if}
+    {#if purchase && todo.link}
+      <a class="link" href={todo.link} target="_blank" rel="noopener noreferrer">Angebot</a>
+    {/if}
     {#if shopping && todo.quantity}
       <span class="quantity">{todo.quantity}</span>
     {/if}
@@ -333,6 +374,8 @@
   .assignee,
   .repeat,
   .quantity,
+  .price,
+  .link,
   .priority {
     flex: none;
     font-size: 0.8125rem;
@@ -345,10 +388,30 @@
     color: var(--on-surface-variant);
   }
 
-  .quantity {
+  .quantity,
+  .price {
     background: var(--surface-container-high);
     border-radius: var(--radius-full);
     padding: 0.125rem 0.625rem;
+  }
+
+  .price {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .link {
+    color: var(--primary);
+  }
+
+  .total {
+    color: var(--on-surface-variant);
+    margin: 0 0 1.5rem;
+  }
+
+  .total strong {
+    color: var(--on-surface);
+    font-size: 1.25rem;
+    font-weight: 500;
   }
 
   .department {

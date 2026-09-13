@@ -66,7 +66,8 @@ Listen haben einen Modus, wählbar beim Anlegen und später umstellbar.
 behält die feste Reihenfolge und bietet "Alle zurücksetzen", damit sich
 eine Packliste wiederverwenden lässt. Beide blenden Priorität,
 Zuständigkeit, Termine und Wiederholung aus, ohne gesetzte Werte zu
-löschen.
+löschen. `ANSCHAFFUNG` ist für größere Käufe: Preis und Link pro Eintrag,
+Sortierung nach Priorität und die Summe der offenen Posten oben.
 
 Fehlt noch: Anzeige, wenn gerade offline gearbeitet wird. Sortieren geht
 nur mit Maus oder Touch, nicht per Tastatur.
