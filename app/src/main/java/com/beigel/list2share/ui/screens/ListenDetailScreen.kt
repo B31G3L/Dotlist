@@ -834,6 +834,8 @@ private fun DetailTaskRow(
                 color    = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        // Anschaffungen zeigen den Preis, der Prioritätspunkt bleibt daneben
+        // sinnvoll: die Priorität bestimmt dort die Reihenfolge.
         if (!simple) {
             // Prioritätspunkt
             Box(Modifier.size(8.dp).clip(CircleShape).background(

@@ -334,6 +334,7 @@
     <string name="share_list_failed">Einladung konnte nicht erstellt werden</string>
 
     <!-- Einkaufsmodus -->
+    <string name="action_open_link">Angebot öffnen</string>
     <string name="list_mode_purchase">Anschaffungen</string>
     <string name="label_price">Preis</string>
     <string name="hint_price">z. B. 649</string>

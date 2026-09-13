@@ -200,14 +200,26 @@
   {#if purchase}
     <div class="row">
       <label class="field">
+        <span>Priorität</span>
+        <select class="text-field" bind:value={priority}>
+          {#each priorities as value (value)}
+            <option {value}>{value.charAt(0) + value.slice(1).toLowerCase()}</option>
+          {/each}
+        </select>
+      </label>
+      <label class="field">
         <span>Preis</span>
         <input class="text-field" bind:value={priceInput} inputmode="decimal" placeholder="z. B. 649" />
       </label>
-      <label class="field">
-        <span>Link</span>
-        <input class="text-field" bind:value={link} type="url" placeholder="https://…" />
-      </label>
     </div>
+
+    <label class="field">
+      <span>Link</span>
+      <input class="text-field" bind:value={link} type="url" placeholder="https://…" />
+    </label>
+    {#if link.trim()}
+      <a class="offer" href={link.trim()} target="_blank" rel="noopener noreferrer">Angebot öffnen</a>
+    {/if}
   {/if}
 
   <label class="field">
@@ -215,7 +227,9 @@
     <textarea class="text-field" rows="3" bind:value={description}></textarea>
   </label>
 
-  {#if !simple}
+  <!-- Anschaffungen brauchen weder Termin noch Zuständigkeit, Erinnerung
+       oder Wiederholung – dort zählen Preis und Link. -->
+  {#if !simple && !purchase}
   <div class="row">
     <label class="field">
       <span>Priorität</span>
@@ -300,6 +314,9 @@
   </section>
   {/if}
 
+  <!-- Anschaffungen kommen ohne Unteraufgaben aus – dort geht es um eine
+       Sache, nicht um Arbeitsschritte. -->
+  {#if !purchase}
   <section>
     <h3>Unteraufgaben</h3>
     {#if todo.subtasks.length > 0}
@@ -328,6 +345,7 @@
       <button class="text-button" disabled={!newSubtask.trim()}>Hinzufügen</button>
     </form>
   </section>
+  {/if}
 
   <section>
     <h3>Kommentare</h3>
@@ -467,6 +485,11 @@
     align-items: center;
     display: flex;
     gap: 0.5rem;
+  }
+
+  .offer {
+    color: var(--primary);
+    font-size: 0.875rem;
   }
 
   .hint {

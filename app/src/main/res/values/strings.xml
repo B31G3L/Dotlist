@@ -340,6 +340,7 @@
     <string name="invite_link" translatable="false">https://dotlist-83d5c.web.app/join/%1$s</string>
 
     <!-- Einkaufsmodus -->
+    <string name="action_open_link">Open offer</string>
     <string name="list_mode_purchase">Purchases</string>
     <string name="label_price">Price</string>
     <string name="hint_price">e.g. 649</string>

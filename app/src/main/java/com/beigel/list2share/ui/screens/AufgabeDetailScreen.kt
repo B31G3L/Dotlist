@@ -1,5 +1,10 @@
 package com.beigel.list2share.ui.screens
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.util.Log
+import androidx.core.net.toUri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -112,6 +117,22 @@ private fun detailReminderOptions(): List<Pair<String, Int?>> = listOf(
     stringResource(R.string.reminder_1_hour)  to 60,
     stringResource(R.string.reminder_1_day)   to 1440,
 )
+
+/**
+ * Angebot im Browser öffnen.
+ *
+ * Ohne Schema ergänzen wir https:// – wer einen Link aus der Adresszeile
+ * kopiert, hat es dabei, wer ihn abtippt, meist nicht. Findet sich keine App
+ * dafür, passiert nichts weiter; ein Absturz wäre hier die schlechtere Antwort.
+ */
+private fun openLink(context: Context, raw: String) {
+    val url = raw.trim().let { if (it.startsWith("http://") || it.startsWith("https://")) it else "https://$it" }
+    try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+    } catch (e: ActivityNotFoundException) {
+        Log.w("AufgabeDetailScreen", "Kein Browser für $url", e)
+    }
+}
 
 /**
  * „12,50" und „12.50" sollen beide funktionieren; alles Unbrauchbare wird zu
@@ -397,7 +418,9 @@ fun AufgabeDetailScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
             ) {
                 Column {
-                    if (!simple) {
+                    // Anschaffungen brauchen weder Termin noch Zuständigkeit,
+                    // Erinnerung oder Wiederholung – dort zählen Preis und Link.
+                    if (!simple && !purchase) {
                     DetailClickRow(
                         icon    = Icons.Default.DateRange,
                         label   = stringResource(R.string.label_due),
@@ -460,6 +483,15 @@ fun AufgabeDetailScreen(
                             onValueChange = { link = it },
                             onDone      = { save() }
                         )
+                        if (link.isNotBlank()) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            DetailClickRow(
+                                icon    = Icons.Default.Search,
+                                label   = stringResource(R.string.action_open_link),
+                                value   = "",
+                                onClick = { openLink(context, link) }
+                            )
+                        }
                     } else if (shopping) {
                         // Einkaufsmodus: nur die Menge, alles andere wäre hier Ballast.
                         DetailTextRow(
@@ -475,90 +507,94 @@ fun AufgabeDetailScreen(
 
             Spacer(Modifier.height(28.dp))
 
-            // ── Unteraufgaben ─────────────────────────────────────────
-            val doneSubtasks = liveTodo.subtasks.count { it.isDone }
-            Row(
-                modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment     = Alignment.CenterVertically
-            ) {
-                Text(
-                    stringResource(R.string.section_subtasks), fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (liveTodo.subtasks.isNotEmpty()) {
-                    Text(
-                        "$doneSubtasks/${liveTodo.subtasks.size}", fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            liveTodo.subtasks.forEach { subtask ->
+            // Anschaffungen kommen ohne Unteraufgaben aus – dort geht es
+            // um eine Sache, nicht um Arbeitsschritte.
+            if (!purchase) {
+                // ── Unteraufgaben ─────────────────────────────────────────
+                val doneSubtasks = liveTodo.subtasks.count { it.isDone }
                 Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .clickable { todoVm.toggleSubtask(liveTodo, subtask.id) }
-                        .padding(vertical = 9.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier.size(22.dp).clip(CircleShape)
-                            .background(if (subtask.isDone) MaterialTheme.colorScheme.primary else Color.Transparent),
-                        contentAlignment = Alignment.Center
+                    Text(
+                        stringResource(R.string.section_subtasks), fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (liveTodo.subtasks.isNotEmpty()) {
+                        Text(
+                            "$doneSubtasks/${liveTodo.subtasks.size}", fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                liveTodo.subtasks.forEach { subtask ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .clickable { todoVm.toggleSubtask(liveTodo, subtask.id) }
+                            .padding(vertical = 9.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        if (subtask.isDone) {
-                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(15.dp))
-                        } else {
-                            Surface(
-                                modifier = Modifier.size(22.dp), shape = CircleShape, color = Color.Transparent,
-                                border   = BorderStroke(2.dp, MaterialTheme.colorScheme.outline)
-                            ) {}
+                        Box(
+                            modifier = Modifier.size(22.dp).clip(CircleShape)
+                                .background(if (subtask.isDone) MaterialTheme.colorScheme.primary else Color.Transparent),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (subtask.isDone) {
+                                Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(15.dp))
+                            } else {
+                                Surface(
+                                    modifier = Modifier.size(22.dp), shape = CircleShape, color = Color.Transparent,
+                                    border   = BorderStroke(2.dp, MaterialTheme.colorScheme.outline)
+                                ) {}
+                            }
+                        }
+                        Text(
+                            subtask.title, fontSize = 15.sp, modifier = Modifier.weight(1f),
+                            color          = if (subtask.isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                            textDecoration = if (subtask.isDone) TextDecoration.LineThrough else TextDecoration.None
+                        )
+                        IconButton(onClick = { haptic.heavy(); todoVm.deleteSubtask(liveTodo, subtask.id) }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                         }
                     }
-                    Text(
-                        subtask.title, fontSize = 15.sp, modifier = Modifier.weight(1f),
-                        color          = if (subtask.isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                        textDecoration = if (subtask.isDone) TextDecoration.LineThrough else TextDecoration.None
+                }
+                if (showNewSubtaskField) {
+                    TextField(
+                        value           = newSubtaskText,
+                        onValueChange   = { newSubtaskText = it },
+                        placeholder     = { Text(stringResource(R.string.placeholder_subtask)) },
+                        singleLine      = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            todoVm.addSubtask(liveTodo, newSubtaskText)
+                            newSubtaskText = ""
+                            showNewSubtaskField = false
+                        }),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor   = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor   = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    IconButton(onClick = { haptic.heavy(); todoVm.deleteSubtask(liveTodo, subtask.id) }, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .clickable { showNewSubtaskField = true }
+                            .padding(vertical = 9.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                        Text(stringResource(R.string.action_add_subtask), fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-            }
-            if (showNewSubtaskField) {
-                TextField(
-                    value           = newSubtaskText,
-                    onValueChange   = { newSubtaskText = it },
-                    placeholder     = { Text(stringResource(R.string.placeholder_subtask)) },
-                    singleLine      = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = {
-                        todoVm.addSubtask(liveTodo, newSubtaskText)
-                        newSubtaskText = ""
-                        showNewSubtaskField = false
-                    }),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor   = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedIndicatorColor   = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .clickable { showNewSubtaskField = true }
-                        .padding(vertical = 9.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    Text(stringResource(R.string.action_add_subtask), fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
 
+            }
             Spacer(Modifier.height(28.dp))
 
             // ── Kommentare ────────────────────────────────────────────

@@ -367,21 +367,21 @@
     {#if shopping && todo.quantity}
       <span class="quantity">{todo.quantity}</span>
     {/if}
-    {#if !simple && formatDue(todo)}
+    {#if !simple && !purchase && formatDue(todo)}
       <span class="due">{formatDue(todo)}</span>
     {/if}
-    {#if !simple && todo.recurrence}
+    {#if !simple && !purchase && todo.recurrence}
       <span class="repeat" title="Wiederholt sich">↻</span>
     {/if}
     {#if !simple && todo.priority === "HOCH"}
       <span class="priority">Hoch</span>
     {/if}
-    {#if !simple && todo.subtasks.length > 0}
+    {#if !simple && !purchase && todo.subtasks.length > 0}
       <span class="subtasks">
         {todo.subtasks.filter((s) => s.isDone).length}/{todo.subtasks.length}
       </span>
     {/if}
-    {#if !simple && todo.assignedTo}
+    {#if !simple && !purchase && todo.assignedTo}
       <span class="assignee">{list?.memberNames[todo.assignedTo] ?? "?"}</span>
     {/if}
     <button
