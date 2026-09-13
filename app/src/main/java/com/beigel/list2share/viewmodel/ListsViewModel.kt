@@ -6,6 +6,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import android.util.Log
 import com.beigel.list2share.data.DeviceIdManager
 import com.beigel.list2share.data.ListMode
 import com.beigel.list2share.data.Invite
@@ -30,6 +31,8 @@ data class ListsUiState(
     val lastListId      : String?        = null,
     val selectedListIds : Set<String>    = emptySet()
 )
+
+private const val TAG = "ListsViewModel"
 
 class ListsViewModel(
     private val repository : TodoRepository,
@@ -121,6 +124,10 @@ class ListsViewModel(
                 SelectedListsPreferences.setSelectedIds(context, updated)
                 _uiState.update { it.copy(lastListId = newId, selectedListIds = updated) }
             } catch (e: Exception) {
+                // Mit Grund im Log: beim Anlegen in der Cloud ist die häufigste
+                // Ursache eine Ablehnung durch die Security Rules, und die ist
+                // ohne Meldung nicht zu erkennen.
+                Log.w(TAG, "Liste konnte nicht angelegt werden", e)
                 _uiState.update { it.copy(error = context.getString(R.string.error_list_create_failed)) }
             }
         }

@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Calendar
 import java.util.UUID
 
@@ -97,6 +98,12 @@ class TodoRepository(
 
         /** Wie oft bei einer Code-Kollision ein neuer Code probiert wird. */
         const val INVITE_CODE_ATTEMPTS = 5
+
+        /**
+         * Wie lange auf die Server-Bestätigung eines Schreibvorgangs gewartet
+         * wird, bevor er als „offline eingereiht" gilt.
+         */
+        const val WRITE_TIMEOUT_MS = 4_000L
 
         /** Maximale Abgleich-Runden beim Hochladen lokaler Todos, siehe [uploadLocalTodos]. */
         const val SHARE_UPLOAD_ROUNDS = 3
@@ -263,12 +270,25 @@ class TodoRepository(
                 icon = icon,
                 mode = mode.name
             )
-            // Bewusst ohne await(): der Task wird erst mit der Server-Bestätigung
-            // fertig und hinge offline beliebig lange. Firestore übernimmt den
-            // Schreibvorgang aber sofort in den lokalen Cache (die Liste erscheint
-            // also direkt im Listen-Flow) und reicht ihn nach, sobald wieder Netz da ist.
-            listsRef.document(id).set(list)
-                .addOnFailureListener { Log.w(TAG, "Liste $id konnte nicht angelegt werden", it) }
+            /*
+             * Kurz auf die Server-Bestätigung warten, aber nicht unbegrenzt.
+             *
+             * Offline wird der Task nie fertig – Firestore hat den Schreibvorgang
+             * dann längst im lokalen Cache, die Liste erscheint sofort im Flow und
+             * geht später raus. Nach [WRITE_TIMEOUT_MS] gilt sie deshalb als
+             * angelegt.
+             *
+             * Lehnen die Security Rules ab, kommt der Fehler dagegen sofort. Genau
+             * der soll nicht mehr still im Log landen: vorher sah der Nutzer nur,
+             * dass nichts passiert.
+             */
+            val result = withTimeoutOrNull(WRITE_TIMEOUT_MS) {
+                runCatching { listsRef.document(id).set(list).await() }
+            }
+            result?.onFailure { e ->
+                Log.w(TAG, "Liste $id konnte nicht angelegt werden", e)
+                throw e
+            }
             return id
         }
 
