@@ -334,6 +334,16 @@
     <string name="share_list_failed">Einladung konnte nicht erstellt werden</string>
 
     <!-- Einkaufsmodus -->
+    <string name="list_mode_purchase">Anschaffungen</string>
+    <string name="label_price">Preis</string>
+    <string name="hint_price">z. B. 649</string>
+    <string name="label_link">Link</string>
+    <string name="hint_link">https://…</string>
+    <string name="purchase_total">%1$s offen</string>
+    <plurals name="purchase_without_price">
+        <item quantity="one">%1$d ohne Preis</item>
+        <item quantity="other">%1$d ohne Preis</item>
+    </plurals>
     <string name="list_mode_checklist">Checkliste</string>
     <string name="action_mode_switch">Als %1$s verwenden</string>
     <string name="action_reset_all">Alle zurücksetzen</string>

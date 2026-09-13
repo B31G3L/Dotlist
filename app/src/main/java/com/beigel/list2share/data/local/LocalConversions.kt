@@ -45,7 +45,9 @@ fun LocalTodoEntity.toTodoItem(): TodoItem = TodoItem(
     position = position,
     subtasks = subtasksJson.toSubtasks(),
     comments = commentsJson.toComments(),
-    quantity = quantity
+    quantity = quantity,
+    price = price,
+    link = link
 )
 
 fun TodoItem.toLocalEntity(listId: String): LocalTodoEntity = LocalTodoEntity(
@@ -66,7 +68,9 @@ fun TodoItem.toLocalEntity(listId: String): LocalTodoEntity = LocalTodoEntity(
     position        = position,
     subtasksJson    = subtasks.toJson(),
     commentsJson    = comments.toJson(),
-    quantity        = quantity
+    quantity        = quantity,
+    price           = price,
+    link            = link
 )
 
 // ─── Subtasks/Comments als JSON (kein Untertabellen-Aufwand nötig) ──────────

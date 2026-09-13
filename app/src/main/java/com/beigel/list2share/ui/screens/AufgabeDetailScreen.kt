@@ -114,6 +114,20 @@ private fun detailReminderOptions(): List<Pair<String, Int?>> = listOf(
 )
 
 /**
+ * „12,50" und „12.50" sollen beide funktionieren; alles Unbrauchbare wird zu
+ * null, also „kein Preis". Negative Beträge ergeben hier keinen Sinn.
+ */
+internal fun parsePrice(raw: String): Double? {
+    val value = raw.replace(',', '.').trim().toDoubleOrNull() ?: return null
+    if (value < 0) return null
+    return Math.round(value * 100) / 100.0
+}
+
+/** Preis fürs Eingabefeld: ganze Beträge ohne ",00". */
+internal fun formatPriceInput(value: Double): String =
+    if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
+
+/**
  * Zeile mit freiem Text, im Stil der DetailClickRow. Für die Mengenangabe im
  * Einkaufsmodus: „2 kg" tippt man als Ganzes, getrennte Felder für Zahl und
  * Einheit wären nur im Weg.
@@ -185,12 +199,20 @@ fun AufgabeDetailScreen(
     var reminderMinutes by remember(liveTodo.id) { mutableStateOf(liveTodo.reminderMinutes) }
     var recurrence      by remember(liveTodo.id) { mutableStateOf(liveTodo.recurrence) }
     var quantity        by remember(liveTodo.id) { mutableStateOf(liveTodo.quantity) }
+    // Preis als Text, nicht als Zahl: ein leeres Feld ist „kein Preis" und
+    // nicht 0, und beim Tippen von „12," darf der Wert nicht verschwinden.
+    var priceInput      by remember(liveTodo.id) {
+        mutableStateOf(liveTodo.price?.let { formatPriceInput(it) } ?: "")
+    }
+    var link            by remember(liveTodo.id) { mutableStateOf(liveTodo.link) }
     // Im Einkaufsmodus bleiben Priorität, Zuständigkeit, Termine und
     // Wiederholung aus der Ansicht. Gesetzte Werte werden nicht gelöscht –
     // sie stehen weiter im Dokument, falls die Liste wieder umgestellt wird.
     val shopping = list.listMode == ListMode.EINKAUFEN
     /** Einkaufen und Checkliste kommen ohne Termine und Prioritäten aus. */
     val simple = list.listMode.isSimple
+    /** Anschaffungen: Preis und Link statt Menge, Priorität bleibt sinnvoll. */
+    val purchase = list.listMode == ListMode.ANSCHAFFUNG
     var rotateAmong     by remember(liveTodo.id) { mutableStateOf(liveTodo.rotateAmong) }
 
     var showNewSubtaskField by remember { mutableStateOf(false) }
@@ -220,6 +242,8 @@ fun AufgabeDetailScreen(
             reminderMinutes    = reminderMinutes,
             recurrence         = recurrence,
             quantity           = quantity,
+            price              = parsePrice(priceInput),
+            link               = link,
             // Ohne Wiederholung ergibt eine Runde keinen Sinn.
             rotateAmong        = if (recurrence != null) rotateAmong else emptyList(),
             previousAssignedTo = liveTodo.assignedTo,
@@ -420,6 +444,22 @@ fun AufgabeDetailScreen(
                             )
                         }
                     }
+                    } else if (purchase) {
+                        DetailTextRow(
+                            label       = stringResource(R.string.label_price),
+                            value       = priceInput,
+                            placeholder = stringResource(R.string.hint_price),
+                            onValueChange = { priceInput = it },
+                            onDone      = { save() }
+                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        DetailTextRow(
+                            label       = stringResource(R.string.label_link),
+                            value       = link,
+                            placeholder = stringResource(R.string.hint_link),
+                            onValueChange = { link = it },
+                            onDone      = { save() }
+                        )
                     } else if (shopping) {
                         // Einkaufsmodus: nur die Menge, alles andere wäre hier Ballast.
                         DetailTextRow(

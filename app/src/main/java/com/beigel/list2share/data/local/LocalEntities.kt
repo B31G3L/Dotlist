@@ -50,4 +50,8 @@ data class LocalTodoEntity(
     val commentsJson: String = "[]",
     /** Mengenangabe als Freitext, nur im Einkaufsmodus genutzt. */
     val quantity: String = "",
+    /** Geschätzter Preis, nur im Anschaffungsmodus genutzt. */
+    val price: Double? = null,
+    /** Link zum Angebot, nur im Anschaffungsmodus genutzt. */
+    val link: String = "",
 )

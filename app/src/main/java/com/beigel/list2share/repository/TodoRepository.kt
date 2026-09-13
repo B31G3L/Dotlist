@@ -996,6 +996,8 @@ class TodoRepository(
         recurrence      : Recurrence? = null,
         rotateAmong     : List<String> = emptyList(),
         quantity        : String = "",
+        price           : Double? = null,
+        link            : String = "",
     ) {
         if (isLocalList(listId)) {
             val entity = todoDao.getTodo(todoId) ?: return
@@ -1007,7 +1009,9 @@ class TodoRepository(
                     dueDate         = dueDate?.toDate()?.time,
                     assignedTo      = assignedTo,
                     reminderMinutes = reminderMinutes,
-                    quantity        = quantity.trim()
+                    quantity        = quantity.trim(),
+                    price           = price,
+                    link            = link.trim()
                 )
             )
             return
@@ -1024,6 +1028,8 @@ class TodoRepository(
             "recurrence"      to recurrence,
             "rotateAmong"     to rotateAmong,
             "quantity"        to quantity.trim(),
+            "price"           to price,
+            "link"            to link.trim(),
         )
         todosRef(listId).document(todoId).update(updates).await()
     }

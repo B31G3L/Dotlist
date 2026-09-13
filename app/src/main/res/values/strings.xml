@@ -340,6 +340,16 @@
     <string name="invite_link" translatable="false">https://dotlist-83d5c.web.app/join/%1$s</string>
 
     <!-- Einkaufsmodus -->
+    <string name="list_mode_purchase">Purchases</string>
+    <string name="label_price">Price</string>
+    <string name="hint_price">e.g. 649</string>
+    <string name="label_link">Link</string>
+    <string name="hint_link">https://…</string>
+    <string name="purchase_total">%1$s open</string>
+    <plurals name="purchase_without_price">
+        <item quantity="one">%1$d without a price</item>
+        <item quantity="other">%1$d without a price</item>
+    </plurals>
     <string name="list_mode_checklist">Checklist</string>
     <string name="action_mode_switch">Use as %1$s</string>
     <string name="action_reset_all">Reset all</string>

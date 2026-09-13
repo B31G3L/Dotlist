@@ -56,6 +56,10 @@ data class TodoList(
  * Putzplan. Ebenfalls ohne Termine und Prioritäten, aber in fester Reihenfolge
  * und mit „Alle zurücksetzen" statt „Erledigte löschen".
  *
+ * ANSCHAFFUNG ist für größere Käufe, über die man länger nachdenkt:
+ * Waschmaschine, Fahrrad. Behält Priorität und Fälligkeit, ergänzt Preis und
+ * Link und zeigt die Summe der offenen Posten.
+ *
  * Gesetzte Werte bleiben in jedem Fall im Dokument stehen, ein Umschalten
  * verliert also nichts.
  */
@@ -63,15 +67,21 @@ enum class ListMode(val labelRes: Int) {
     AUFGABEN(R.string.list_mode_tasks),
     EINKAUFEN(R.string.list_mode_shopping),
     CHECKLISTE(R.string.list_mode_checklist),
+    ANSCHAFFUNG(R.string.list_mode_purchase),
 }
 
 /** Modus einer Liste, unbekannte oder fehlende Werte gelten als AUFGABEN. */
 val TodoList.listMode: ListMode
     get() = runCatching { ListMode.valueOf(mode) }.getOrDefault(ListMode.AUFGABEN)
 
-/** Modi ohne Priorität, Zuständigkeit, Termine und Wiederholung. */
+/**
+ * Modi ohne Priorität, Zuständigkeit, Termine und Wiederholung.
+ *
+ * ANSCHAFFUNG gehört ausdrücklich nicht dazu: dort bedeutet die Priorität
+ * tatsächlich etwas („brauchen wir bald" gegen „irgendwann mal").
+ */
 val ListMode.isSimple: Boolean
-    get() = this != ListMode.AUFGABEN
+    get() = this == ListMode.EINKAUFEN || this == ListMode.CHECKLISTE
 
 /**
  * Rolle eines Mitglieds innerhalb einer Liste.
@@ -172,6 +182,8 @@ data class Comment(
  * @param subtasks          Liste von Unteraufgaben
  * @param comments          Liste von Kommentaren
  * @param quantity          Mengenangabe als Freitext, nur im Einkaufsmodus genutzt
+ * @param price             Geschätzter Preis, nur im Anschaffungsmodus genutzt
+ * @param link              Link zum Angebot, nur im Anschaffungsmodus genutzt
  * @param recurrence        Wiederholungsmuster (null = einmalige Aufgabe)
  * @param rotateAmong       Geräte-IDs, unter denen die Zuständigkeit reihum wechselt
  * @param recurrenceSpawned Von der Cloud Function gesetzt, sobald die Folgeaufgabe existiert
@@ -195,6 +207,13 @@ data class TodoItem(
     val subtasks: List<Subtask> = emptyList(),
     val comments: List<Comment> = emptyList(),
     val quantity: String = "",
+    /**
+     * Geschätzter Preis im Anschaffungsmodus. null heißt „noch kein Preis",
+     * nicht „kostenlos" – die Unterscheidung zählt für die Summe.
+     */
+    val price: Double? = null,
+    /** Link zum Angebot im Anschaffungsmodus. */
+    val link: String = "",
     val recurrence: Recurrence? = null,
     val rotateAmong: List<String> = emptyList(),
     @get:PropertyName("recurrenceSpawned") @set:PropertyName("recurrenceSpawned")
@@ -203,7 +222,7 @@ data class TodoItem(
     constructor() : this(
         "", "", "", false, Priority.MITTEL.name, null, null, null, false,
         "", Timestamp.now(), null, null, 0L, emptyList(), emptyList(),
-        "", null, emptyList(), false
+        "", null, "", null, emptyList(), false
     )
 }
 

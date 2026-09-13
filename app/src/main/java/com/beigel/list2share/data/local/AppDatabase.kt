@@ -13,7 +13,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  */
 @Database(
     entities = [LocalListEntity::class, LocalTodoEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -32,6 +32,14 @@ abstract class AppDatabase : RoomDatabase() {
          * auf dem Gerät, ein Zurücksetzen der Datenbank würde sie ersatzlos
          * löschen.
          */
+        /** Anschaffungsmodus: Preis und Link am Todo. */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE local_todos ADD COLUMN price REAL")
+                db.execSQL("ALTER TABLE local_todos ADD COLUMN link TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE local_lists ADD COLUMN mode TEXT NOT NULL DEFAULT 'AUFGABEN'")
@@ -45,7 +53,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "dotlist_local.db"
-                ).addMigrations(MIGRATION_1_2).build().also { INSTANCE = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { INSTANCE = it }
             }
     }
 }

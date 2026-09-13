@@ -26,6 +26,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +41,7 @@ import android.widget.Toast
 import com.beigel.list2share.R
 import com.beigel.list2share.data.ListMode
 import com.beigel.list2share.data.departmentFor
+import com.beigel.list2share.data.formatPrice
 import com.beigel.list2share.data.isSimple
 import com.beigel.list2share.data.listMode
 import com.beigel.list2share.auth.AuthManager
@@ -76,7 +78,16 @@ fun ListenDetailScreen(
     val mode      = list.listMode
     val shopping  = mode == ListMode.EINKAUFEN
     val checklist = mode == ListMode.CHECKLISTE
-    val openTodos = remember(uiState.todos) { uiState.todos.filter { !it.isDone } }
+    val purchase  = mode == ListMode.ANSCHAFFUNG
+    val openTodos = remember(uiState.todos, purchase) {
+        val open = uiState.todos.filter { !it.isDone }
+        // Anschaffungen nach Priorität statt nach Eingabereihenfolge: was
+        // dringend gebraucht wird, gehört nach oben. Bei Gleichstand bleibt
+        // die manuelle Reihenfolge erhalten.
+        if (purchase) open.sortedWith(
+            compareBy({ Priority.fromString(it.priority).ordinal }, { it.position })
+        ) else open
+    }
     val doneTodos = remember(uiState.todos) { uiState.todos.filter { it.isDone } }
     val total     = uiState.todos.size
     val doneCount = doneTodos.size
@@ -214,6 +225,29 @@ fun ListenDetailScreen(
                     }
                 }
             }
+            // Summe der offenen Anschaffungen. Einträge ohne Preis zählen nicht
+            // mit, deshalb steht daneben, wie viele davon noch keinen haben.
+            if (purchase && openTodos.isNotEmpty()) {
+                item {
+                    val total = openTodos.sumOf { it.price ?: 0.0 }
+                    val missing = openTodos.count { it.price == null }
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 8.dp)) {
+                        Text(
+                            text = stringResource(R.string.purchase_total, formatPrice(total)),
+                            fontSize = 20.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (missing > 0) {
+                            Text(
+                                text = pluralStringResource(R.plurals.purchase_without_price, missing, missing),
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
             // Section Aufgaben
             item { SectionLabel(stringResource(R.string.title_tasks)) }
             if (openTodos.isEmpty() && doneTodos.isEmpty()) {
@@ -254,6 +288,7 @@ fun ListenDetailScreen(
                         listColor = listColor,
                         simple    = checklist,
                         shopping  = false,
+                        purchase  = purchase,
                         onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
                         onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() },
                         onClick   = { haptic.tick(); onOpenTask(todo) }
@@ -296,6 +331,7 @@ fun ListenDetailScreen(
                         listColor = listColor,
                         simple    = mode.isSimple,
                         shopping  = shopping,
+                        purchase  = purchase,
                         onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
                         onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() },
                         onClick   = { haptic.tick(); onOpenTask(todo) }
@@ -688,6 +724,8 @@ private fun DetailTaskRow(
     simple   : Boolean = false,
     /** Zusätzlich mit Mengenangabe – nur beim Einkaufen. */
     shopping : Boolean = false,
+    /** Zusätzlich mit Preis – nur bei Anschaffungen. */
+    purchase : Boolean = false,
     onToggle : () -> Unit,
     onDelete : () -> Unit,
     onClick  : () -> Unit = {},
@@ -727,6 +765,13 @@ private fun DetailTaskRow(
                 color          = if (todo.isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                 textDecoration = if (todo.isDone) TextDecoration.LineThrough else TextDecoration.None,
                 lineHeight     = 20.sp
+            )
+        }
+        if (purchase && todo.price != null) {
+            Text(
+                text     = formatPrice(todo.price),
+                fontSize = 13.sp,
+                color    = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         if (shopping && todo.quantity.isNotBlank()) {
