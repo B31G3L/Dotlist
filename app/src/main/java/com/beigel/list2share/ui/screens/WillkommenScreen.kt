@@ -119,7 +119,7 @@ fun WillkommenScreen(
                     // Beim Onboarding gibt es praktisch nie lokale Listen – der Aufruf
                     // ist trotzdem da, damit die Regel "mit Google alles in der Cloud"
                     // nicht von dieser Annahme abhängt.
-                    CloudMigration.start(context, result.uid)
+                    CloudMigration.check(context, result.uid)
                     onDone(displayName)
                 }
                 else -> onDone(displayName)

@@ -159,7 +159,7 @@ class MainActivity : ComponentActivity() {
                         // Mit Google-Konto: noch lokal liegende Listen in die Cloud
                         // übernehmen. Setzt auch eine unterbrochene Migration fort.
                         LaunchedEffect(currentUid) {
-                            CloudMigration.start(this@MainActivity, currentUid)
+                            CloudMigration.check(this@MainActivity, currentUid)
                         }
                         MainScreen(repository = repository, deviceId = currentUid)
                     }

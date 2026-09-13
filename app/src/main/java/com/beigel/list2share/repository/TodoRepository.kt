@@ -433,11 +433,18 @@ class TodoRepository(
      * erhalten und wird beim nächsten Aufruf erneut versucht, die übrigen
      * werden trotzdem migriert.
      *
+     * @param ids Nur diese Listen werden übernommen – der Nutzer hat beim
+     *            Anmelden ausgewählt, was in die Cloud soll.
      * @return Anzahl der erfolgreich überführten Listen.
      */
-    suspend fun migrateLocalListsToCloud(creatorName: String): Int {
+    /** Einmaliger Schnappschuss der rein lokalen Listen. */
+    suspend fun localListsOnce(): List<TodoList> =
+        listDao.getListsOnce().map { it.toTodoList() }
+
+    suspend fun migrateLocalListsToCloud(creatorName: String, ids: Set<String>): Int {
         var migrated = 0
         for (entity in listDao.getListsOnce()) {
+            if (entity.id !in ids) continue
             // Abmeldung oder Kontowechsel während der Migration: sofort aufhören.
             if (!syncAllLists()) break
             try {

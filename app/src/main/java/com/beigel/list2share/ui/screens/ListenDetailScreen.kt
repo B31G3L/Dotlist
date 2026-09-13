@@ -41,6 +41,7 @@ import android.util.Log
 import android.widget.Toast
 import com.beigel.list2share.R
 import com.beigel.list2share.data.ListMode
+import com.beigel.list2share.data.MigrationPreferences
 import com.beigel.list2share.data.activityOf
 import com.beigel.list2share.data.departmentFor
 import com.beigel.list2share.data.formatWhen
@@ -441,9 +442,13 @@ fun ListenDetailScreen(
                     )
                 }
                 // ── Cloud-Teilen-Regler ────────────────────────────────────
-                // Mit Google-Konto liegt jede Liste in der Cloud – der Regler
-                // hätte dann nichts mehr umzuschalten.
-                if (canManage && !AuthManager.isSignedInWithGoogle) {
+                /*
+                 * Der Regler gilt jetzt auch mit Google-Konto, solange die Liste
+                 * noch lokal ist: wer die Übernahme beim Anmelden abgelehnt hat,
+                 * kann sie hier nachholen. Für bereits geteilte Listen bleibt er
+                 * aus, denn zurückholen geht mit Konto nicht (siehe unshareList).
+                 */
+                if (canManage && (!AuthManager.isSignedInWithGoogle || !listIsShared)) {
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .padding(horizontal = 24.dp, vertical = 10.dp),
@@ -474,6 +479,9 @@ fun ListenDetailScreen(
                                     scope.launch {
                                         try {
                                             repository.shareList(list, DeviceIdManager.getDeviceName(context))
+                                            // Die Liste ist jetzt in der Cloud – eine früher
+                                            // abgelehnte Übernahme ist damit erledigt.
+                                            MigrationPreferences.removeDeclined(context, list.id)
                                             listIsShared = true
                                         } catch (e: Exception) {
                                             snackbarHostState.showSnackbar(context.getString(R.string.error_unknown))

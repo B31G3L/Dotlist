@@ -175,7 +175,7 @@
     <string name="action_link_google">Mit Google verknüpfen</string>
     <string name="sign_out_hint">Nach dem Abmelden kannst du dich mit demselben Google-Konto wieder anmelden und behältst Zugriff auf deine Listen.</string>
     <string name="dialog_sign_out_title">Abmelden?</string>
-    <string name="dialog_sign_out_message">Du wirst abgemeldet und die App startet neu. Mit demselben Google-Konto kommst du wieder rein.</string>
+    <string name="dialog_sign_out_message">Synchronisierte Listen verschwinden von diesem Gerät, bleiben aber in deinem Konto – nach dem nächsten Anmelden sind sie wieder da. Rein lokale Listen bleiben erhalten.</string>
 
     <!-- ===================== ListeErstellenScreen (Liste erstellen) ===================== -->
     <string name="title_new_list">Neue Liste</string>
@@ -374,4 +374,10 @@
     <string name="action_hide_activity">Verlauf ausblenden</string>
     <string name="activity_done_by">%1$s hat %2$s abgehakt</string>
     <string name="activity_done">%1$s abgehakt</string>
+
+    <!-- Uebernahme beim Anmelden -->
+    <string name="migration_title">Listen in die Cloud übernehmen?</string>
+    <string name="migration_message">Diese Listen liegen nur auf diesem Gerät. Ausgewählte werden in deinem Konto gesichert und lassen sich teilen.</string>
+    <string name="migration_confirm">Ausgewählte übernehmen</string>
+    <string name="migration_keep_all_local">Alle lokal lassen</string>
 </resources>

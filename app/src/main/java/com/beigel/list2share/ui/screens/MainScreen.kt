@@ -48,6 +48,7 @@ import com.beigel.list2share.data.TodoItem
 import com.beigel.list2share.data.TodoList
 import com.beigel.list2share.notifications.LocalNotifier
 import com.beigel.list2share.SharedText
+import com.beigel.list2share.repository.CloudMigration
 import com.beigel.list2share.notifications.NotificationRoute
 import com.beigel.list2share.repository.TodoRepository
 import com.beigel.list2share.utils.HapticFeedback
@@ -190,6 +191,23 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
             listsViewModel.setLastList(list.id)
         }
         NotificationRoute.consume()
+    }
+
+    // Nach dem Anmelden: fragen, welche lokalen Listen in die Cloud sollen.
+    val pendingMigration by CloudMigration.pending.collectAsStateWithLifecycle()
+    if (pendingMigration.isNotEmpty()) {
+        MigrationSheet(
+            lists     = pendingMigration,
+            onConfirm = { selected ->
+                CloudMigration.migrate(context, deviceId, selected)
+                CloudMigration.decline(context, pendingMigration.map { it.id }.toSet() - selected)
+            },
+            onDismiss = {
+                // Wegwischen heißt nicht „nein für immer": beim nächsten Start
+                // wird erneut gefragt.
+                CloudMigration.dismiss()
+            }
+        )
     }
 
     // Aus einer anderen App geteilter Text: erst fragen, in welche Liste.
@@ -487,6 +505,77 @@ private fun SharedTextSheet(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+
+/**
+ * Auswahl, welche lokalen Listen beim Anmelden in die Cloud sollen.
+ *
+ * Alles vorausgewählt, weil das der übliche Wunsch ist – aber abwählbar:
+ * wer die App bewusst ohne Konto benutzt hat, will vielleicht nicht jede
+ * Liste auf einem Server haben.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MigrationSheet(
+    lists    : List<TodoList>,
+    onConfirm: (Set<String>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var selected by remember(lists) { mutableStateOf(lists.map { it.id }.toSet()) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+            Text(
+                text       = stringResource(R.string.migration_title),
+                fontSize   = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color      = MaterialTheme.colorScheme.onSurface,
+                modifier   = Modifier.padding(horizontal = 22.dp, vertical = 4.dp)
+            )
+            Text(
+                text     = stringResource(R.string.migration_message),
+                fontSize = 14.sp,
+                color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 22.dp).padding(bottom = 12.dp)
+            )
+
+            lists.forEach { list ->
+                val checked = list.id in selected
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            selected = if (checked) selected - list.id else selected + list.id
+                        }
+                        .padding(horizontal = 22.dp, vertical = 10.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Checkbox(checked = checked, onCheckedChange = null)
+                    Text(
+                        text     = list.name,
+                        fontSize = 15.sp,
+                        color    = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = { onConfirm(emptySet()) }) {
+                    Text(stringResource(R.string.migration_keep_all_local))
+                }
+                TextButton(onClick = { onConfirm(selected) }) {
+                    Text(stringResource(R.string.migration_confirm))
                 }
             }
         }

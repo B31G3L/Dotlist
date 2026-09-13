@@ -77,7 +77,7 @@ fun KontoScreen(
                 haptic.click()
                 // UID bleibt gleich, die Activity wird also nicht neu erzeugt –
                 // die lokalen Listen müssen hier explizit in die Cloud.
-                CloudMigration.start(context, result.uid)
+                CloudMigration.check(context, result.uid)
             }
 
             is GoogleAuthResult.SwitchedAccount -> {

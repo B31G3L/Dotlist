@@ -179,7 +179,7 @@
     <string name="action_link_google">Link Google account</string>
     <string name="sign_out_hint">After signing out, you can sign back in with the same Google account and keep access to your lists.</string>
     <string name="dialog_sign_out_title">Sign out?</string>
-    <string name="dialog_sign_out_message">You\'ll be signed out and the app will restart. You can get back in with the same Google account.</string>
+    <string name="dialog_sign_out_message">Synced lists disappear from this device but stay in your account – they are back after signing in again. Lists that are only on this device stay.</string>
 
     <!-- ===================== ListeErstellenScreen (create list) ===================== -->
     <string name="title_new_list">New list</string>
@@ -380,4 +380,10 @@
     <string name="action_hide_activity">Hide activity</string>
     <string name="activity_done_by">%1$s completed %2$s</string>
     <string name="activity_done">%1$s completed</string>
+
+    <!-- Uebernahme beim Anmelden -->
+    <string name="migration_title">Move lists to the cloud?</string>
+    <string name="migration_message">These lists are only on this device. Selected ones are backed up to your account and can be shared.</string>
+    <string name="migration_confirm">Move selected</string>
+    <string name="migration_keep_all_local">Keep all local</string>
 </resources>
