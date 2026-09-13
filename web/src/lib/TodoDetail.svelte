@@ -10,7 +10,14 @@
     updateTodo,
     type TodoEdit,
   } from "./lists.svelte";
-  import type { Priority, Recurrence, RecurrenceUnit, TodoItem, TodoList } from "./types";
+  import {
+    isSimpleMode,
+    type Priority,
+    type Recurrence,
+    type RecurrenceUnit,
+    type TodoItem,
+    type TodoList,
+  } from "./types";
 
   interface Props {
     list: TodoList;
@@ -87,6 +94,11 @@
    * auf Aufgaben umgestellt wird.
    */
   const shopping = $derived(list.mode === "EINKAUFEN");
+  /**
+   * Einkaufen und Checkliste kommen ohne Priorität, Zuständigkeit, Termine und
+   * Wiederholung aus. Die Mengenangabe gibt es nur beim Einkaufen.
+   */
+  const simple = $derived(isSimpleMode(list.mode));
 
   const members = $derived(
     list.memberIds.map((id) => ({ id, name: list.memberNames[id] ?? "Unbekannt" }))
@@ -172,7 +184,7 @@
     <textarea class="text-field" rows="3" bind:value={description}></textarea>
   </label>
 
-  {#if !shopping}
+  {#if !simple}
   <div class="row">
     <label class="field">
       <span>Priorität</span>

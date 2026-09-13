@@ -20,11 +20,21 @@ export type Priority = "NIEDRIG" | "MITTEL" | "HOCH";
  * Art der Liste.
  *
  * AUFGABEN ist der Standard und der Rückfall für alles, was das Feld noch
- * nicht kennt. EINKAUFEN blendet Priorität, Zuständigkeit, Fälligkeit und
- * Erinnerung aus und zeigt stattdessen Mengen und eine Gliederung nach
- * Abteilungen.
+ * nicht kennt.
+ *
+ * EINKAUFEN blendet Priorität, Zuständigkeit, Fälligkeit und Erinnerung aus
+ * und zeigt stattdessen Mengen und eine Gliederung nach Abteilungen.
+ *
+ * CHECKLISTE ist für Listen, die immer wieder abgearbeitet werden – Packliste,
+ * Putzplan. Wie EINKAUFEN ohne Termine und Prioritäten, aber in fester
+ * Reihenfolge und mit „Alle zurücksetzen" statt „Erledigte löschen".
  */
-export type ListMode = "AUFGABEN" | "EINKAUFEN";
+export type ListMode = "AUFGABEN" | "EINKAUFEN" | "CHECKLISTE";
+
+/** Modi ohne Priorität, Zuständigkeit, Termine und Wiederholung. */
+export function isSimpleMode(mode: ListMode): boolean {
+  return mode !== "AUFGABEN";
+}
 
 export type RecurrenceUnit = "TAG" | "WOCHE" | "MONAT" | "JAHR";
 

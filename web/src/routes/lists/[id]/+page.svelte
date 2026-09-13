@@ -9,6 +9,7 @@
     createTodo,
     deleteDoneTodos,
     reorderTodos,
+    resetAllTodos,
     setTodoDone,
   } from "$lib/lists.svelte";
   import { DEPARTMENT_LABELS, DEPARTMENT_ORDER, departmentFor } from "$lib/departments";
@@ -53,6 +54,9 @@
   const selected = $derived(todos?.items.find((t) => t.id === selectedId) ?? null);
   const actorName = $derived(list && auth.uid ? (list.memberNames[auth.uid] ?? "") : "");
   const shopping = $derived(list?.mode === "EINKAUFEN");
+  const checklist = $derived(list?.mode === "CHECKLISTE");
+  /** Modi ohne Priorität, Zuständigkeit, Termine und Wiederholung. */
+  const simple = $derived(shopping || checklist);
   const open = $derived(todos?.items.filter((t) => !t.isDone) ?? []);
 
   /**
@@ -107,6 +111,14 @@
     const [moved] = items.splice(from, 1);
     items.splice(to, 0, moved);
     return reorderTodos(listId, items);
+  }
+
+  async function resetAll() {
+    if (!todos) return;
+    const count = todos.items.filter((t) => t.isDone).length;
+    if (count === 0) return;
+    if (!confirm(`Alle ${count} Haken entfernen?`)) return;
+    await resetAllTodos(listId, todos.items);
   }
 
   async function clearDone() {
@@ -185,12 +197,20 @@
   {:else}
     <ul>
       {#each open as todo (todo.id)}
+        <!-- Checklisten bleiben sortierbar: bei einer Packliste ist die
+             Reihenfolge der halbe Sinn. Nur im Einkaufsmodus entfällt das,
+             dort sortiert die Abteilung. -->
         {@render row(todo, !shopping)}
       {/each}
     </ul>
 
     {#if done.length > 0}
-      <h2>Erledigt</h2>
+      <div class="done-header">
+        <h2>Erledigt</h2>
+        {#if checklist}
+          <button class="text-button" onclick={resetAll}>Alle zurücksetzen</button>
+        {/if}
+      </div>
       <ul class="done-list">
         {#each done as todo (todo.id)}
           {@render row(todo, false)}
@@ -221,24 +241,24 @@
       <input type="checkbox" checked={todo.isDone} onchange={() => toggle(todo)} />
       <span class="title">{todo.title}</span>
     </label>
-    {#if todo.quantity}
+    {#if shopping && todo.quantity}
       <span class="quantity">{todo.quantity}</span>
     {/if}
-    {#if !shopping && formatDue(todo)}
+    {#if !simple && formatDue(todo)}
       <span class="due">{formatDue(todo)}</span>
     {/if}
-    {#if !shopping && todo.recurrence}
+    {#if !simple && todo.recurrence}
       <span class="repeat" title="Wiederholt sich">↻</span>
     {/if}
-    {#if !shopping && todo.priority === "HOCH"}
+    {#if !simple && todo.priority === "HOCH"}
       <span class="priority">Hoch</span>
     {/if}
-    {#if !shopping && todo.subtasks.length > 0}
+    {#if !simple && todo.subtasks.length > 0}
       <span class="subtasks">
         {todo.subtasks.filter((s) => s.isDone).length}/{todo.subtasks.length}
       </span>
     {/if}
-    {#if !shopping && todo.assignedTo}
+    {#if !simple && todo.assignedTo}
       <span class="assignee">{list?.memberNames[todo.assignedTo] ?? "?"}</span>
     {/if}
     <button

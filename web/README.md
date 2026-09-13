@@ -60,10 +60,13 @@ Termin am geplanten Datum oder am Abhaken hängt, und optional Rotation der
 Zuständigkeit. Die Folgeaufgabe legt die Cloud Function an.
 
 Listen haben einen Modus, wählbar beim Anlegen und später umstellbar.
-`EINKAUFEN` blendet Priorität, Zuständigkeit, Termine und Wiederholung aus,
-zeigt stattdessen eine Mengenangabe, gliedert nach Abteilungen und bietet
-"Erledigte löschen". Die Zuordnung Begriff zu Abteilung steht in
-`src/lib/departments.ts` – eine Liste im Code, kein Dienst.
+`EINKAUFEN` zeigt eine Mengenangabe, gliedert nach Abteilungen und bietet
+"Erledigte löschen"; die Zuordnung Begriff zu Abteilung steht in
+`src/lib/departments.ts` – eine Liste im Code, kein Dienst. `CHECKLISTE`
+behält die feste Reihenfolge und bietet "Alle zurücksetzen", damit sich
+eine Packliste wiederverwenden lässt. Beide blenden Priorität,
+Zuständigkeit, Termine und Wiederholung aus, ohne gesetzte Werte zu
+löschen.
 
 Fehlt noch: Anzeige, wenn gerade offline gearbeitet wird. Sortieren geht
 nur mit Maus oder Touch, nicht per Tastatur.

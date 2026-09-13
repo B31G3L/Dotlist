@@ -61,7 +61,10 @@ function normalizeList(id: string, data: Record<string, unknown>): TodoList {
     id,
     adminIds: Array.isArray(data.adminIds) ? (data.adminIds as string[]) : [],
     mutedBy: Array.isArray(data.mutedBy) ? (data.mutedBy as string[]) : [],
-    mode: data.mode === "EINKAUFEN" ? "EINKAUFEN" : "AUFGABEN",
+    mode:
+      data.mode === "EINKAUFEN" || data.mode === "CHECKLISTE"
+        ? (data.mode as ListMode)
+        : "AUFGABEN",
   };
 }
 
@@ -370,4 +373,29 @@ export async function deleteDoneTodos(listId: string, todos: TodoItem[]): Promis
 /** Modus einer bestehenden Liste umstellen. */
 export async function setListMode(listId: string, mode: ListMode): Promise<void> {
   await updateDoc(doc(db(), "lists", listId), { mode });
+}
+
+/**
+ * Alle Aufgaben einer Liste wieder auf offen setzen.
+ *
+ * Für Checklisten: eine Packliste ist nach der Reise abgehakt und soll vor der
+ * nächsten wieder vollständig dastehen. Unteraufgaben werden mit
+ * zurückgesetzt, sonst bliebe die Hälfte der Haken stehen.
+ */
+export async function resetAllTodos(listId: string, todos: TodoItem[]): Promise<number> {
+  const affected = todos.filter((t) => t.isDone || t.subtasks.some((s) => s.isDone));
+
+  for (let i = 0; i < affected.length; i += 400) {
+    const batch = writeBatch(db());
+    for (const todo of affected.slice(i, i + 400)) {
+      batch.update(doc(db(), "lists", listId, "todos", todo.id), {
+        isDone: false,
+        doneBy: null,
+        doneAt: null,
+        subtasks: todo.subtasks.map((s) => ({ ...s, isDone: false })),
+      });
+    }
+    await batch.commit();
+  }
+  return affected.length;
 }

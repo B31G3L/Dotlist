@@ -70,6 +70,7 @@
     <select class="text-field mode" bind:value={newListMode} aria-label="Art der Liste">
       <option value="AUFGABEN">Aufgaben</option>
       <option value="EINKAUFEN">Einkaufen</option>
+      <option value="CHECKLISTE">Checkliste</option>
     </select>
     <button class="filled-button" disabled={!newListName.trim() || creating}>Anlegen</button>
   </form>
@@ -87,8 +88,10 @@
           <a href={`/lists/${list.id}`} style={`--accent: ${list.color}`}>
             <span class="dot"></span>
             <span class="name">{list.name}</span>
-            {#if list.mode === "EINKAUFEN"}
-              <span class="members">Einkaufen</span>
+            {#if list.mode !== "AUFGABEN"}
+              <span class="members">
+                {list.mode === "EINKAUFEN" ? "Einkaufen" : "Checkliste"}
+              </span>
             {/if}
             {#if list.memberIds.length > 1}
               <span class="members">{list.memberIds.length} Mitglieder</span>

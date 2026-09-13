@@ -106,11 +106,13 @@
       >
         <option value="AUFGABEN">Aufgaben</option>
         <option value="EINKAUFEN">Einkaufen</option>
+        <option value="CHECKLISTE">Checkliste</option>
       </select>
     </label>
     <p class="muted">
-      Einkaufen blendet Priorität, Zuständigkeit und Termine aus und sortiert nach Abteilungen.
-      Bereits gesetzte Werte bleiben erhalten.
+      Einkaufen sortiert nach Abteilungen und zeigt Mengen, Checkliste lässt sich nach dem
+      Abarbeiten komplett zurücksetzen. Beide blenden Priorität, Zuständigkeit und Termine
+      aus; bereits gesetzte Werte bleiben erhalten.
     </p>
   {/if}
 
