@@ -1,7 +1,6 @@
 package com.beigel.list2share.ui.screens
 
 import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.net.toUri
@@ -486,7 +485,7 @@ fun AufgabeDetailScreen(
                         if (link.isNotBlank()) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                             DetailClickRow(
-                                icon    = Icons.Default.Search,
+                                icon    = Icons.Default.KeyboardArrowRight,
                                 label   = stringResource(R.string.action_open_link),
                                 value   = "",
                                 onClick = { openLink(context, link) }
