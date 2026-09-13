@@ -25,6 +25,50 @@
   let selectedId = $state<string | null>(null);
   let draggedId = $state<string | null>(null);
 
+  /**
+   * Tastaturbedienung.
+   *
+   * Pfeiltasten wandern zwischen den Zeilen, die Leertaste hakt ab (das macht
+   * die Checkbox von selbst), "n" springt ins Eingabefeld.
+   *
+   * Umgesetzt über den Fokus statt über eine eigene Auswahl: so bleibt die
+   * Bedienung dieselbe wie mit Tab, und Screenreader lesen ohnehin das
+   * fokussierte Element vor. Der Handler hängt am Fenster statt an den
+   * Listen – ein keydown auf einem <ul> wäre für Screenreader ein Versprechen,
+   * das das Element nicht einlösen kann.
+   */
+  function onGlobalKeydown(event: KeyboardEvent) {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const target = event.target as HTMLElement | null;
+
+    // Pfeiltasten wandern zwischen den Zeilen – aber nur, wenn der Fokus auch
+    // in einer steht. Sonst wäre das normale Scrollen der Seite blockiert.
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      const row = target?.closest("li");
+      const list = row?.parentElement;
+      if (!row || !list) return;
+
+      const rows = Array.from(list.querySelectorAll<HTMLElement>(":scope > li"));
+      const index = rows.indexOf(row as HTMLElement);
+      const next = rows[index + (event.key === "ArrowDown" ? 1 : -1)];
+      if (!next) return;
+
+      event.preventDefault();
+      next.querySelector<HTMLElement>('input[type="checkbox"]')?.focus();
+      return;
+    }
+
+    // Beim Tippen nicht dazwischenfunken.
+    if (target?.closest("input, textarea, select")) return;
+
+    if (event.key === "n") {
+      event.preventDefault();
+      titleInput?.focus();
+    }
+  }
+
+  let titleInput = $state<HTMLInputElement | null>(null);
+
   // Die Liste selbst kommt aus derselben Abfrage wie die Übersicht: ein
   // direkter Zugriff auf lists/{id} wäre eine zweite Verbindung für Daten,
   // die ohnehin schon im Cache liegen.
@@ -181,6 +225,8 @@
   }
 </script>
 
+<svelte:window onkeydown={onGlobalKeydown} />
+
 {#if !auth.loading && !auth.user}
   <p class="muted">Bitte zuerst <a href="/">anmelden</a>.</p>
 {:else}
@@ -189,6 +235,7 @@
   <form onsubmit={addTodo}>
     <input
       class="text-field"
+      bind:this={titleInput}
       bind:value={newTitle}
       placeholder="Neue Aufgabe"
       aria-label="Titel der neuen Aufgabe"

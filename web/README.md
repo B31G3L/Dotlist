@@ -74,8 +74,13 @@ Zuständigkeit, Termine und Wiederholung aus, ohne gesetzte Werte zu
 löschen. `ANSCHAFFUNG` ist für größere Käufe: Preis und Link pro Eintrag,
 Sortierung nach Priorität und die Summe der offenen Posten oben.
 
-Fehlt noch: Anzeige, wenn gerade offline gearbeitet wird. Sortieren geht
-nur mit Maus oder Touch, nicht per Tastatur.
+Benachrichtigungen liegen unter `/benachrichtigungen`, mit Zähler im Kopf
+und "Alle als gelesen". Ist der Browser offline, erscheint ein Hinweis –
+Änderungen laufen dann in den Firestore-Cache und gehen später raus.
+Tastatur: Pfeiltasten zwischen den Zeilen, Leertaste hakt ab, "n" springt
+ins Eingabefeld.
+
+Fehlt noch: Sortieren geht nur mit Maus oder Touch, nicht per Tastatur.
 
 Verlässt die letzte Person eine Liste, bleibt sie im Web als verwaistes
 Dokument zurück. Die App löscht sie in diesem Fall; vom Web aus ist das
