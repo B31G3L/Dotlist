@@ -45,12 +45,14 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Läuft die App schon, liefert Android den Tap auf eine Benachrichtigung
-     * hier ab statt in onCreate – die Activity ist als singleTop deklariert.
+     * oder einen geteilten Text hier ab statt in onCreate – die Activity ist
+     * als singleTop deklariert.
      */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         NotificationRoute.submit(intent)
+        SharedText.submit(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,6 +61,9 @@ class MainActivity : ComponentActivity() {
         // Wurde die App über eine Benachrichtigung geöffnet, steckt das Ziel
         // im Start-Intent. MainScreen springt dorthin, sobald die Listen da sind.
         NotificationRoute.submit(intent)
+        // Aus einer anderen App geteilter Text: MainScreen fragt, in welche
+        // Liste er soll, sobald die Listen geladen sind.
+        SharedText.submit(intent)
 
         // enableEdgeToEdge() setzt decorFitsSystemWindows selbst und macht die
         // Systemleisten auch auf Geraeten vor Android 15 transparent. Ein

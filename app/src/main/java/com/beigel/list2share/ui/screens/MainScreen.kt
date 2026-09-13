@@ -6,7 +6,17 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -21,7 +31,13 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,12 +47,16 @@ import com.beigel.list2share.data.NotificationPreferences
 import com.beigel.list2share.data.TodoItem
 import com.beigel.list2share.data.TodoList
 import com.beigel.list2share.notifications.LocalNotifier
+import com.beigel.list2share.SharedText
 import com.beigel.list2share.notifications.NotificationRoute
 import com.beigel.list2share.repository.TodoRepository
 import com.beigel.list2share.utils.HapticFeedback
 import com.beigel.list2share.viewmodel.ListsViewModel
 import com.beigel.list2share.viewmodel.NotificationsViewModel
 import kotlin.collections.find
+import android.util.Log
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
 
@@ -162,6 +182,30 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
             listsViewModel.setLastList(list.id)
         }
         NotificationRoute.consume()
+    }
+
+    // Aus einer anderen App geteilter Text: erst fragen, in welche Liste.
+    val shareScope = rememberCoroutineScope()
+    val pendingShare by SharedText.pending.collectAsStateWithLifecycle()
+    if (pendingShare != null && !listsUiState.isLoading) {
+        SharedTextSheet(
+            share    = pendingShare!!,
+            lists    = listsUiState.lists,
+            onDismiss = { SharedText.consume() },
+            onPick   = { list ->
+                val share = pendingShare!!
+                SharedText.consume()
+                shareScope.launch {
+                    try {
+                        repository.addTodo(list.id, share.title, share.description)
+                    } catch (e: Exception) {
+                        Log.w("MainScreen", "Geteilter Text nicht übernommen", e)
+                    }
+                }
+                screen = AppScreen.ListenDetail(list)
+                listsViewModel.setLastList(list.id)
+            }
+        )
     }
 
     // Back-Handler für Sub-Screens
@@ -369,6 +413,74 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
             // Aufgaben/Listen/Kalender/Profil werden weiter oben im HorizontalPager
             // gerendert (mit return@Scaffold abgefangen) – hier nie erreicht.
             else -> {}
+        }
+    }
+}
+/**
+ * Auswahl, in welche Liste ein von außen geteilter Text soll.
+ *
+ * Bewusst ein Sheet über der laufenden App statt eines eigenen Screens: der
+ * Vorgang ist kurz, und nach der Auswahl landet man ohnehin in der Liste.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SharedTextSheet(
+    share    : SharedText.Pending,
+    lists    : List<TodoList>,
+    onDismiss: () -> Unit,
+    onPick   : (TodoList) -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+            Text(
+                text     = stringResource(R.string.share_target_title),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color    = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp)
+            )
+            Text(
+                text     = share.title,
+                fontSize = 14.sp,
+                color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 22.dp).padding(bottom = 12.dp)
+            )
+
+            if (lists.isEmpty()) {
+                // Ohne Liste gibt es kein Ziel – hier nur erklären, nicht
+                // nebenbei eine Liste anlegen.
+                Text(
+                    text     = stringResource(R.string.share_target_no_lists),
+                    fontSize = 14.sp,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
+                )
+            } else {
+                lists.forEach { list ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(list) }
+                            .padding(horizontal = 22.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Box(
+                            Modifier.size(10.dp).clip(CircleShape)
+                                .background(listColor(list.color))
+                        )
+                        Text(
+                            text     = list.name,
+                            fontSize = 15.sp,
+                            color    = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
         }
     }
 }

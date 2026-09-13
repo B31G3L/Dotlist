@@ -364,6 +364,10 @@
     <string name="department_household">Haushalt &amp; Drogerie</string>
     <string name="department_other">Sonstiges</string>
 
+    <!-- Geteilter Text -->
+    <string name="share_target_title">In welche Liste?</string>
+    <string name="share_target_no_lists">Leg zuerst eine Liste an, dann kannst du geteilten Text darin ablegen.</string>
+
     <!-- Verlauf -->
     <string name="action_show_activity">Verlauf anzeigen</string>
     <string name="action_hide_activity">Verlauf ausblenden</string>

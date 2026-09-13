@@ -370,6 +370,10 @@
     <string name="department_household">Household &amp; toiletries</string>
     <string name="department_other">Other</string>
 
+    <!-- Geteilter Text -->
+    <string name="share_target_title">Add to which list?</string>
+    <string name="share_target_no_lists">Create a list first, then you can add shared text to it.</string>
+
     <!-- Verlauf -->
     <string name="action_show_activity">Show activity</string>
     <string name="action_hide_activity">Hide activity</string>
