@@ -340,8 +340,9 @@
     <string name="invite_link" translatable="false">https://dotlist-83d5c.web.app/join/%1$s</string>
 
     <!-- Einkaufsmodus -->
-    <string name="action_mode_to_shopping">Use as shopping list</string>
-    <string name="action_mode_to_tasks">Use as task list</string>
+    <string name="list_mode_checklist">Checklist</string>
+    <string name="action_mode_switch">Use as %1$s</string>
+    <string name="action_reset_all">Reset all</string>
     <string name="section_list_mode">List type</string>
     <string name="list_mode_tasks">Tasks</string>
     <string name="list_mode_shopping">Shopping</string>

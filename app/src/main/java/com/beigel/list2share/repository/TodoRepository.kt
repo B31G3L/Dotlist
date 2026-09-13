@@ -26,6 +26,7 @@ import com.beigel.list2share.data.local.LocalTodoEntity
 import com.beigel.list2share.data.local.toComments
 import com.beigel.list2share.data.local.toJson
 import com.beigel.list2share.data.local.toLocalEntity
+import com.beigel.list2share.data.local.toSubtasks
 import com.beigel.list2share.data.local.toTodoItem
 import com.beigel.list2share.data.local.toTodoList
 import com.beigel.list2share.data.Priority
@@ -124,6 +125,15 @@ class TodoRepository(
         refs.chunked(BATCH_LIMIT).forEach { chunk ->
             val batch = db.batch()
             chunk.forEach { batch.delete(it) }
+            batch.commit().await()
+        }
+    }
+
+    /** Aktualisiert einzelne Felder beliebig vieler Dokumente in Blöcken. */
+    private suspend fun updateInChunks(items: List<Pair<DocumentReference, Map<String, Any?>>>) {
+        items.chunked(BATCH_LIMIT).forEach { chunk ->
+            val batch = db.batch()
+            chunk.forEach { (ref, values) -> batch.update(ref, values) }
             batch.commit().await()
         }
     }
@@ -826,6 +836,48 @@ class TodoRepository(
             position = nextRemotePosition(listId)
         )
         todosRef(listId).add(todo).await()
+    }
+
+    /**
+     * Alle Todos einer Liste wieder auf offen setzen.
+     *
+     * Für Checklisten: eine Packliste ist nach der Reise abgehakt und soll vor
+     * der nächsten wieder vollständig dastehen. Unteraufgaben werden mit
+     * zurückgesetzt, sonst bliebe die Hälfte der Haken stehen.
+     *
+     * @return Anzahl der zurückgesetzten Einträge.
+     */
+    suspend fun resetAllTodos(listId: String): Int {
+        if (isLocalList(listId)) {
+            val affected = todoDao.getTodosOnce(listId)
+                .filter { it.isDone || it.subtasksJson.contains("\"isDone\":true") }
+            affected.forEach { entity ->
+                todoDao.updateTodo(
+                    entity.copy(
+                        isDone = false,
+                        doneBy = null,
+                        doneAt = null,
+                        subtasksJson = entity.subtasksJson.toSubtasks()
+                            .map { it.copy(isDone = false) }.toJson()
+                    )
+                )
+            }
+            return affected.size
+        }
+
+        val snapshot = todosRef(listId).get().await()
+        val updates = snapshot.documents.mapNotNull { doc ->
+            val todo = doc.toObject(TodoItem::class.java) ?: return@mapNotNull null
+            if (!todo.isDone && todo.subtasks.none { it.isDone }) return@mapNotNull null
+            doc.reference to mapOf(
+                "isDone" to false,
+                "doneBy" to null,
+                "doneAt" to null,
+                "subtasks" to todo.subtasks.map { it.copy(isDone = false) },
+            )
+        }
+        updateInChunks(updates)
+        return updates.size
     }
 
     /**

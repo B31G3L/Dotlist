@@ -50,14 +50,28 @@ data class TodoList(
  *
  * EINKAUFEN blendet Priorität, Zuständigkeit, Fälligkeit, Erinnerung und
  * Wiederholung aus und zeigt stattdessen eine Mengenangabe sowie eine
- * Gliederung nach Abteilungen. Gesetzte Werte bleiben im Dokument stehen,
- * ein Umschalten verliert also nichts.
+ * Gliederung nach Abteilungen.
+ *
+ * CHECKLISTE ist für Listen, die immer wieder abgearbeitet werden – Packliste,
+ * Putzplan. Ebenfalls ohne Termine und Prioritäten, aber in fester Reihenfolge
+ * und mit „Alle zurücksetzen" statt „Erledigte löschen".
+ *
+ * Gesetzte Werte bleiben in jedem Fall im Dokument stehen, ein Umschalten
+ * verliert also nichts.
  */
-enum class ListMode { AUFGABEN, EINKAUFEN }
+enum class ListMode(val labelRes: Int) {
+    AUFGABEN(R.string.list_mode_tasks),
+    EINKAUFEN(R.string.list_mode_shopping),
+    CHECKLISTE(R.string.list_mode_checklist),
+}
 
 /** Modus einer Liste, unbekannte oder fehlende Werte gelten als AUFGABEN. */
 val TodoList.listMode: ListMode
     get() = runCatching { ListMode.valueOf(mode) }.getOrDefault(ListMode.AUFGABEN)
+
+/** Modi ohne Priorität, Zuständigkeit, Termine und Wiederholung. */
+val ListMode.isSimple: Boolean
+    get() = this != ListMode.AUFGABEN
 
 /**
  * Rolle eines Mitglieds innerhalb einer Liste.

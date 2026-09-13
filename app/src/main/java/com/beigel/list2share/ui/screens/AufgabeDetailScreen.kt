@@ -58,6 +58,7 @@ import com.beigel.list2share.viewmodel.TodosViewModel
 import com.beigel.list2share.data.DeviceIdManager
 import com.beigel.list2share.data.ListMode
 import com.beigel.list2share.data.Recurrence
+import com.beigel.list2share.data.isSimple
 import com.beigel.list2share.data.listMode
 import com.beigel.list2share.data.RecurrenceAnchor
 import com.beigel.list2share.data.RecurrenceUnit
@@ -188,6 +189,8 @@ fun AufgabeDetailScreen(
     // Wiederholung aus der Ansicht. Gesetzte Werte werden nicht gelöscht –
     // sie stehen weiter im Dokument, falls die Liste wieder umgestellt wird.
     val shopping = list.listMode == ListMode.EINKAUFEN
+    /** Einkaufen und Checkliste kommen ohne Termine und Prioritäten aus. */
+    val simple = list.listMode.isSimple
     var rotateAmong     by remember(liveTodo.id) { mutableStateOf(liveTodo.rotateAmong) }
 
     var showNewSubtaskField by remember { mutableStateOf(false) }
@@ -370,7 +373,7 @@ fun AufgabeDetailScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
             ) {
                 Column {
-                    if (!shopping) {
+                    if (!simple) {
                     DetailClickRow(
                         icon    = Icons.Default.DateRange,
                         label   = stringResource(R.string.label_due),
@@ -393,7 +396,7 @@ fun AufgabeDetailScreen(
                     )
                     // Wiederholungen erzeugt die Cloud Function – für rein lokale
                     // Listen gäbe es also niemanden, der die Folgeaufgabe anlegt.
-                    if (list.isShared && !shopping) {
+                    if (list.isShared && !simple) {
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                         DetailClickRow(
                             icon    = Icons.Default.Refresh,
@@ -417,7 +420,7 @@ fun AufgabeDetailScreen(
                             )
                         }
                     }
-                    } else {
+                    } else if (shopping) {
                         // Einkaufsmodus: nur die Menge, alles andere wäre hier Ballast.
                         DetailTextRow(
                             label       = stringResource(R.string.label_quantity),

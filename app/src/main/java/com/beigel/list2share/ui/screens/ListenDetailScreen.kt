@@ -40,6 +40,7 @@ import android.widget.Toast
 import com.beigel.list2share.R
 import com.beigel.list2share.data.ListMode
 import com.beigel.list2share.data.departmentFor
+import com.beigel.list2share.data.isSimple
 import com.beigel.list2share.data.listMode
 import com.beigel.list2share.auth.AuthManager
 import com.beigel.list2share.data.TodoItem
@@ -72,7 +73,9 @@ fun ListenDetailScreen(
     )
     val uiState by todoVm.uiState.collectAsStateWithLifecycle()
 
-    val shopping  = list.listMode == ListMode.EINKAUFEN
+    val mode      = list.listMode
+    val shopping  = mode == ListMode.EINKAUFEN
+    val checklist = mode == ListMode.CHECKLISTE
     val openTodos = remember(uiState.todos) { uiState.todos.filter { !it.isDone } }
     val doneTodos = remember(uiState.todos) { uiState.todos.filter { it.isDone } }
     val total     = uiState.todos.size
@@ -236,6 +239,7 @@ fun ListenDetailScreen(
                         DetailTaskRow(
                             todo      = todo,
                             listColor = listColor,
+                            simple    = true,
                             shopping  = true,
                             onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
                             onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() },
@@ -248,6 +252,7 @@ fun ListenDetailScreen(
                     DetailTaskRow(
                         todo      = todo,
                         listColor = listColor,
+                        simple    = checklist,
                         shopping  = false,
                         onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
                         onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() },
@@ -266,10 +271,22 @@ fun ListenDetailScreen(
                         TextButton(onClick = {
                             haptic.click()
                             scope.launch {
-                                try { repository.deleteDoneTodos(list.id) } catch (_: Exception) {}
+                                try {
+                                    // Checkliste soll wiederverwendbar bleiben, deshalb
+                                    // zurücksetzen statt löschen.
+                                    if (checklist) repository.resetAllTodos(list.id)
+                                    else repository.deleteDoneTodos(list.id)
+                                } catch (e: Exception) {
+                                    Log.w("ListenDetailScreen", "Erledigte nicht bearbeitet", e)
+                                }
                             }
                         }) {
-                            Text(stringResource(R.string.action_clear_done), fontSize = 13.sp)
+                            Text(
+                                stringResource(
+                                    if (checklist) R.string.action_reset_all else R.string.action_clear_done
+                                ),
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }
@@ -277,6 +294,7 @@ fun ListenDetailScreen(
                     DetailTaskRow(
                         todo      = todo,
                         listColor = listColor,
+                        simple    = mode.isSimple,
                         shopping  = shopping,
                         onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
                         onDelete  = { todoVm.deleteTodo(todo.id); haptic.heavy() },
@@ -439,28 +457,32 @@ fun ListenDetailScreen(
                         }
                     )
                 }
-                OptionRow(
-                    icon  = if (shopping) Icons.AutoMirrored.Filled.List else Icons.Default.ShoppingCart,
-                    label = stringResource(
-                        if (shopping) R.string.action_mode_to_tasks else R.string.action_mode_to_shopping
-                    ),
-                    onClick = {
-                        showOptionsSheet = false
-                        haptic.click()
-                        scope.launch {
-                            // Nichts geht verloren: Prioritäten und Termine bleiben
-                            // im Dokument stehen, der Modus blendet sie nur aus.
-                            try {
-                                repository.setListMode(
-                                    list.id,
-                                    if (shopping) ListMode.AUFGABEN else ListMode.EINKAUFEN
-                                )
-                            } catch (e: Exception) {
-                                Log.w("ListenDetailScreen", "Modus für ${list.id} nicht geändert", e)
+                // Reihum durch die Modi: bei drei Möglichkeiten braucht es dafür
+                // kein eigenes Untermenü.
+                run {
+                    val nextMode = ListMode.entries[(mode.ordinal + 1) % ListMode.entries.size]
+                    OptionRow(
+                        icon  = when (nextMode) {
+                            ListMode.EINKAUFEN  -> Icons.Default.ShoppingCart
+                            ListMode.CHECKLISTE -> Icons.Default.CheckCircle
+                            ListMode.AUFGABEN   -> Icons.AutoMirrored.Filled.List
+                        },
+                        label = stringResource(R.string.action_mode_switch, stringResource(nextMode.labelRes)),
+                        onClick = {
+                            showOptionsSheet = false
+                            haptic.click()
+                            scope.launch {
+                                // Nichts geht verloren: Prioritäten und Termine bleiben
+                                // im Dokument stehen, der Modus blendet sie nur aus.
+                                try {
+                                    repository.setListMode(list.id, nextMode)
+                                } catch (e: Exception) {
+                                    Log.w("ListenDetailScreen", "Modus für ${list.id} nicht geändert", e)
+                                }
                             }
                         }
-                    }
-                )
+                    )
+                }
                 run {
                     val isMuted = list.mutedBy.contains(deviceId)
                     OptionRow(
@@ -662,6 +684,9 @@ private fun MemberAvatarStack(memberIds: List<String>, listColor: Color) {
 private fun DetailTaskRow(
     todo     : TodoItem,
     listColor: Color,
+    /** Ohne Prioritätspunkt – gilt für Einkaufen und Checkliste. */
+    simple   : Boolean = false,
+    /** Zusätzlich mit Mengenangabe – nur beim Einkaufen. */
     shopping : Boolean = false,
     onToggle : () -> Unit,
     onDelete : () -> Unit,
@@ -704,15 +729,14 @@ private fun DetailTaskRow(
                 lineHeight     = 20.sp
             )
         }
-        if (shopping) {
-            if (todo.quantity.isNotBlank()) {
-                Text(
-                    text     = todo.quantity,
-                    fontSize = 13.sp,
-                    color    = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
+        if (shopping && todo.quantity.isNotBlank()) {
+            Text(
+                text     = todo.quantity,
+                fontSize = 13.sp,
+                color    = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (!simple) {
             // Prioritätspunkt
             Box(Modifier.size(8.dp).clip(CircleShape).background(
                 if (todo.isDone) Color.Transparent else priorityColor(Priority.fromString(todo.priority))

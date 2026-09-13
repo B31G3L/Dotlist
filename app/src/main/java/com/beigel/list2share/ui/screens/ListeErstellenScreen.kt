@@ -185,14 +185,7 @@ fun ListeErstellenScreen(
                 FilterChip(
                     selected = selected,
                     onClick  = { selectedMode = mode },
-                    label    = {
-                        Text(
-                            stringResource(
-                                if (mode == ListMode.AUFGABEN) R.string.list_mode_tasks
-                                else R.string.list_mode_shopping
-                            )
-                        )
-                    }
+                    label    = { Text(stringResource(mode.labelRes)) }
                 )
             }
         }
