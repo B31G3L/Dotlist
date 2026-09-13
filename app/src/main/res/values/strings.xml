@@ -369,4 +369,10 @@
     <string name="department_drinks">Drinks</string>
     <string name="department_household">Household &amp; toiletries</string>
     <string name="department_other">Other</string>
+
+    <!-- Verlauf -->
+    <string name="action_show_activity">Show activity</string>
+    <string name="action_hide_activity">Hide activity</string>
+    <string name="activity_done_by">%1$s completed %2$s</string>
+    <string name="activity_done">%1$s completed</string>
 </resources>

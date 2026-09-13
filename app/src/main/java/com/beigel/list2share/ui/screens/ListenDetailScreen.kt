@@ -32,6 +32,7 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,7 +41,9 @@ import android.util.Log
 import android.widget.Toast
 import com.beigel.list2share.R
 import com.beigel.list2share.data.ListMode
+import com.beigel.list2share.data.activityOf
 import com.beigel.list2share.data.departmentFor
+import com.beigel.list2share.data.formatWhen
 import com.beigel.list2share.data.formatPrice
 import com.beigel.list2share.data.isSimple
 import com.beigel.list2share.data.listMode
@@ -111,6 +114,9 @@ fun ListenDetailScreen(
     val shareTemplate = stringResource(R.string.share_list_message)
     val shareFailed = stringResource(R.string.share_list_failed)
     var isSharing by remember { mutableStateOf(false) }
+
+    var showActivity by remember { mutableStateOf(false) }
+    val activity = remember(uiState.todos, list.memberNames) { activityOf(list, uiState.todos) }
 
     var showOptionsSheet  by remember { mutableStateOf(false) }
     var showRenameDialog  by remember { mutableStateOf(false) }
@@ -295,6 +301,51 @@ fun ListenDetailScreen(
                     )
                 }
             }
+            if (activity.isNotEmpty()) {
+                item {
+                    TextButton(
+                        onClick = { haptic.tick(); showActivity = !showActivity },
+                        modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+                    ) {
+                        Text(
+                            stringResource(
+                                if (showActivity) R.string.action_hide_activity
+                                else R.string.action_show_activity
+                            ),
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+                if (showActivity) {
+                    items(activity, key = { "act_${it.todoId}" }) { entry ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 3.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (entry.who.isNotBlank()) {
+                                    stringResource(R.string.activity_done_by, entry.who, entry.title)
+                                } else {
+                                    stringResource(R.string.activity_done, entry.title)
+                                },
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = formatWhen(entry.at),
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
             if (doneTodos.isNotEmpty()) {
                 item {
                     Row(

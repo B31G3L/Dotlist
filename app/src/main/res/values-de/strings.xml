@@ -363,4 +363,10 @@
     <string name="department_drinks">Getränke</string>
     <string name="department_household">Haushalt &amp; Drogerie</string>
     <string name="department_other">Sonstiges</string>
+
+    <!-- Verlauf -->
+    <string name="action_show_activity">Verlauf anzeigen</string>
+    <string name="action_hide_activity">Verlauf ausblenden</string>
+    <string name="activity_done_by">%1$s hat %2$s abgehakt</string>
+    <string name="activity_done">%1$s abgehakt</string>
 </resources>
