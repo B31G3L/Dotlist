@@ -82,6 +82,10 @@ fun ListenDetailScreen(
     val shopping  = mode == ListMode.EINKAUFEN
     val checklist = mode == ListMode.CHECKLISTE
     val purchase  = mode == ListMode.ANSCHAFFUNG
+    // Im Laden will man alles aus einem Gang beieinander haben. Leere
+    // Abteilungen fallen weg, "Sonstiges" erscheint also nur, wenn wirklich
+    // etwas drin ist. Bewusst hier und nicht im LazyColumn-Inhalt: dessen
+    // Lambda ist nicht @Composable, remember() geht dort nicht.
     val openTodos = remember(uiState.todos, purchase) {
         val open = uiState.todos.filter { !it.isDone }
         // Anschaffungen nach Priorität statt nach Eingabereihenfolge: was
@@ -92,6 +96,10 @@ fun ListenDetailScreen(
         ) else open
     }
     val doneTodos = remember(uiState.todos) { uiState.todos.filter { it.isDone } }
+    val groupedTodos = remember(openTodos) {
+        openTodos.groupBy { departmentFor(it.title) }
+            .toSortedMap(compareBy { it.ordinal })
+    }
     val total     = uiState.todos.size
     val doneCount = doneTodos.size
     val progress  = if (total > 0) doneCount.toFloat() / total else 0f
@@ -264,14 +272,7 @@ fun ListenDetailScreen(
                 }
             }
             if (shopping) {
-                // Im Laden will man alles aus einem Gang beieinander haben.
-                // Leere Abteilungen fallen weg, "Sonstiges" erscheint also nur,
-                // wenn wirklich etwas drin ist.
-                val grouped = remember(openTodos) {
-                    openTodos.groupBy { departmentFor(it.title) }
-                        .toSortedMap(compareBy { it.ordinal })
-                }
-                grouped.forEach { (department, todos) ->
+                groupedTodos.forEach { (department, todos) ->
                     item(key = "dep_${department.name}") {
                         SectionLabel(stringResource(department.labelRes), modifier = Modifier.padding(top = 8.dp))
                     }
@@ -550,9 +551,10 @@ fun ListenDetailScreen(
                     val nextMode = ListMode.entries[(mode.ordinal + 1) % ListMode.entries.size]
                     OptionRow(
                         icon  = when (nextMode) {
-                            ListMode.EINKAUFEN  -> Icons.Default.ShoppingCart
-                            ListMode.CHECKLISTE -> Icons.Default.CheckCircle
-                            ListMode.AUFGABEN   -> Icons.AutoMirrored.Filled.List
+                            ListMode.EINKAUFEN   -> Icons.Default.ShoppingCart
+                            ListMode.CHECKLISTE  -> Icons.Default.CheckCircle
+                            ListMode.ANSCHAFFUNG -> Icons.Default.Star
+                            ListMode.AUFGABEN    -> Icons.AutoMirrored.Filled.List
                         },
                         label = stringResource(R.string.action_mode_switch, stringResource(nextMode.labelRes)),
                         onClick = {
