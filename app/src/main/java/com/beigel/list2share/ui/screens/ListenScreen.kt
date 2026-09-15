@@ -29,9 +29,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import com.beigel.list2share.R
 import com.beigel.list2share.data.ListCounts
 import com.beigel.list2share.data.TodoItem
+import com.beigel.list2share.auth.AuthManager
+import com.beigel.list2share.data.HintPreferences
 import com.beigel.list2share.data.TodoList
 import com.beigel.list2share.repository.TodoRepository
 import com.beigel.list2share.utils.HapticFeedback
@@ -55,6 +58,13 @@ fun ListenScreen(
     val uiState           by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val scope   = rememberCoroutineScope()
+
+    val hintDismissed by HintPreferences.localOnlyDismissed(context)
+        .collectAsStateWithLifecycle(initialValue = true)
+    // initialValue = true: lieber einen Moment nichts zeigen, als den Hinweis
+    // bei jedem Start kurz aufblitzen zu lassen.
+    val showLocalOnlyHint = !hintDismissed && !AuthManager.isSignedInWithGoogle
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let { snackbarHostState.showSnackbar(it); viewModel.clearError() }
@@ -104,6 +114,27 @@ fun ListenScreen(
                             stringResource(R.string.lists_summary, uiState.lists.size, shared),
                             fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                        )
+                    }
+                }
+
+                /*
+                 * Ohne Konto liegen die Listen nur auf diesem Gerät. Wer das
+                 * nicht weiß, verliert sie beim Gerätewechsel – also einmal
+                 * sagen, ruhig und wegklickbar. Kein Drängeln zur Anmeldung:
+                 * der Hinweis nennt die Tatsache, den Weg findet man im
+                 * Konto-Bereich.
+                 *
+                 * Erst ab der ersten Liste, damit er nicht die leere App
+                 * begrüßt.
+                 */
+                if (showLocalOnlyHint && uiState.lists.isNotEmpty()) {
+                    item(span = { GridItemSpan(2) }) {
+                        LocalOnlyHint(
+                            onDismiss = {
+                                haptic.tick()
+                                scope.launch { HintPreferences.dismissLocalOnly(context) }
+                            }
                         )
                     }
                 }
@@ -357,4 +388,38 @@ private fun JoinListDialog(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
+}
+
+/**
+ * Hinweis, dass die Listen ohne Konto nur auf diesem Gerät liegen.
+ *
+ * Absichtlich zurückhaltend: kein Symbol in Signalfarbe, kein
+ * "Jetzt anmelden"-Knopf. Es ist eine Tatsache, die man kennen sollte, kein
+ * Problem, das man sofort lösen muss.
+ */
+@Composable
+private fun LocalOnlyHint(onDismiss: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 14.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+            .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text       = stringResource(R.string.hint_local_only),
+            fontSize   = 13.sp,
+            lineHeight = 18.sp,
+            color      = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier   = Modifier.weight(1f)
+        )
+        Icon(
+            Icons.Default.Close,
+            contentDescription = stringResource(R.string.action_dismiss),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp).clickable { onDismiss() }
+        )
+    }
 }

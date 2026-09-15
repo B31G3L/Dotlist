@@ -382,4 +382,8 @@
     <string name="migration_message">Diese Listen liegen nur auf diesem Gerät. Ausgewählte werden in deinem Konto gesichert und lassen sich teilen.</string>
     <string name="migration_confirm">Ausgewählte übernehmen</string>
     <string name="migration_keep_all_local">Alle lokal lassen</string>
+
+    <!-- Hinweise -->
+    <string name="hint_local_only">Diese Listen liegen nur auf diesem Gerät. Ohne Konto sind sie weg, wenn das Handy verloren geht oder zurückgesetzt wird.</string>
+    <string name="action_dismiss">Ausblenden</string>
 </resources>

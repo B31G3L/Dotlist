@@ -388,4 +388,8 @@
     <string name="migration_message">These lists are only on this device. Selected ones are backed up to your account and can be shared.</string>
     <string name="migration_confirm">Move selected</string>
     <string name="migration_keep_all_local">Keep all local</string>
+
+    <!-- Hinweise -->
+    <string name="hint_local_only">These lists are only on this device. Without an account they are gone if you lose or reset your phone.</string>
+    <string name="action_dismiss">Dismiss</string>
 </resources>
