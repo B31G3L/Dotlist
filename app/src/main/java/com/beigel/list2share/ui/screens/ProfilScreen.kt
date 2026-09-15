@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.beigel.list2share.R
+import com.beigel.list2share.auth.AuthManager
+import com.beigel.list2share.ui.components.Avatar
 import com.beigel.list2share.data.DeviceIdManager
 import com.beigel.list2share.data.NotificationPreferences
 import com.beigel.list2share.data.TodoList
@@ -97,18 +99,13 @@ fun ProfilScreen(
                 .clickable { renameText = deviceName; showRenameDialog = true },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier         = Modifier.size(84.dp).clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text       = deviceName.take(1).uppercase().ifEmpty { "?" },
-                    fontSize   = 32.sp,
-                    fontWeight = FontWeight.Medium,
-                    color      = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
+            // Mit Google-Konto das Kontobild, sonst der Anfangsbuchstabe.
+            Avatar(
+                photoUrl = AuthManager.currentUser?.photoUrl?.toString(),
+                fallback = deviceName,
+                size     = 84.dp,
+                fontSize = 32.sp
+            )
             Text(
                 text       = deviceName,
                 fontSize   = 20.sp,
