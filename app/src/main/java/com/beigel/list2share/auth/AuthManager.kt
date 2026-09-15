@@ -52,6 +52,24 @@ object AuthManager {
         get() = auth.currentUser?.providerData.orEmpty().any { it.providerId == GoogleAuthProvider.PROVIDER_ID }
 
     /**
+     * Profilbild des Google-Kontos, oder null.
+     *
+     * Wird ein anonymes Konto mit Google verknüpft, übernimmt Firebase Name
+     * und Bild NICHT ins Hauptprofil – `currentUser.photoUrl` bleibt dann
+     * leer. Zu finden sind sie nur in den Provider-Daten. Deshalb prüft schon
+     * [isSignedInWithGoogle] dort, und hier gilt dasselbe.
+     */
+    val googlePhotoUrl: String?
+        get() {
+            val user = auth.currentUser ?: return null
+            user.photoUrl?.let { return it.toString() }
+            return user.providerData
+                .firstOrNull { it.providerId == GoogleAuthProvider.PROVIDER_ID }
+                ?.photoUrl
+                ?.toString()
+        }
+
+    /**
      * Stellt sicher, dass ein Nutzer angemeldet ist (mindestens anonym).
      * Beim allerersten Start wird ein neuer anonymer Account erzeugt.
      */

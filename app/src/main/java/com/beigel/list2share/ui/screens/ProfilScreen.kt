@@ -101,7 +101,7 @@ fun ProfilScreen(
         ) {
             // Mit Google-Konto das Kontobild, sonst der Anfangsbuchstabe.
             Avatar(
-                photoUrl = AuthManager.currentUser?.photoUrl?.toString(),
+                photoUrl = AuthManager.googlePhotoUrl,
                 fallback = deviceName,
                 size     = 84.dp,
                 fontSize = 32.sp

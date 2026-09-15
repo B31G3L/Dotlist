@@ -98,9 +98,14 @@ fun Avatar(
     val density = LocalDensity.current
 
     LaunchedEffect(photoUrl, size) {
-        val url = photoUrl ?: return@LaunchedEffect
+        val url = photoUrl
+        if (url.isNullOrBlank()) {
+            image = null
+            return@LaunchedEffect
+        }
         val px = with(density) { size.roundToPx() }
         image = AvatarCache.load(url, px)
+        if (image == null) Log.i("Avatar", "Kein Bild geladen für $url")
     }
 
     Box(
