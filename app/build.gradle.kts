@@ -14,8 +14,8 @@ android {
         applicationId = "com.beigel.list2share"
         minSdk = 29
         targetSdk = 36
-        versionCode = 9
-        versionName = "0.2.1"
+        versionCode = 10
+        versionName = "0.2.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
