@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -176,21 +177,31 @@ fun ListeErstellenScreen(
 
         // Art der Liste
         SectionLabel(stringResource(R.string.section_list_mode), modifier = Modifier.padding(top = 20.dp))
+        // Waagerecht scrollbar statt umbrechend: "Anschaffungen" ist lang, und
+        // ein in zwei Zeilen gebrochener Chip sieht aus wie ein Fehler.
         Row(
-            modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp),
+            modifier = Modifier
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             ListMode.entries.forEach { mode ->
-                val selected = selectedMode == mode
                 FilterChip(
-                    selected = selected,
+                    selected = selectedMode == mode,
                     onClick  = { selectedMode = mode },
-                    label    = { Text(stringResource(mode.labelRes)) }
+                    label    = {
+                        Text(
+                            text     = stringResource(mode.labelRes),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 )
             }
         }
+        // Erklärt, was der gewählte Modus bringt – und wechselt mit der Auswahl.
         Text(
-            text     = stringResource(R.string.list_mode_hint),
+            text     = stringResource(selectedMode.hintRes),
             fontSize = 13.sp,
             color    = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 22.dp)

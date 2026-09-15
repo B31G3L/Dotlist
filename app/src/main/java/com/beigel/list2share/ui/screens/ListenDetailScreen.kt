@@ -553,33 +553,6 @@ fun ListenDetailScreen(
                         }
                     )
                 }
-                // Reihum durch die Modi: bei drei Möglichkeiten braucht es dafür
-                // kein eigenes Untermenü.
-                run {
-                    val nextMode = ListMode.entries[(mode.ordinal + 1) % ListMode.entries.size]
-                    OptionRow(
-                        icon  = when (nextMode) {
-                            ListMode.EINKAUFEN   -> Icons.Default.ShoppingCart
-                            ListMode.CHECKLISTE  -> Icons.Default.CheckCircle
-                            ListMode.ANSCHAFFUNG -> Icons.Default.Star
-                            ListMode.AUFGABEN    -> Icons.AutoMirrored.Filled.List
-                        },
-                        label = stringResource(R.string.action_mode_switch, stringResource(nextMode.labelRes)),
-                        onClick = {
-                            showOptionsSheet = false
-                            haptic.click()
-                            scope.launch {
-                                // Nichts geht verloren: Prioritäten und Termine bleiben
-                                // im Dokument stehen, der Modus blendet sie nur aus.
-                                try {
-                                    repository.setListMode(list.id, nextMode)
-                                } catch (e: Exception) {
-                                    Log.w("ListenDetailScreen", "Modus für ${list.id} nicht geändert", e)
-                                }
-                            }
-                        }
-                    )
-                }
                 run {
                     val isMuted = list.mutedBy.contains(deviceId)
                     OptionRow(

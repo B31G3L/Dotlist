@@ -340,6 +340,10 @@
     <string name="invite_link" translatable="false">https://dotlist-83d5c.web.app/join/%1$s</string>
 
     <!-- Einkaufsmodus -->
+    <string name="list_mode_hint_tasks">Everything on board: priority, assignee, due date, reminder and repeating tasks.</string>
+    <string name="list_mode_hint_shopping">Groups items by aisle and adds an amount per item, so you can work through the shop in one go.</string>
+    <string name="list_mode_hint_checklist">Reset everything with one tap – for lists you work through again and again, like packing or cleaning.</string>
+    <string name="list_mode_hint_purchase">Price and link per item, sorted by priority, with the total of everything still open.</string>
     <string name="action_open_link">Open offer</string>
     <string name="list_mode_purchase">Purchases</string>
     <string name="label_price">Price</string>
@@ -352,12 +356,10 @@
         <item quantity="other">%1$d without a price</item>
     </plurals>
     <string name="list_mode_checklist">Checklist</string>
-    <string name="action_mode_switch">Use as %1$s</string>
     <string name="action_reset_all">Reset all</string>
     <string name="section_list_mode">List type</string>
     <string name="list_mode_tasks">Tasks</string>
     <string name="list_mode_shopping">Shopping</string>
-    <string name="list_mode_hint">Shopping hides priority, assignee and dates and groups items by aisle.</string>
     <string name="label_quantity">Amount</string>
     <string name="hint_quantity">e.g. 2 kg</string>
     <string name="action_clear_done">Clear done</string>

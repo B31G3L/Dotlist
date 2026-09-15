@@ -334,6 +334,10 @@
     <string name="share_list_failed">Einladung konnte nicht erstellt werden</string>
 
     <!-- Einkaufsmodus -->
+    <string name="list_mode_hint_tasks">Alles dabei: Priorität, Zuständigkeit, Fälligkeit, Erinnerung und Wiederholungen.</string>
+    <string name="list_mode_hint_shopping">Sortiert nach Abteilungen und mit Mengenangabe – so läufst du den Laden in einem Rutsch ab.</string>
+    <string name="list_mode_hint_checklist">Mit einem Tipp alles zurücksetzen – für Listen, die du immer wieder abarbeitest, etwa Packen oder Putzen.</string>
+    <string name="list_mode_hint_purchase">Preis und Link pro Eintrag, nach Priorität sortiert, mit der Summe von allem, was noch offen ist.</string>
     <string name="action_open_link">Angebot öffnen</string>
     <string name="list_mode_purchase">Anschaffungen</string>
     <string name="label_price">Preis</string>
@@ -346,12 +350,10 @@
         <item quantity="other">%1$d ohne Preis</item>
     </plurals>
     <string name="list_mode_checklist">Checkliste</string>
-    <string name="action_mode_switch">Als %1$s verwenden</string>
     <string name="action_reset_all">Alle zurücksetzen</string>
     <string name="section_list_mode">Art der Liste</string>
     <string name="list_mode_tasks">Aufgaben</string>
     <string name="list_mode_shopping">Einkaufen</string>
-    <string name="list_mode_hint">Einkaufen blendet Priorität, Zuständigkeit und Termine aus und sortiert nach Abteilungen.</string>
     <string name="label_quantity">Menge</string>
     <string name="hint_quantity">z. B. 2 kg</string>
     <string name="action_clear_done">Erledigte löschen</string>

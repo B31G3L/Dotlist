@@ -63,11 +63,11 @@ data class TodoList(
  * Gesetzte Werte bleiben in jedem Fall im Dokument stehen, ein Umschalten
  * verliert also nichts.
  */
-enum class ListMode(val labelRes: Int) {
-    AUFGABEN(R.string.list_mode_tasks),
-    EINKAUFEN(R.string.list_mode_shopping),
-    CHECKLISTE(R.string.list_mode_checklist),
-    ANSCHAFFUNG(R.string.list_mode_purchase),
+enum class ListMode(val labelRes: Int, val hintRes: Int) {
+    AUFGABEN(R.string.list_mode_tasks, R.string.list_mode_hint_tasks),
+    EINKAUFEN(R.string.list_mode_shopping, R.string.list_mode_hint_shopping),
+    CHECKLISTE(R.string.list_mode_checklist, R.string.list_mode_hint_checklist),
+    ANSCHAFFUNG(R.string.list_mode_purchase, R.string.list_mode_hint_purchase),
 }
 
 /** Modus einer Liste, unbekannte oder fehlende Werte gelten als AUFGABEN. */

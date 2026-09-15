@@ -936,6 +936,10 @@ class TodoRepository(
     /**
      * Art der Liste umstellen. Gesetzte Werte an den Aufgaben bleiben
      * erhalten – ein Wechsel blendet sie nur aus.
+     *
+     * In der App gibt es dafür derzeit keine Stelle: der Modus wird beim
+     * Anlegen gewählt. Die Web-Version kann umstellen, und die schreibt in
+     * dieselben Dokumente – deshalb bleibt die Funktion hier.
      */
     suspend fun setListMode(listId: String, mode: ListMode) {
         if (isLocalList(listId)) {
