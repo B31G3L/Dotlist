@@ -4,6 +4,11 @@ import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -188,7 +193,24 @@ fun WillkommenScreen(
                 modifier   = Modifier.padding(horizontal = 8.dp)
             )
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(24.dp))
+
+            /*
+             * Drei Zeilen dazu, was die App kann – bewusst keine mehrseitige
+             * Einführung zum Durchwischen. Die klickt man weg und weiß danach
+             * trotzdem nichts. Vor allem der Einkaufsmodus wird sonst nie
+             * entdeckt: von allein tippt niemand auf "Art der Liste".
+             */
+            Column(
+                modifier = Modifier.padding(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                WelcomePoint(Icons.Default.People, stringResource(R.string.welcome_point_share))
+                WelcomePoint(Icons.Default.ShoppingCart, stringResource(R.string.welcome_point_modes))
+                WelcomePoint(Icons.Default.Refresh, stringResource(R.string.welcome_point_repeat))
+            }
+
+            Spacer(Modifier.height(28.dp))
 
             OutlinedTextField(
                 value         = name,
@@ -268,5 +290,27 @@ fun WillkommenScreen(
 
             Spacer(Modifier.weight(1.4f))
         }
+    }
+}
+
+/** Eine Zeile der Kurzerklärung: Symbol links, Text daneben. */
+@Composable
+private fun WelcomePoint(icon: ImageVector, text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Text(
+            text       = text,
+            fontSize   = 14.sp,
+            lineHeight = 19.sp,
+            color      = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

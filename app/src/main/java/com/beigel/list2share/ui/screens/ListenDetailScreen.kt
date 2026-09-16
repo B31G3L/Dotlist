@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.app.Activity
 import android.util.Log
 import android.widget.Toast
 import com.beigel.list2share.R
@@ -55,6 +56,7 @@ import com.beigel.list2share.data.canManageMembers
 import com.beigel.list2share.repository.TodoRepository
 import com.beigel.list2share.ui.theme.priorityColor
 import com.beigel.list2share.utils.HapticFeedback
+import com.beigel.list2share.utils.ReviewManager
 import com.beigel.list2share.viewmodel.TodosViewModel
 import com.beigel.list2share.data.DeviceIdManager
 import com.beigel.list2share.data.Priority
@@ -104,6 +106,21 @@ fun ListenDetailScreen(
     val total     = uiState.todos.size
     val doneCount = doneTodos.size
     val progress  = if (total > 0) doneCount.toFloat() / total else 0f
+
+    /*
+     * Gelungener Moment: die Liste ist komplett abgehakt. Hier nach einer
+     * Bewertung zu fragen trifft eine andere Stimmung als beim fünften
+     * App-Start – und nur hier, nicht bei jedem einzelnen Haken.
+     *
+     * Ob überhaupt gefragt wird, entscheidet der ReviewManager (Mindestnutzung,
+     * Sperrfrist, Obergrenze) und danach Google selbst.
+     */
+    val listCompleted = total > 0 && doneCount == total
+    LaunchedEffect(listCompleted) {
+        if (listCompleted) {
+            (context as? Activity)?.let { ReviewManager.onSuccessMoment(it) }
+        }
+    }
 
     val listColor = listColor(list.color)
     val hasMultipleMembers = list.memberIds.size > 1

@@ -7,44 +7,70 @@ import com.google.android.play.core.review.ReviewManagerFactory
 
 /**
  * Steuert, wann die native Play-In-App-Review angefragt wird.
- * Fragt max. 2x an, jeweils an sinnvollen App-Start-Marken (5. und 20. Start),
- * damit Nutzer:innen die App schon etwas kennen, bevor sie um eine Bewertung
- * gebeten werden.
+ *
+ * Nicht an der Anzahl der App-Starts, sondern an gelungenen Momenten. Wer die
+ * App zum fünften Mal öffnet, hatte womöglich gerade Ärger damit – und
+ * antwortet entsprechend. Gefragt wird deshalb, wenn sichtbar etwas
+ * funktioniert hat:
+ *
+ *  - eine Liste ist vollständig abgehakt
+ *  - jemand ist einer geteilten Liste beigetreten
+ *
+ * Zusätzlich muss die App eine Weile in Gebrauch sein ([MIN_OPENS]), damit die
+ * Frage nicht schon am ersten Tag kommt, und zwischen zwei Anfragen liegt eine
+ * Sperrfrist. Höchstens [MAX_REVIEW_PROMPTS] Anfragen insgesamt.
  */
 object ReviewManager {
 
     private const val PREFS_NAME = "review_prefs"
     private const val KEY_APP_OPENS = "app_opens"
     private const val KEY_REVIEW_SHOWN_COUNT = "review_shown_count"
+    private const val KEY_LAST_PROMPT_AT = "last_prompt_at"
 
-    private val TRIGGER_POINTS = setOf(5, 20)
+    /** Vorher kennt niemand die App gut genug für ein Urteil. */
+    private const val MIN_OPENS = 4
+
     private const val MAX_REVIEW_PROMPTS = 2
 
+    /** Abstand zwischen zwei Anfragen. */
+    private const val COOLDOWN_MS = 30L * 24 * 60 * 60 * 1000
+
+    /** Beim App-Start aufrufen: zählt nur mit, fragt nichts. */
+    fun recordAppOpen(context: Context) {
+        val prefs = prefs(context)
+        prefs.edit().putInt(KEY_APP_OPENS, prefs.getInt(KEY_APP_OPENS, 0) + 1).apply()
+    }
+
     /**
-     * Bei jedem App-Start aufrufen (z. B. in MainActivity).
-     * Zeigt den nativen Review-Dialog, wenn der aktuelle Öffnungs-Zähler
-     * einem Trigger-Punkt entspricht und die max. Anzahl noch nicht erreicht ist.
+     * Nach einem gelungenen Moment aufrufen.
+     *
+     * Ob der Dialog tatsächlich erscheint, entscheidet Google (Tageslimit,
+     * Kontingent pro Nutzer). Der Versuch wird trotzdem gezählt – sonst würde
+     * die App bei jedem weiteren Erfolg erneut anfragen, obwohl Google gerade
+     * nichts anzeigt.
      */
-    fun maybeRequestReview(activity: Activity) {
+    fun onSuccessMoment(activity: Activity) {
         val prefs = prefs(activity)
-        val opens = prefs.getInt(KEY_APP_OPENS, 0) + 1
-        val reviewsShown = prefs.getInt(KEY_REVIEW_SHOWN_COUNT, 0)
-
-        prefs.edit().putInt(KEY_APP_OPENS, opens).apply()
-
-        val shouldShow = opens in TRIGGER_POINTS && reviewsShown < MAX_REVIEW_PROMPTS
-        if (!shouldShow) return
+        if (!shouldAsk(prefs)) return
 
         val reviewManager = ReviewManagerFactory.create(activity)
-        val request = reviewManager.requestReviewFlow()
-        request.addOnCompleteListener { task ->
+        reviewManager.requestReviewFlow().addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                // Google entscheidet selbst, ob der Dialog tatsächlich angezeigt wird
-                // (z. B. Tageslimit von Google), daher zählen wir den Versuch trotzdem.
                 reviewManager.launchReviewFlow(activity, task.result)
             }
-            prefs.edit().putInt(KEY_REVIEW_SHOWN_COUNT, reviewsShown + 1).apply()
+            prefs.edit()
+                .putInt(KEY_REVIEW_SHOWN_COUNT, prefs.getInt(KEY_REVIEW_SHOWN_COUNT, 0) + 1)
+                .putLong(KEY_LAST_PROMPT_AT, System.currentTimeMillis())
+                .apply()
         }
+    }
+
+    private fun shouldAsk(prefs: SharedPreferences): Boolean {
+        if (prefs.getInt(KEY_APP_OPENS, 0) < MIN_OPENS) return false
+        if (prefs.getInt(KEY_REVIEW_SHOWN_COUNT, 0) >= MAX_REVIEW_PROMPTS) return false
+
+        val last = prefs.getLong(KEY_LAST_PROMPT_AT, 0L)
+        return last == 0L || System.currentTimeMillis() - last > COOLDOWN_MS
     }
 
     private fun prefs(context: Context): SharedPreferences =

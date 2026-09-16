@@ -154,7 +154,9 @@ class MainActivity : ComponentActivity() {
                         val repository =
                             remember(currentUid) { TodoRepository(currentUid, this@MainActivity) }
                         LaunchedEffect(Unit) {
-                            ReviewManager.maybeRequestReview(this@MainActivity)
+                            // Zählt nur mit – gefragt wird nach einem gelungenen
+                            // Moment, siehe ReviewManager.
+                            ReviewManager.recordAppOpen(this@MainActivity)
                         }
                         // Mit Google-Konto: noch lokal liegende Listen in die Cloud
                         // übernehmen. Setzt auch eine unterbrochene Migration fort.

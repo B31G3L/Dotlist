@@ -386,4 +386,9 @@
     <!-- Hinweise -->
     <string name="hint_local_only">Diese Listen liegen nur auf diesem Gerät. Ohne Konto sind sie weg, wenn das Handy verloren geht oder zurückgesetzt wird.</string>
     <string name="action_dismiss">Ausblenden</string>
+
+    <!-- Kurzerklaerung beim ersten Start -->
+    <string name="welcome_point_share">Listen mit anderen teilen – Änderungen sind sofort bei allen da.</string>
+    <string name="welcome_point_modes">Einkaufen, Checkliste oder Anschaffungen: jede Art zeigt nur, was sie braucht.</string>
+    <string name="welcome_point_repeat">Wiederkehrende Aufgaben wechseln reihum – Müll, Gießen, Miete.</string>
 </resources>
