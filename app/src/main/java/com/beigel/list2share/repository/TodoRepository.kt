@@ -108,9 +108,22 @@ class TodoRepository(
          */
         const val WRITE_TIMEOUT_MS = 4_000L
 
-        /** Wartezeit zwischen zwei Versuchen, einen Listener neu aufzubauen. */
+        /**
+         * Wartezeit vor dem nächsten Versuch, einen Listener aufzubauen.
+         *
+         * Der erste Versuch kommt schnell: die häufigste Ursache ist, dass beim
+         * Registrieren noch kein Auth-Token am Firestore-Client hing. Das ist
+         * nach Millisekunden erledigt, und eine Sekunde Leere in der Liste
+         * würde man sehen. Danach steigt die Wartezeit an, damit ein dauerhaft
+         * abgelehnter Zugriff nicht im Sekundentakt gegen Firestore läuft.
+         */
+        const val LISTENER_RETRY_FIRST_MS = 300L
         const val LISTENER_RETRY_STEP_MS = 2_000L
         const val LISTENER_RETRY_MAX_MS = 30_000L
+
+        fun retryDelay(attempt: Long): Long =
+            if (attempt == 0L) LISTENER_RETRY_FIRST_MS
+            else minOf(LISTENER_RETRY_MAX_MS, LISTENER_RETRY_STEP_MS * attempt)
 
         /** Maximale Abgleich-Runden beim Hochladen lokaler Todos, siehe [uploadLocalTodos]. */
         const val SHARE_UPLOAD_ROUNDS = 3
@@ -247,7 +260,14 @@ class TodoRepository(
                         return@addSnapshotListener
                     }
                     val lists = snapshot?.documents?.mapNotNull { doc ->
-                        doc.toObject(TodoList::class.java)?.copy(id = doc.id, isShared = true)
+                        // toObject arbeitet per Reflection und kann werfen – etwa
+                        // bei einem Feld, dessen Typ nicht mehr passt. Das läuft
+                        // im Firestore-Callback und würde die App mitreißen.
+                        // Ein kaputtes Dokument kostet hier nur diese eine Zeile.
+                        runCatching {
+                            doc.toObject(TodoList::class.java)?.copy(id = doc.id, isShared = true)
+                        }.onFailure { Log.w(TAG, "Liste ${doc.id} nicht lesbar", it) }
+                            .getOrNull()
                     } ?: emptyList()
                     last = lists
                     trySend(lists)
@@ -256,10 +276,16 @@ class TodoRepository(
         }
             .onStart { emit(last) }
             .retryWhen { cause, attempt ->
-                Log.w(TAG, "Listen-Listener fehlgeschlagen, neuer Versuch", cause)
-                // Ansteigend, aber gedeckelt: ein dauerhaft abgelehnter Zugriff
-                // soll nicht im Sekundentakt gegen Firestore laufen.
-                delay(minOf(LISTENER_RETRY_MAX_MS, LISTENER_RETRY_STEP_MS * (attempt + 1)))
+                // Beide UIDs mitloggen: weichen sie ab, beobachtet das Repository
+                // ein fremdes Konto. Sind sie gleich, war beim Registrieren nur
+                // noch kein Auth-Token am Firestore-Client – das heilt von selbst.
+                Log.w(
+                    TAG,
+                    "Listen-Listener fehlgeschlagen (Abfrage-UID=$deviceId, " +
+                        "angemeldet=${AuthManager.currentUid}), Versuch ${attempt + 1}",
+                    cause
+                )
+                delay(retryDelay(attempt))
                 true
             }
     }
@@ -832,7 +858,9 @@ class TodoRepository(
                         return@addSnapshotListener
                     }
                     val todos = snapshot?.documents?.mapNotNull { doc ->
-                        doc.toObject(TodoItem::class.java)?.copy(id = doc.id)
+                        runCatching { doc.toObject(TodoItem::class.java)?.copy(id = doc.id) }
+                            .onFailure { Log.w(TAG, "Aufgabe ${doc.id} nicht lesbar", it) }
+                            .getOrNull()
                     } ?: emptyList()
                     last = todos
                     trySend(todos)
@@ -841,8 +869,8 @@ class TodoRepository(
         }
             .onStart { emit(last) }
             .retryWhen { cause, attempt ->
-                Log.w(TAG, "Todo-Listener für $listId fehlgeschlagen, neuer Versuch", cause)
-                delay(minOf(LISTENER_RETRY_MAX_MS, LISTENER_RETRY_STEP_MS * (attempt + 1)))
+                Log.w(TAG, "Todo-Listener für $listId fehlgeschlagen, Versuch ${attempt + 1}", cause)
+                delay(retryDelay(attempt))
                 true
             }
     }
