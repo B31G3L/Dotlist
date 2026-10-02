@@ -6,6 +6,7 @@ import android.content.Context
 import android.util.Log
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
@@ -23,6 +24,8 @@ import com.beigel.list2share.data.TodoList
 import com.beigel.list2share.data.local.AppDatabase
 import com.beigel.list2share.data.local.LocalListEntity
 import com.beigel.list2share.data.local.LocalTodoEntity
+import com.beigel.list2share.data.local.toBudgetJson
+import com.beigel.list2share.data.local.toBudgetMap
 import com.beigel.list2share.data.local.toComments
 import com.beigel.list2share.data.local.toJson
 import com.beigel.list2share.data.local.toLocalEntity
@@ -396,7 +399,11 @@ class TodoRepository(
             createdAt = list.createdAt,
             color = list.color,
             icon = list.icon,
-            mutedBy = emptyList()
+            mutedBy = emptyList(),
+            // Ohne diese beiden wurde eine geteilte Liste stillschweigend zur
+            // normalen Aufgabenliste und verlor ihr Budget.
+            mode = list.mode,
+            monthlyBudgets = list.monthlyBudgets
         )
         listsRef.document(list.id).set(remoteList).await()
 
@@ -513,7 +520,9 @@ class TodoRepository(
                 creatorName = list.displayNameForOrFallback(list.createdBy.ifBlank { deviceId }),
                 createdAt = list.createdAt.toDate().time,
                 color = list.color,
-                icon = list.icon
+                icon = list.icon,
+                mode = list.mode,
+                monthlyBudgetsJson = list.monthlyBudgets.toBudgetJson()
             )
         )
         if (todos.isNotEmpty()) {
@@ -552,7 +561,9 @@ class TodoRepository(
                     creatorName = creatorName,
                     createdAt = System.currentTimeMillis(),
                     color = list.color,
-                    icon = list.icon
+                    icon = list.icon,
+                    mode = list.mode,
+                    monthlyBudgetsJson = list.monthlyBudgets.toBudgetJson()
                 )
             )
             val todos = todoDao.getTodosOnce(list.id)
@@ -568,7 +579,9 @@ class TodoRepository(
             memberNames = mapOf(deviceId to creatorName),
             createdBy = deviceId,
             color = list.color,
-            icon = list.icon
+            icon = list.icon,
+            mode = list.mode,
+            monthlyBudgets = list.monthlyBudgets
         )
         // Quelle vor dem Anlegen lesen, damit bei einem Lesefehler keine leere
         // Kopie zurückbleibt. Die `id` ist @Exclude und wird nicht mitgeschrieben,
@@ -886,6 +899,8 @@ class TodoRepository(
         dueDate         : Timestamp? = null,
         assignedTo      : String? = null,
         reminderMinutes : Int? = null,
+        price           : Double? = null,
+        link            : String = "",
     ) {
         if (isLocalList(listId)) {
             val position = todoDao.maxPosition(listId) + 1L
@@ -899,7 +914,9 @@ class TodoRepository(
                 assignedTo = assignedTo,
                 reminderMinutes = reminderMinutes,
                 createdBy = deviceId,
-                position = position
+                position = position,
+                price = price,
+                link = link.trim()
             )
             todoDao.insertTodo(todo.toLocalEntity(listId))
             return
@@ -914,7 +931,9 @@ class TodoRepository(
             assignedTo = assignedTo,
             reminderMinutes = reminderMinutes,
             createdBy = deviceId,
-            position = nextRemotePosition(listId)
+            position = nextRemotePosition(listId),
+            price = price,
+            link = link.trim()
         )
         todosRef(listId).add(todo).await()
     }
@@ -975,6 +994,25 @@ class TodoRepository(
             return
         }
         listsRef.document(listId).update("mode", mode.name).await()
+    }
+
+    /**
+     * Monatsbudget setzen. Gilt ab [monthKey], bis ein späterer Eintrag es
+     * ablöst – vergangene Monate behalten so ihr damaliges Budget.
+     *
+     * @param amount null oder 0 = ab diesem Monat kein Budget
+     */
+    suspend fun setMonthlyBudget(listId: String, monthKey: String, amount: Double?) {
+        val value = amount?.takeIf { it > 0.0 } ?: 0.0
+        val local = listDao.getList(listId)
+        if (local != null) {
+            val budgets = local.monthlyBudgetsJson.toBudgetMap() + (monthKey to value)
+            listDao.setMonthlyBudgets(listId, budgets.toBudgetJson())
+            return
+        }
+        // FieldPath statt "monthlyBudgets.$monthKey": nur dieser eine Monat
+        // wird geschrieben, parallele Änderungen anderer Monate bleiben stehen.
+        listsRef.document(listId).update(FieldPath.of("monthlyBudgets", monthKey), value).await()
     }
 
     /**

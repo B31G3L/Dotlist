@@ -22,6 +22,8 @@ data class LocalListEntity(
     val icon: String,
     /** Art der Liste, siehe ListMode. Leer/unbekannt gilt als AUFGABEN. */
     val mode: String = "AUFGABEN",
+    /** Monatsbudgets im Anschaffungsmodus als JSON-Objekt {"yyyy-MM": Betrag}. */
+    val monthlyBudgetsJson: String = "{}",
 )
 
 /**
