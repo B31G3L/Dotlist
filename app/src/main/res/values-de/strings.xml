@@ -337,7 +337,7 @@
     <string name="list_mode_hint_tasks">Alles dabei: Priorität, Zuständigkeit, Fälligkeit, Erinnerung und Wiederholungen.</string>
     <string name="list_mode_hint_shopping">Sortiert nach Abteilungen und mit Mengenangabe – so läufst du den Laden in einem Rutsch ab.</string>
     <string name="list_mode_hint_checklist">Mit einem Tipp alles zurücksetzen – für Listen, die du immer wieder abarbeitest, etwa Packen oder Putzen.</string>
-    <string name="list_mode_hint_purchase">Preis und Link pro Eintrag, nach Priorität sortiert, mit der Summe von allem, was noch offen ist.</string>
+    <string name="list_mode_hint_purchase">Preis und Link pro Eintrag, mit Monatsbudget und der Summe von allem, was noch offen ist.</string>
     <string name="action_open_link">Angebot öffnen</string>
     <string name="list_mode_purchase">Anschaffungen</string>
     <string name="label_price">Preis</string>
@@ -391,4 +391,25 @@
     <string name="welcome_point_share">Listen mit anderen teilen – Änderungen sind sofort bei allen da.</string>
     <string name="welcome_point_modes">Einkaufen, Checkliste oder Anschaffungen: jede Art zeigt nur, was sie braucht.</string>
     <string name="welcome_point_repeat">Wiederkehrende Aufgaben wechseln reihum – Müll, Gießen, Miete.</string>
+    <!-- Anschaffungen: Budget -->
+    <string name="title_new_purchase">Neue Anschaffung</string>
+    <string name="fab_purchase">Anschaffung</string>
+    <string name="placeholder_purchase_title">Was soll angeschafft werden?</string>
+    <string name="placeholder_add_purchase">Neue Anschaffung hinzufügen…</string>
+    <string name="section_purchases_open">Offen</string>
+    <string name="section_bought_in">Gekauft im %1$s</string>
+    <string name="error_price_invalid">Kein gültiger Betrag</string>
+    <string name="budget_month">Budget %1$s</string>
+    <string name="budget_remaining">%1$s übrig</string>
+    <string name="budget_over">%1$s über dem Budget</string>
+    <string name="budget_spent_of">%1$s von %2$s ausgegeben</string>
+    <string name="budget_spent">%1$s ausgegeben</string>
+    <string name="budget_none">Noch kein Monatsbudget – tippen zum Festlegen</string>
+    <string name="action_set_budget">Monatsbudget</string>
+    <string name="dialog_budget_title">Monatsbudget</string>
+    <string name="dialog_budget_message">Gilt ab %1$s, bis du es wieder änderst. Vergangene Monate behalten ihr Budget. Leer lassen für kein Budget.</string>
+    <string name="hint_budget">z. B. 300</string>
+    <string name="action_past_months">Vergangene Monate</string>
+    <string name="empty_past_months">Noch keine vergangenen Monate mit Käufen oder Budget.</string>
+    <string name="month_nothing_bought">Nichts gekauft</string>
 </resources>

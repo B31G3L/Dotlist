@@ -59,11 +59,16 @@ class TodosViewModel(
         assignedTo      : String? = null,
         reminderMinutes : Int? = null,
         actorName       : String = "",
+        price           : Double? = null,
+        link            : String = "",
     ) {
         if (title.isBlank()) return
         viewModelScope.launch {
             try {
-                repository.addTodo(listId, title, description, priority, dueDate, assignedTo, reminderMinutes)
+                repository.addTodo(
+                    listId, title, description, priority, dueDate, assignedTo, reminderMinutes,
+                    price = price, link = link
+                )
                 if (assignedTo != null) {
                     repository.notifyAssigned(assignedTo, actorName, title, listId, "")
                 }

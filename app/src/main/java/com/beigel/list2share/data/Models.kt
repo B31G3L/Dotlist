@@ -23,6 +23,9 @@ import com.beigel.list2share.R
  *                      Wird nicht in Firestore gespeichert, sondern beim Laden abgeleitet:
  *                      aus Firestore gelesene Listen sind immer true, aus der lokalen
  *                      DB gelesene Listen immer false.
+ * @param monthlyBudgets Monatsbudgets im Anschaffungsmodus, Schlüssel "yyyy-MM".
+ *                      Ein Eintrag gilt ab seinem Monat, bis ein späterer ihn
+ *                      ablöst (siehe [budgetFor]). 0 heißt „kein Budget".
  */
 data class TodoList(
     @get:Exclude val id: String = "",
@@ -36,10 +39,11 @@ data class TodoList(
     val icon: String = "",
     val mutedBy: List<String> = emptyList(),
     val mode: String = ListMode.AUFGABEN.name,
+    val monthlyBudgets: Map<String, Double> = emptyMap(),
     @get:Exclude val isShared: Boolean = false
 ) {
     // Parameterloser Konstruktor für Firestore-Deserialisierung
-    constructor() : this("", "", emptyList(), emptyMap(), emptyList(), "", Timestamp.now(), "#6750A4", "", emptyList(), ListMode.AUFGABEN.name, false)
+    constructor() : this("", "", emptyList(), emptyMap(), emptyList(), "", Timestamp.now(), "#6750A4", "", emptyList(), ListMode.AUFGABEN.name, emptyMap(), false)
 }
 
 /**
@@ -57,8 +61,9 @@ data class TodoList(
  * und mit „Alle zurücksetzen" statt „Erledigte löschen".
  *
  * ANSCHAFFUNG ist für größere Käufe, über die man länger nachdenkt:
- * Waschmaschine, Fahrrad. Behält Priorität und Fälligkeit, ergänzt Preis und
- * Link und zeigt die Summe der offenen Posten.
+ * Waschmaschine, Fahrrad. Ohne Priorität und Termine, dafür mit Preis, Link,
+ * der Summe der offenen Posten und einem Monatsbudget: abgehakt heißt
+ * „gekauft", und der Kaufmonat ergibt sich aus doneAt.
  *
  * Gesetzte Werte bleiben in jedem Fall im Dokument stehen, ein Umschalten
  * verliert also nichts.
@@ -77,8 +82,8 @@ val TodoList.listMode: ListMode
 /**
  * Modi ohne Priorität, Zuständigkeit, Termine und Wiederholung.
  *
- * ANSCHAFFUNG gehört ausdrücklich nicht dazu: dort bedeutet die Priorität
- * tatsächlich etwas („brauchen wir bald" gegen „irgendwann mal").
+ * ANSCHAFFUNG gehört nicht dazu, obwohl es ebenfalls ohne Priorität auskommt:
+ * die Einkaufs-Sonderfälle (Abteilungen, Menge) passen dort nicht.
  */
 val ListMode.isSimple: Boolean
     get() = this == ListMode.EINKAUFEN || this == ListMode.CHECKLISTE

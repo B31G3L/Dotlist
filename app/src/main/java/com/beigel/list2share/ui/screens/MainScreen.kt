@@ -405,7 +405,9 @@ fun MainScreen(repository: TodoRepository, deviceId: String) {
                 onBack = { nav.goBack() }
             )
             is AppScreen.ListenDetail -> ListenDetailScreen(
-                list    = s.list,
+                // Live-Stand statt Navigations-Schnappschuss: sonst käme etwa ein
+                // geändertes Monatsbudget erst nach erneutem Öffnen an.
+                list    = listsUiState.lists.find { it.id == s.list.id } ?: s.list,
                 repository = repository,
                 haptic  = haptic,
                 deviceId = deviceId,

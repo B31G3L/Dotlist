@@ -43,6 +43,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -134,18 +136,40 @@ private fun openLink(context: Context, raw: String) {
 }
 
 /**
- * „12,50" und „12.50" sollen beide funktionieren; alles Unbrauchbare wird zu
- * null, also „kein Preis". Negative Beträge ergeben hier keinen Sinn.
+ * „12,50", „12.50", „12,50 €" und „1.299,99" sollen alle funktionieren.
+ * Stehen Punkt und Komma beide drin, ist das hintere das Dezimaltrennzeichen.
+ * Alles Unbrauchbare wird zu null, also „kein Preis"; negative Beträge
+ * ergeben hier keinen Sinn.
  */
 internal fun parsePrice(raw: String): Double? {
-    val value = raw.replace(',', '.').trim().toDoubleOrNull() ?: return null
+    var text = raw.filter { it.isDigit() || it == ',' || it == '.' || it == '-' }
+    if (text.isEmpty()) return null
+    val lastComma = text.lastIndexOf(',')
+    val lastDot = text.lastIndexOf('.')
+    text = when {
+        lastComma >= 0 && lastDot >= 0 -> {
+            val decimal = if (lastComma > lastDot) ',' else '.'
+            val thousands = if (decimal == ',') '.' else ','
+            text.replace(thousands.toString(), "").replace(decimal, '.')
+        }
+        // „1.299" ist bei uns eher tausendzweihundert als 1,299 €:
+        // genau drei Ziffern hinter einem einzelnen Punkt gelten als Tausender.
+        lastDot >= 0 && text.count { it == '.' } == 1 && text.length - lastDot - 1 == 3 -> text.replace(".", "")
+        lastDot >= 0 && text.count { it == '.' } > 1 -> text.replace(".", "")
+        else -> text.replace(',', '.')
+    }
+    val value = text.toDoubleOrNull() ?: return null
     if (value < 0) return null
     return Math.round(value * 100) / 100.0
 }
 
-/** Preis fürs Eingabefeld: ganze Beträge ohne ",00". */
+/** Leeres Feld ist „kein Preis" und gültig – nur echter Unsinn ist ein Fehler. */
+internal fun isPriceInputValid(raw: String): Boolean = raw.isBlank() || parsePrice(raw) != null
+
+/** Preis fürs Eingabefeld: ganze Beträge ohne ",00", sonst mit dem Dezimalzeichen der Gerätesprache. */
 internal fun formatPriceInput(value: Double): String =
-    if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
+    if (value % 1.0 == 0.0) value.toLong().toString()
+    else String.format(Locale.getDefault(), "%.2f", value)
 
 /**
  * Zeile mit freiem Text, im Stil der DetailClickRow. Für die Mengenangabe im
@@ -159,6 +183,9 @@ private fun DetailTextRow(
     placeholder  : String,
     onValueChange: (String) -> Unit,
     onDone       : () -> Unit,
+    keyboardType : KeyboardType = KeyboardType.Text,
+    isError      : Boolean = false,
+    suffix       : String? = null,
 ) {
     Row(
         modifier          = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
@@ -177,8 +204,10 @@ private fun DetailTextRow(
             onValueChange = onValueChange,
             placeholder   = { Text(placeholder) },
             singleLine    = true,
+            isError       = isError,
+            suffix        = if (suffix != null) { { Text(suffix) } } else null,
             modifier      = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onDone() })
         )
     }
@@ -262,7 +291,8 @@ fun AufgabeDetailScreen(
             reminderMinutes    = reminderMinutes,
             recurrence         = recurrence,
             quantity           = quantity,
-            price              = parsePrice(priceInput),
+            // Ein unlesbarer Betrag überschreibt nicht den bisherigen Preis.
+            price              = if (isPriceInputValid(priceInput)) parsePrice(priceInput) else liveTodo.price,
             link               = link,
             // Ohne Wiederholung ergibt eine Runde keinen Sinn.
             rotateAmong        = if (recurrence != null) rotateAmong else emptyList(),
@@ -271,15 +301,33 @@ fun AufgabeDetailScreen(
         )
     }
 
+    /*
+     * Die System-Zurück-Geste lief bisher am Speichern vorbei: sie landete im
+     * BackHandler des MainScreen, und alles, was nicht per „Fertig" auf der
+     * Tastatur bestätigt war – etwa ein eben getippter Preis –, ging verloren.
+     * Dieser Handler ist später komponiert und hat damit Vorrang.
+     */
+    fun saveAndClose() {
+        save()
+        onBack()
+    }
+    BackHandler { saveAndClose() }
+
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         // ── Kopfzeile ────────────────────────────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
-            verticalAlignment     = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalAlignment     = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { haptic.tick(); save(); onBack() }) {
+            IconButton(onClick = { haptic.tick(); saveAndClose() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+            }
+            Spacer(Modifier.weight(1f))
+            TextButton(
+                enabled = title.isNotBlank(),
+                onClick = { haptic.click(); saveAndClose() }
+            ) {
+                Text(stringResource(R.string.action_save), fontWeight = FontWeight.SemiBold)
             }
             Box {
                 IconButton(onClick = { showMenu = true }) {
@@ -389,28 +437,31 @@ fun AufgabeDetailScreen(
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(if (purchase) 16.dp else 4.dp))
 
             // ── Priorität ─────────────────────────────────────────────
-            Text(
-                stringResource(R.string.section_priority),
-                fontSize      = 12.sp,
-                fontWeight    = FontWeight.Bold,
-                letterSpacing = 0.8.sp,
-                color         = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Priority.entries.forEach { p ->
-                    DetailPriorityChip(
-                        priority = p,
-                        selected = priority == p,
-                        onClick  = { priority = p; save() }
-                    )
+            // Nicht bei Anschaffungen: dort zählen Preis und Budget.
+            if (!purchase) {
+                Text(
+                    stringResource(R.string.section_priority),
+                    fontSize      = 12.sp,
+                    fontWeight    = FontWeight.Bold,
+                    letterSpacing = 0.8.sp,
+                    color         = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Priority.entries.forEach { p ->
+                        DetailPriorityChip(
+                            priority = p,
+                            selected = priority == p,
+                            onClick  = { priority = p; save() }
+                        )
+                    }
                 }
-            }
 
-            Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(20.dp))
+            }
 
             Surface(
                 shape = RoundedCornerShape(18.dp),
@@ -472,7 +523,10 @@ fun AufgabeDetailScreen(
                             value       = priceInput,
                             placeholder = stringResource(R.string.hint_price),
                             onValueChange = { priceInput = it },
-                            onDone      = { save() }
+                            onDone      = { if (isPriceInputValid(priceInput)) save() },
+                            keyboardType = KeyboardType.Decimal,
+                            isError     = !isPriceInputValid(priceInput),
+                            suffix      = "€"
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                         DetailTextRow(
@@ -480,7 +534,8 @@ fun AufgabeDetailScreen(
                             value       = link,
                             placeholder = stringResource(R.string.hint_link),
                             onValueChange = { link = it },
-                            onDone      = { save() }
+                            onDone      = { save() },
+                            keyboardType = KeyboardType.Uri
                         )
                         if (link.isNotBlank()) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))

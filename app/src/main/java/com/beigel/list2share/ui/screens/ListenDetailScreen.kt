@@ -47,6 +47,13 @@ import com.beigel.list2share.data.activityOf
 import com.beigel.list2share.data.departmentFor
 import com.beigel.list2share.data.formatWhen
 import com.beigel.list2share.data.formatPrice
+import com.beigel.list2share.data.MonthSummary
+import com.beigel.list2share.data.budgetFor
+import com.beigel.list2share.data.currentMonthKey
+import com.beigel.list2share.data.formatMonthKey
+import com.beigel.list2share.data.monthSummary
+import com.beigel.list2share.data.pastMonthSummaries
+import androidx.compose.ui.text.input.KeyboardType
 import com.beigel.list2share.data.isSimple
 import com.beigel.list2share.data.listMode
 import com.beigel.list2share.auth.AuthManager
@@ -89,16 +96,20 @@ fun ListenDetailScreen(
     // Abteilungen fallen weg, "Sonstiges" erscheint also nur, wenn wirklich
     // etwas drin ist. Bewusst hier und nicht im LazyColumn-Inhalt: dessen
     // Lambda ist nicht @Composable, remember() geht dort nicht.
-    val openTodos = remember(uiState.todos, purchase) {
-        val open = uiState.todos.filter { !it.isDone }
-        // Anschaffungen nach Priorität statt nach Eingabereihenfolge: was
-        // dringend gebraucht wird, gehört nach oben. Bei Gleichstand bleibt
-        // die manuelle Reihenfolge erhalten.
-        if (purchase) open.sortedWith(
-            compareBy({ Priority.fromString(it.priority).ordinal }, { it.position })
-        ) else open
+    val openTodos = remember(uiState.todos) { uiState.todos.filter { !it.isDone } }
+    /*
+     * Anschaffungen: abgehakt heißt gekauft. In der Liste steht nur, was im
+     * laufenden Monat gekauft wurde – ältere Käufe bleiben für den Verlauf
+     * erhalten und erscheinen unter „Vergangene Monate", statt die Liste
+     * endlos wachsen zu lassen.
+     */
+    val monthKey = currentMonthKey()
+    val thisMonth = remember(uiState.todos, list.monthlyBudgets, monthKey) {
+        monthSummary(list, uiState.todos, monthKey)
     }
-    val doneTodos = remember(uiState.todos) { uiState.todos.filter { it.isDone } }
+    val doneTodos = remember(uiState.todos, purchase, thisMonth) {
+        if (purchase) thisMonth.items else uiState.todos.filter { it.isDone }
+    }
     val groupedTodos = remember(openTodos) {
         openTodos.groupBy { departmentFor(it.title) }
             .toSortedMap(compareBy { it.ordinal })
@@ -149,6 +160,8 @@ fun ListenDetailScreen(
     var renameText        by remember { mutableStateOf(list.name) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showLeaveConfirm  by remember { mutableStateOf(false) }
+    var showBudgetDialog  by remember { mutableStateOf(false) }
+    var showPastMonths    by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(uiState.error) {
@@ -204,15 +217,33 @@ fun ListenDetailScreen(
                         }
                         Spacer(Modifier.height(16.dp))
                     }
-                    Text(stringResource(R.string.progress_done_of_total, doneCount, total),
-                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress      = { progress },
-                        modifier      = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                        color         = listColor,
-                        trackColor    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                    )
+                    if (purchase) {
+                        // „x von y erledigt" sagt bei Anschaffungen wenig –
+                        // dort zählt, wie viel vom Monatsbudget noch da ist.
+                        BudgetCard(
+                            summary   = thisMonth,
+                            listColor = listColor,
+                            onClick   = { haptic.tick(); showBudgetDialog = true }
+                        )
+                        TextButton(
+                            onClick  = { haptic.tick(); showPastMonths = true },
+                            modifier = Modifier.offset(x = (-12).dp)
+                        ) {
+                            Icon(Icons.Default.History, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.action_past_months), fontSize = 13.sp)
+                        }
+                    } else {
+                        Text(stringResource(R.string.progress_done_of_total, doneCount, total),
+                            fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress      = { progress },
+                            modifier      = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                            color         = listColor,
+                            trackColor    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        )
+                    }
                 }
             }
             // Eingabe
@@ -229,7 +260,8 @@ fun ListenDetailScreen(
                         TextField(
                             value         = newText,
                             onValueChange = { newText = it },
-                            placeholder   = { Text(stringResource(R.string.placeholder_add_task),
+                            placeholder   = { Text(
+                                stringResource(if (purchase) R.string.placeholder_add_purchase else R.string.placeholder_add_task),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             colors        = TextFieldDefaults.colors(
                                 focusedContainerColor   = Color.Transparent,
@@ -281,7 +313,9 @@ fun ListenDetailScreen(
             }
 
             // Section Aufgaben
-            item { SectionLabel(stringResource(R.string.title_tasks)) }
+            item {
+                SectionLabel(stringResource(if (purchase) R.string.section_purchases_open else R.string.title_tasks))
+            }
             if (openTodos.isEmpty() && doneTodos.isEmpty()) {
                 item {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
@@ -311,7 +345,8 @@ fun ListenDetailScreen(
                     DetailTaskRow(
                         todo      = todo,
                         listColor = listColor,
-                        simple    = checklist,
+                        // Anschaffungen ohne Prioritätspunkt.
+                        simple    = checklist || purchase,
                         shopping  = false,
                         purchase  = purchase,
                         onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
@@ -372,8 +407,13 @@ fun ListenDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        SectionLabel(stringResource(R.string.section_done_count, doneTodos.size))
-                        TextButton(onClick = {
+                        SectionLabel(
+                            if (purchase) stringResource(R.string.section_bought_in, formatMonthKey(monthKey))
+                            else stringResource(R.string.section_done_count, doneTodos.size)
+                        )
+                        // Gekaufte Anschaffungen bleiben stehen: sie sind der
+                        // Verlauf, aus dem sich das Budget berechnet.
+                        if (!purchase) TextButton(onClick = {
                             haptic.click()
                             scope.launch {
                                 try {
@@ -399,7 +439,7 @@ fun ListenDetailScreen(
                     DetailTaskRow(
                         todo      = todo,
                         listColor = listColor,
-                        simple    = mode.isSimple,
+                        simple    = mode.isSimple || purchase,
                         shopping  = shopping,
                         purchase  = purchase,
                         onToggle  = { todoVm.toggleTodo(todo); haptic.tick() },
@@ -418,7 +458,12 @@ fun ListenDetailScreen(
             contentColor   = MaterialTheme.colorScheme.onPrimary,
             shape          = RoundedCornerShape(18.dp),
             icon           = { Icon(Icons.Default.Add, null) },
-            text           = { Text(stringResource(R.string.fab_task), fontWeight = FontWeight.Medium, fontSize = 15.sp) }
+            text           = {
+                Text(
+                    stringResource(if (purchase) R.string.fab_purchase else R.string.fab_task),
+                    fontWeight = FontWeight.Medium, fontSize = 15.sp
+                )
+            }
         )
 
         SnackbarHost(
@@ -427,7 +472,16 @@ fun ListenDetailScreen(
         )
     }
 
-    if (showAdd) {
+    if (showAdd && purchase) {
+        NeueAnschaffungScreen(
+            onDismiss = { showAdd = false },
+            onSave    = { title, price, link ->
+                todoVm.addTodo(title, price = price, link = link)
+                haptic.click()
+                showAdd = false
+            }
+        )
+    } else if (showAdd) {
         NeueAufgabeScreen(
             lists           = listOf(list),
             initialListId   = list.id,
@@ -512,6 +566,13 @@ fun ListenDetailScreen(
                             }
                         )
                     }
+                }
+                if (purchase) {
+                    OptionRow(
+                        icon  = Icons.Default.Savings,
+                        label = stringResource(R.string.action_set_budget),
+                        onClick = { showOptionsSheet = false; showBudgetDialog = true }
+                    )
                 }
                 if (listIsShared) {
                     OptionRow(
@@ -601,6 +662,39 @@ fun ListenDetailScreen(
                     )
                 }
             }
+        }
+    }
+
+    // ── Monatsbudget festlegen ─────────────────────────────────────────────
+    if (showBudgetDialog) {
+        BudgetDialog(
+            initial   = list.budgetFor(monthKey),
+            monthKey  = monthKey,
+            onDismiss = { showBudgetDialog = false },
+            onSave    = { amount ->
+                showBudgetDialog = false
+                haptic.click()
+                scope.launch {
+                    try {
+                        repository.setMonthlyBudget(list.id, monthKey, amount)
+                    } catch (e: Exception) {
+                        Log.w("ListenDetailScreen", "Budget nicht gespeichert", e)
+                        snackbarHostState.showSnackbar(context.getString(R.string.error_unknown))
+                    }
+                }
+            }
+        )
+    }
+
+    // ── Vergangene Monate ──────────────────────────────────────────────────
+    if (showPastMonths) {
+        val months = remember(uiState.todos, list.monthlyBudgets) { pastMonthSummaries(list, uiState.todos) }
+        ModalBottomSheet(onDismissRequest = { showPastMonths = false }) {
+            PastMonthsSheet(
+                months      = months,
+                listColor   = listColor,
+                onOpenTask  = { todo -> showPastMonths = false; onOpenTask(todo) }
+            )
         }
     }
 
@@ -852,6 +946,228 @@ private fun DetailTaskRow(
                     leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                     onClick = { showMenu = false; onDelete() }
                 )
+            }
+        }
+    }
+}
+
+// ─── Anschaffungen: Budget ──────────────────────────────────────────────────
+
+/**
+ * Laufender Monat: wie viel vom Budget ist ausgegeben, wie viel bleibt übrig.
+ * Ohne Budget zeigt die Karte nur die Ausgaben und lädt zum Festlegen ein.
+ */
+@Composable
+private fun BudgetCard(
+    summary  : MonthSummary,
+    listColor: Color,
+    onClick  : () -> Unit,
+) {
+    val budget = summary.budget
+    val remaining = summary.remaining
+    val over = remaining != null && remaining < 0
+    Surface(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { onClick() },
+        shape    = RoundedCornerShape(16.dp),
+        color    = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                stringResource(R.string.budget_month, formatMonthKey(summary.key)),
+                fontSize = 13.sp,
+                color    = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (budget == null || remaining == null) {
+                if (summary.spent > 0) {
+                    Text(
+                        stringResource(R.string.budget_spent, formatPrice(summary.spent)),
+                        fontSize = 20.sp,
+                        color    = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                Text(
+                    stringResource(R.string.budget_none),
+                    fontSize = 13.sp,
+                    color    = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            } else {
+                Text(
+                    if (over) stringResource(R.string.budget_over, formatPrice(-remaining))
+                    else stringResource(R.string.budget_remaining, formatPrice(remaining)),
+                    fontSize   = 22.sp,
+                    fontWeight = FontWeight.Medium,
+                    color      = if (over) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                    modifier   = Modifier.padding(top = 4.dp)
+                )
+                Spacer(Modifier.height(10.dp))
+                LinearProgressIndicator(
+                    progress   = { (summary.spent / budget).toFloat().coerceIn(0f, 1f) },
+                    modifier   = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                    color      = if (over) MaterialTheme.colorScheme.error else listColor,
+                    trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    stringResource(R.string.budget_spent_of, formatPrice(summary.spent), formatPrice(budget)),
+                    fontSize = 13.sp,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (summary.withoutPrice > 0) {
+                Text(
+                    pluralStringResource(R.plurals.purchase_without_price, summary.withoutPrice, summary.withoutPrice),
+                    fontSize = 12.sp,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BudgetDialog(
+    initial  : Double?,
+    monthKey : String,
+    onDismiss: () -> Unit,
+    onSave   : (Double?) -> Unit,
+) {
+    var input by remember { mutableStateOf(initial?.let { formatPriceInput(it) } ?: "") }
+    val valid = isPriceInputValid(input)
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dialog_budget_title)) },
+        text  = {
+            Column {
+                Text(
+                    stringResource(R.string.dialog_budget_message, formatMonthKey(monthKey)),
+                    fontSize = 14.sp,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value         = input,
+                    onValueChange = { input = it },
+                    placeholder   = { Text(stringResource(R.string.hint_budget)) },
+                    suffix        = { Text("€") },
+                    isError       = !valid,
+                    supportingText = if (!valid) {
+                        { Text(stringResource(R.string.error_price_invalid)) }
+                    } else null,
+                    singleLine    = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { if (valid) onSave(parsePrice(input)) }),
+                    modifier      = Modifier.fillMaxWidth().focusRequester(focus)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = valid, onClick = { onSave(parsePrice(input)) }) {
+                Text(stringResource(R.string.action_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+/** Vergangene Monate, neuester zuerst; ein Tipp klappt die Käufe des Monats auf. */
+@Composable
+private fun PastMonthsSheet(
+    months    : List<MonthSummary>,
+    listColor : Color,
+    onOpenTask: (TodoItem) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(months.firstOrNull()?.key) }
+    Column(Modifier.padding(bottom = 24.dp)) {
+        Text(
+            stringResource(R.string.action_past_months),
+            fontSize   = 20.sp,
+            fontWeight = FontWeight.Medium,
+            modifier   = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+        )
+        if (months.isEmpty()) {
+            Text(
+                stringResource(R.string.empty_past_months),
+                color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+            )
+            return@Column
+        }
+        LazyColumn {
+            items(months, key = { it.key }) { month ->
+                val remaining = month.remaining
+                val over = remaining != null && remaining < 0
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { expanded = if (expanded == month.key) null else month.key }
+                        .padding(horizontal = 24.dp, vertical = 12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(formatMonthKey(month.key), fontSize = 16.sp, modifier = Modifier.weight(1f))
+                        if (remaining != null) {
+                            Text(
+                                if (over) stringResource(R.string.budget_over, formatPrice(-remaining))
+                                else stringResource(R.string.budget_remaining, formatPrice(remaining)),
+                                fontSize = 14.sp,
+                                color    = if (over) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Text(
+                        when {
+                            month.budget != null -> stringResource(
+                                R.string.budget_spent_of, formatPrice(month.spent), formatPrice(month.budget)
+                            )
+                            month.items.isEmpty() -> stringResource(R.string.month_nothing_bought)
+                            else -> stringResource(R.string.budget_spent, formatPrice(month.spent))
+                        },
+                        fontSize = 13.sp,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                    if (month.budget != null) {
+                        Spacer(Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress   = { (month.spent / month.budget).toFloat().coerceIn(0f, 1f) },
+                            modifier   = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                            color      = if (over) MaterialTheme.colorScheme.error else listColor,
+                            trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+                if (expanded == month.key) {
+                    month.items.forEach { todo ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenTask(todo) }
+                                .padding(start = 40.dp, end = 24.dp, top = 8.dp, bottom = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                todo.title,
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                todo.price?.let { formatPrice(it) } ?: "–",
+                                fontSize = 14.sp,
+                                color    = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
             }
         }
     }

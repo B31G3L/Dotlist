@@ -343,7 +343,7 @@
     <string name="list_mode_hint_tasks">Everything on board: priority, assignee, due date, reminder and repeating tasks.</string>
     <string name="list_mode_hint_shopping">Groups items by aisle and adds an amount per item, so you can work through the shop in one go.</string>
     <string name="list_mode_hint_checklist">Reset everything with one tap – for lists you work through again and again, like packing or cleaning.</string>
-    <string name="list_mode_hint_purchase">Price and link per item, sorted by priority, with the total of everything still open.</string>
+    <string name="list_mode_hint_purchase">Price and link per item, with a monthly budget and the total of everything still open.</string>
     <string name="action_open_link">Open offer</string>
     <string name="list_mode_purchase">Purchases</string>
     <string name="label_price">Price</string>
@@ -397,4 +397,25 @@
     <string name="welcome_point_share">Share lists with others – everyone sees changes right away.</string>
     <string name="welcome_point_modes">Shopping, checklist or purchases: each type shows only what it needs.</string>
     <string name="welcome_point_repeat">Repeating tasks take turns automatically – bins, watering, rent.</string>
+    <!-- Purchases: budget -->
+    <string name="title_new_purchase">New purchase</string>
+    <string name="fab_purchase">Purchase</string>
+    <string name="placeholder_purchase_title">What do you want to buy?</string>
+    <string name="placeholder_add_purchase">Add a new purchase…</string>
+    <string name="section_purchases_open">Open</string>
+    <string name="section_bought_in">Bought in %1$s</string>
+    <string name="error_price_invalid">Not a valid amount</string>
+    <string name="budget_month">Budget %1$s</string>
+    <string name="budget_remaining">%1$s left</string>
+    <string name="budget_over">%1$s over budget</string>
+    <string name="budget_spent_of">%1$s of %2$s spent</string>
+    <string name="budget_spent">%1$s spent</string>
+    <string name="budget_none">No monthly budget yet – tap to set one</string>
+    <string name="action_set_budget">Monthly budget</string>
+    <string name="dialog_budget_title">Monthly budget</string>
+    <string name="dialog_budget_message">Applies from %1$s until you change it. Past months keep their budget. Leave empty for no budget.</string>
+    <string name="hint_budget">e.g. 300</string>
+    <string name="action_past_months">Past months</string>
+    <string name="empty_past_months">No past months with purchases or a budget yet.</string>
+    <string name="month_nothing_bought">Nothing bought</string>
 </resources>

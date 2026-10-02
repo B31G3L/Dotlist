@@ -23,6 +23,7 @@ fun LocalListEntity.toTodoList(): TodoList = TodoList(
     icon = icon,
     mutedBy = emptyList(),
     mode = mode,
+    monthlyBudgets = monthlyBudgetsJson.toBudgetMap(),
     isShared = false
 )
 
@@ -72,6 +73,19 @@ fun TodoItem.toLocalEntity(listId: String): LocalTodoEntity = LocalTodoEntity(
     price           = price,
     link            = link
 )
+
+// ─── Monatsbudgets als JSON-Objekt ───────────────────────────────────────────
+
+fun Map<String, Double>.toBudgetJson(): String =
+    JSONObject().apply { forEach { (k, v) -> put(k, v) } }.toString()
+
+fun String.toBudgetMap(): Map<String, Double> {
+    if (isBlank()) return emptyMap()
+    return runCatching {
+        val o = JSONObject(this)
+        o.keys().asSequence().associateWith { o.getDouble(it) }
+    }.getOrDefault(emptyMap())
+}
 
 // ─── Subtasks/Comments als JSON (kein Untertabellen-Aufwand nötig) ──────────
 
