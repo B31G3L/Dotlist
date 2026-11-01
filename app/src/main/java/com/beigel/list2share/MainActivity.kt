@@ -27,7 +27,10 @@ import com.beigel.list2share.data.NotificationPreferences
 import com.beigel.list2share.notifications.NotificationRoute
 import com.beigel.list2share.repository.CloudMigration
 import com.beigel.list2share.repository.TodoRepository
+import com.beigel.list2share.ui.screens.Abschied
+import com.beigel.list2share.ui.screens.AbschiedScreen
 import com.beigel.list2share.ui.screens.MainScreen
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.beigel.list2share.ui.screens.WillkommenScreen
 import com.beigel.list2share.utils.ReviewManager
 import com.beigel.list2share.ui.theme.AccentColor
@@ -134,9 +137,18 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // Abschieds-Hinweis bei jedem Start. Nach dem Löschdatum gibt es
+            // kein "Weiter" mehr, da Firebase dann nicht mehr erreichbar ist.
+            var abschiedGelesen by rememberSaveable { mutableStateOf(false) }
+
             TodoSharedTheme(darkTheme = isDark, accentColor = accentColor) {
                 val currentUid = uid
-                if (currentUid == null) {
+                if (!abschiedGelesen || Abschied.istBackendWeg()) {
+                    AbschiedScreen(
+                        onWeiter = if (Abschied.istBackendWeg()) null
+                                   else ({ abschiedGelesen = true })
+                    )
+                } else if (currentUid == null) {
                     Box(
                         Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center

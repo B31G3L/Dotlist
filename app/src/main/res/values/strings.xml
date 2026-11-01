@@ -418,4 +418,16 @@
     <string name="action_past_months">Past months</string>
     <string name="empty_past_months">No past months with purchases or a budget yet.</string>
     <string name="month_nothing_bought">Nothing bought</string>
+
+    <!-- ===================== Farewell / app is being discontinued ===================== -->
+    <string name="abschied_titel">%1$s is being discontinued</string>
+    <string name="abschied_intro">Thanks for using %1$s! The app is no longer being developed and is being shut down.</string>
+    <string name="abschied_store_titel">Removed from the Play Store</string>
+    <string name="abschied_store_text">The app is no longer available on the Play Store and won\'t receive any further updates.</string>
+    <string name="abschied_cloud_titel">Cloud will be deleted on %1$s</string>
+    <string name="abschied_cloud_text">All server data will then be permanently deleted – shared lists, sync, sign-in and notifications will stop working. Please move any important items elsewhere before then.</string>
+    <string name="abschied_danke">Thank you for trying it out and for your feedback!</string>
+    <string name="abschied_weiter">Got it – continue to the app</string>
+    <string name="abschied_beendet">The service has been shut down. You can uninstall the app now.</string>
+    <string name="abschied_kontakt">Questions? Get in touch</string>
 </resources>

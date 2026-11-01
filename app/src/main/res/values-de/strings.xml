@@ -412,4 +412,16 @@
     <string name="action_past_months">Vergangene Monate</string>
     <string name="empty_past_months">Noch keine vergangenen Monate mit Käufen oder Budget.</string>
     <string name="month_nothing_bought">Nichts gekauft</string>
+
+    <!-- ===================== Abschied / App wird eingestellt ===================== -->
+    <string name="abschied_titel">%1$s wird eingestellt</string>
+    <string name="abschied_intro">Danke, dass du %1$s genutzt hast! Die App wird nicht mehr weiterentwickelt und eingestellt.</string>
+    <string name="abschied_store_titel">Aus dem Play Store entfernt</string>
+    <string name="abschied_store_text">Die App ist nicht mehr im Play Store erhältlich und bekommt keine Updates mehr.</string>
+    <string name="abschied_cloud_titel">Cloud wird am %1$s gelöscht</string>
+    <string name="abschied_cloud_text">Dann werden alle Server-Daten endgültig gelöscht – geteilte Listen, Synchronisation, Anmeldung und Benachrichtigungen funktionieren danach nicht mehr. Bitte übertrage wichtige Einträge vorher woandershin.</string>
+    <string name="abschied_danke">Vielen Dank fürs Ausprobieren und für dein Feedback!</string>
+    <string name="abschied_weiter">Verstanden – weiter zur App</string>
+    <string name="abschied_beendet">Der Dienst wurde eingestellt. Du kannst die App jetzt deinstallieren.</string>
+    <string name="abschied_kontakt">Fragen? Schreib mir</string>
 </resources>
